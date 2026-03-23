@@ -135,7 +135,10 @@ export default function Home() {
       }
 
       Cookies.set('isAuthenticated', 'true', { expires: 7 })
-      if (data?.user?.role) Cookies.set('role', String(data.user.role), { expires: 7 })
+      // Use DB role names (admin | senior_staff | admissions_officer) for RBAC.
+      // The backend UI layer may map them to manager/staff; we don't want that here.
+      const roleToSet = data?.dbRole ?? data?.user?.role
+      if (roleToSet) Cookies.set('role', String(roleToSet), { expires: 7 })
       Cookies.set('tenant', institutionId.trim(), { expires: 7 })
 
       if (typeof window !== 'undefined') {
@@ -174,7 +177,8 @@ export default function Home() {
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data?.error || 'Verification failed')
       Cookies.set('isAuthenticated', 'true', { expires: 7 })
-      if (data?.user?.role) Cookies.set('role', String(data.user.role), { expires: 7 })
+      const roleToSet = data?.dbRole ?? data?.user?.role
+      if (roleToSet) Cookies.set('role', String(roleToSet), { expires: 7 })
       Cookies.set('tenant', institutionId.trim(), { expires: 7 })
       if (typeof window !== 'undefined') {
         localStorage.setItem('userEmail', email.trim())

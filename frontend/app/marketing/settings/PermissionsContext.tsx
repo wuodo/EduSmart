@@ -18,6 +18,15 @@ function readRoleFromCookie(): string {
   } catch { return '' }
 }
 
+function normalizeAppRoleToDbRole(role: string): string {
+  // Some parts of the UI map backend roles to manager/staff.
+  // The permissions/RBAC logic expects DB role names.
+  const r = String(role || '').toLowerCase()
+  if (r === 'manager') return 'senior_staff'
+  if (r === 'staff') return 'admissions_officer'
+  return String(role || '')
+}
+
 export function PermissionsProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<PermissionsState>({ roles: [], modules: {} });
   const [loading, setLoading] = useState(true);
@@ -25,7 +34,7 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const r = readRoleFromCookie();
-    if (r) setRole(r);
+    if (r) setRole(normalizeAppRoleToDbRole(r));
     (async () => {
       try {
         const res = await fetch('/api/proxy/users/me', { credentials: 'include', cache: 'no-store' })
