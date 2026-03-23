@@ -20,6 +20,7 @@ import prisma from './lib/prisma';
 import path from 'path';
 import permissionsRoutes from './routes/permissions.routes';
 import cpanelRoutes from './routes/cpanel.routes';
+import askAiRoutes from './routes/askAi.routes';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { rbacGuard } from './middleware/rbac';
@@ -666,6 +667,7 @@ app.delete('/api/audit-logs', clearAuditLogs);
 app.use('/api/audit-logs', auditLogsRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/ask-ai', askAiRoutes);
 app.use('/api/tenants', tenantAdminRoutes);
 app.use('/api', permissionsRoutes);
 

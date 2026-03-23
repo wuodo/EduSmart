@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { WEB_API } from '@/utils/api';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import FloatingChat from '@/components/marketing/FloatingChat';
+import FloatingAskAi from '@/components/askAi/FloatingAskAi';
 
 const moduleNames: { [key: string]: string } = {
   '/': 'Dashboard',
@@ -938,6 +939,7 @@ export default function DashboardLayout({
           defaultOpen={false}
           onClose={() => setFloatingChat(null)}
         />
+        <FloatingAskAi />
       </div>
     </div>
   );
