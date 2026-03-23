@@ -1,0 +1,306 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  senior_staff
+  admissions_officer
+}
+
+model Tenant {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  subdomain   String?  @unique
+  domain      String?  @unique
+  logo        String?
+  primaryColor String? @default("#0f766e")   // teal-700
+  secondaryColor String? @default("#22c55e") // green-500
+  accentColor String? @default("#14b8a6")    // teal-500
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users       User[]
+  inquiries   Inquiry[]
+  followups   Followup[]
+  tasks       Task[]
+
+  @@map("tenants")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String
+  password  String
+  role      UserRole @default(admissions_officer)
+  approved  Boolean  @default(true)
+  name      String?
+  gender    String?
+  phone     String?
+  tenantId  Int?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Communication relations
+  chatParticipants ChatParticipant[]
+  sentMessages     Message[]
+
+  @@unique([tenantId, email])
+  @@map("users")
+}
+
+// Student and Program models removed - this is now a CRM/Marketing system
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  module    String
+  user      String?
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model DeleteRequest {
+  id           Int      @id @default(autoincrement())
+  module       String   // inquiries | followups | admission_letters
+  itemId       String
+  reason       String?
+  requestedBy  String
+  status       String   @default("pending") // pending | approved | rejected
+  createdAt    DateTime @default(now())
+
+  @@map("delete_requests")
+}
+
+model DeleteApproval {
+  id           Int      @id @default(autoincrement())
+  officerEmail String
+  module       String
+  itemId       String
+  status       String   // approved | rejected
+  itemName     String?
+  reason       String?
+  approvedBy   String?
+  readBy       Json?
+  approvedAt   DateTime @default(now())
+
+  @@map("delete_approvals")
+}
+
+// Unit model removed - not needed for CRM system
+
+model Inquiry {
+  id                   Int      @id @default(autoincrement())
+  fullName             String
+  email                String
+  phone                String
+  message              String?
+  gender               String?
+  programOfInterest    String?
+  intakePeriod         String?
+  studyMode            String?
+  source               String?
+  agentOrReferralName  String?
+  preferredContactMethod String?
+  bestTimeToContact    String?
+  leadTags             Json?
+  notes                String?
+  status               String?  @default("Pending")
+  assignedTo           String?
+  documents            Json?
+  createdBy            String?
+  letterStatus         String?  @default("Not Generated")
+  letterReferenceNumber String?
+  letterSerialNumber    String?
+  paymentStatus        String?  @default("Not Paid")
+  paymentCode          String?
+  paymentDate          DateTime?
+  tenantId             Int?
+  tenant               Tenant?  @relation(fields: [tenantId], references: [id])
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  followups            Followup[]
+  // Smart fields
+  score                Int      @default(0)
+  firstResponseAt      DateTime?
+  nextFollowupAt       DateTime?
+  sentiment            String?
+  dropoffStage         String?
+  recommendation       String?
+  lastReminderSent DateTime?
+  reminderStatus   String?
+  lastReminderResponse String?
+  engagementSentiment String?
+  // New fields
+  kcseGrade            String   @default("Unknown")
+  detail               InquiryDetail?
+
+  @@map("inquiries")
+}
+
+// Application model removed - not needed for CRM system
+
+model Followup {
+  id          Int      @id @default(autoincrement())
+  inquiryId   Int
+  inquiry     Inquiry  @relation(fields: [inquiryId], references: [id])
+  inquiryName String
+  type        String   // call, sms, whatsapp, email
+  scheduledFor DateTime
+  status      String   // pending, completed, rescheduled, canceled
+  assignedTo  String?
+  notes       String?
+  completedAt DateTime?
+  createdBy   String?
+  tenantId    Int?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  // Payment link
+  paymentStatus String?
+  paymentCode   String?
+  paymentDate   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  comments    FollowupComment[]
+
+  @@map("followups")
+}
+
+model Task {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  dueDate     DateTime?
+  status      String   @default("pending") // pending, in_progress, completed
+  createdBy   String?
+  ownerEmail  String?
+  visibility  String   @default("team") // private, team, org
+  type        String   @default("call") // call, email, meeting, demo, other
+  outcome     String?
+  reminderAt  DateTime?
+  tenantId    Int?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("tasks")
+}
+
+model FollowupComment {
+  id          Int      @id @default(autoincrement())
+  followupId  Int
+  followup    Followup @relation(fields: [followupId], references: [id])
+  comment     String
+  createdBy   String?
+  createdAt   DateTime @default(now())
+
+  @@map("followup_comments")
+}
+
+// Communication System Models
+model ChatRoom {
+  id          Int       @id @default(autoincrement())
+  name        String?   // Optional name for group chats
+  type        String    @default("direct") // direct, group
+  participants ChatParticipant[]
+  messages    Message[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("chat_rooms")
+}
+
+model ChatParticipant {
+  id         Int      @id @default(autoincrement())
+  chatRoomId Int
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt   DateTime @default(now())
+  lastReadAt DateTime @default(now())
+
+  @@unique([chatRoomId, userId])
+  @@map("chat_participants")
+}
+
+model Message {
+  id          Int       @id @default(autoincrement())
+  chatRoomId  Int
+  chatRoom    ChatRoom  @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  senderId    Int
+  sender      User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content     String
+  messageType String    @default("text") // text, inquiry_tag, user_tag
+  metadata    Json?     // For storing tag information, file attachments, etc.
+  readBy      Json?     // Track who has read the message
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  tags        MessageTag[]
+
+  @@map("messages")
+}
+
+model MessageTag {
+  id        Int      @id @default(autoincrement())
+  messageId Int
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  type      String   // inquiry, user
+  targetId  String   // inquiry ID or user ID
+  targetName String  // inquiry name/phone or user name
+  createdAt DateTime @default(now())
+
+  @@map("message_tags")
+}
+
+// cPanel configuration stored as a single JSON row
+model CpanelConfig {
+  id      Int   @id @default(1)
+  data    Json
+  updatedAt DateTime @updatedAt
+
+  @@map("cpanel_config")
+}
+
+// Session model for authentication
+model Session {
+  id          Int      @id @default(autoincrement())
+  token       String   @unique
+  userId      Int
+  tenantId    Int?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  lastUsedAt  DateTime?
+
+  @@map("sessions")
+}
+
+model InquiryDetail {
+  id            Int      @id @default(autoincrement())
+  inquiryId     Int     @unique
+  inquiry       Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  idOrPassport  String?
+  county        String
+  town          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("inquiry_details")
+}

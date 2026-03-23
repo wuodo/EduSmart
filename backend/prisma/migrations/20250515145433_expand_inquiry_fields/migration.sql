@@ -1,0 +1,15 @@
+-- AlterTable
+ALTER TABLE "inquiries" ADD COLUMN     "agentOrReferralName" TEXT,
+ADD COLUMN     "assignedTo" TEXT,
+ADD COLUMN     "bestTimeToContact" TEXT,
+ADD COLUMN     "documents" JSONB,
+ADD COLUMN     "gender" TEXT,
+ADD COLUMN     "intakePeriod" TEXT,
+ADD COLUMN     "leadTags" JSONB,
+ADD COLUMN     "notes" TEXT,
+ADD COLUMN     "preferredContactMethod" TEXT,
+ADD COLUMN     "programOfInterest" TEXT,
+ADD COLUMN     "source" TEXT,
+ADD COLUMN     "studyMode" TEXT,
+ALTER COLUMN "message" DROP NOT NULL,
+ALTER COLUMN "status" DROP NOT NULL;

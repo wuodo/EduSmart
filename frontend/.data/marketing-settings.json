@@ -1,0 +1,14 @@
+{
+  "institution": {
+    "name": "James Flavian College of Business and Technologyj",
+    "logo": "",
+    "email": "info@edusmart.edu",
+    "phone": "+1234567890",
+    "address": "123 Main St, City, Country"
+  },
+  "passwordPolicy": {
+    "minLength": 8,
+    "requireSpecial": true,
+    "expiryDays": 90
+  }
+}
