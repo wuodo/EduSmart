@@ -4,6 +4,10 @@
  * Keys are cleaned up periodically to avoid memory growth.
  */
 
+// TEMPORARY: Disable rate limiting to unblock tenant/admin provisioning.
+// Re-enable by setting this to false in a later commit.
+const DISABLE_LOGIN_RATE_LIMIT = true
+
 const MAX_ATTEMPTS = 3
 const LOCKOUT_MS = 15 * 60 * 1000 // 15 minutes
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
@@ -18,6 +22,7 @@ function getKey(prefix: string, ip: string, identifier: string): string {
 }
 
 export function isLocked(prefix: string, ip: string, identifier: string): boolean {
+  if (DISABLE_LOGIN_RATE_LIMIT) return false
   const key = getKey(prefix, ip, identifier)
   const entry = store.get(key)
   if (!entry) return false
@@ -27,6 +32,7 @@ export function isLocked(prefix: string, ip: string, identifier: string): boolea
 }
 
 export function recordFailedAttempt(prefix: string, ip: string, identifier: string): void {
+  if (DISABLE_LOGIN_RATE_LIMIT) return
   const key = getKey(prefix, ip, identifier)
   const now = Date.now()
   const existing = store.get(key)
@@ -42,6 +48,7 @@ export function recordFailedAttempt(prefix: string, ip: string, identifier: stri
 }
 
 export function clearAttempts(prefix: string, ip: string, identifier: string): void {
+  if (DISABLE_LOGIN_RATE_LIMIT) return
   store.delete(getKey(prefix, ip, identifier))
 }
 
