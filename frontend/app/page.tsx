@@ -114,6 +114,9 @@ export default function Home() {
 
     setLoading(true)
     try {
+      const normalizedPassword = String(password || '')
+        .trim()
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -121,7 +124,7 @@ export default function Home() {
         body: JSON.stringify({
           tenant_code: institutionId.trim(),
           email: email.trim(),
-          password,
+          password: normalizedPassword,
         }),
       })
       const data = await response.json().catch(() => ({}))
