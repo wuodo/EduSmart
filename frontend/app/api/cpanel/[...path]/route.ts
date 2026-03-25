@@ -13,6 +13,15 @@ function fwdHeaders(req: NextRequest) {
   const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip');
   if (clientIp) headers.set('x-forwarded-for', clientIp);
 
+  // Backend resolves tenant using `x-tenant` when host-based subdomain detection fails.
+  // When proxying to the backend service, the incoming `Host` becomes the backend hostname,
+  // so we derive the tenant from the original request host (crm.jfccollege.ac.ke -> crm).
+  const host = req.headers.get('host') || '';
+  const subdomain = host.split('.')[0]?.toLowerCase();
+  if (subdomain && subdomain !== 'www' && subdomain !== 'localhost' && subdomain !== '127') {
+    headers.set('x-tenant', subdomain);
+  }
+
   return Object.fromEntries(headers.entries());
 }
 
