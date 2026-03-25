@@ -143,7 +143,8 @@ app.post('/api/users/login', async (req, res) => {
     const { tenant_code, email, password } = req.body || {};
     const tenantCode = String(tenant_code || '').trim();
     const normalizedEmail = String(email || '').trim();
-    const normalizedPassword = String(password || '');
+    // Trim in case the client accidentally includes whitespace around the password.
+    const normalizedPassword = String(password || '').trim();
     if (!tenantCode || !normalizedEmail || !normalizedPassword) {
       if (res.headersSent) return;
       return res.status(401).json({ error: 'Invalid login credentials' });
@@ -154,7 +155,8 @@ app.post('/api/users/login', async (req, res) => {
 
     const asId = Number.parseInt(tenantCode, 10);
     let tenant: any = null;
-    if (!Number.isNaN(asId) && String(asId) === tenantCode) {
+    // Treat any digits-only tenant_code (including leading zeros like "03") as an ID.
+    if (!Number.isNaN(asId) && /^\d+$/.test(tenantCode)) {
       tenant = await prisma.tenant.findFirst({ where: { id: asId, isActive: true } });
     }
     if (!tenant) {

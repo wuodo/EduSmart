@@ -31,7 +31,8 @@ async function resolveTenantByCode(tenantCode: string) {
   if (!code) return null;
 
   const asId = Number.parseInt(code, 10);
-  if (!Number.isNaN(asId) && String(asId) === code) {
+  // Treat any digits-only tenant_code (including leading zeros) as an ID.
+  if (!Number.isNaN(asId) && /^\d+$/.test(code)) {
     const byId = await prisma.tenant.findFirst({ where: { id: asId, isActive: true } });
     if (byId) return byId;
   }
