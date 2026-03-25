@@ -20,6 +20,7 @@ async function proxy(req: NextRequest) {
   const pathParam = req.nextUrl.pathname.replace(/^\/api\/cpanel/, '');
   const url = `${BASE}/api/cpanel${pathParam}${req.nextUrl.search}`;
   const hasBody = !(req.method === 'GET' || req.method === 'HEAD');
+  const contentType = req.headers.get('content-type') || '';
   
   const init: RequestInit = {
     method: req.method,
@@ -29,13 +30,20 @@ async function proxy(req: NextRequest) {
   };
   
   if (hasBody) {
-    // Forward request body reliably (avoids intermittent JSON/body parsing quirks)
-    const buf = await req.arrayBuffer();
-    // Don't set an empty body
-    if (buf.byteLength > 0) {
-      // Use ArrayBuffer directly; avoids any edge-case where Buffer wrapping
-      // results in the backend receiving a non-JSON body.
-      init.body = buf;
+    // Forward request body reliably.
+    // For JSON, re-serialize it so Express can always parse `req.body`.
+    if (contentType.includes('application/json')) {
+      const json = await req.json().catch(() => null);
+      if (json) {
+        (init.headers as any)['content-type'] = 'application/json';
+        init.body = JSON.stringify(json);
+      } else {
+        const buf = await req.arrayBuffer();
+        if (buf.byteLength > 0) init.body = buf;
+      }
+    } else {
+      const buf = await req.arrayBuffer();
+      if (buf.byteLength > 0) init.body = buf;
     }
   }
   
