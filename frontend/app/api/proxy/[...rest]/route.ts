@@ -34,6 +34,19 @@ function forwardHeaders(req: NextRequest) {
 	}
 	if (auth) h['authorization'] = auth
 	if (tenant) h['x-tenant'] = tenant
+
+	// When the frontend is accessed via a custom subdomain (e.g. crm.jfccollege.ac.ke),
+	// the backend resolves tenant using host/subdomain. During "login UX" calls like
+	// `/api/proxy/tenants/by-code`, the tenant cookie may not be set yet, so we derive
+	// it from the incoming host as a fallback.
+	if (!tenant) {
+		const host = req.headers.get('host') || ''
+		const subdomain = host.split('.')[0]?.toLowerCase()
+		if (subdomain && subdomain !== 'www' && subdomain !== 'localhost' && subdomain !== '127') {
+			h['x-tenant'] = subdomain
+		}
+	}
+
 	if (cookie) h['cookie'] = cookie
 	return h
 }
