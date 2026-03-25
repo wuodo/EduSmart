@@ -45,6 +45,11 @@ import { getComments, createComment, editComment, deleteComment } from './contro
 // Load environment variables
 dotenv.config();
 
+// TEMPORARY: bypass OTP for CPANEL super admin login.
+// This is useful while SMTP/code delivery is not configured.
+// Re-enable OTP later by setting this to false and redeploying.
+const DISABLE_C_PANEL_OTP = true;
+
 // Prevent unhandled rejections/exceptions from crashing the server
 process.on('unhandledRejection', (reason: any) => {
   console.error('[unhandledRejection]', reason?.message || reason);
@@ -293,6 +298,7 @@ app.post('/api/cpanel/login', async (req, res) => {
     const deviceId = deviceIdFromReq(req);
     const knownDevice = await hasKnownDevice(user.email, null, deviceId);
     if (!knownDevice) {
+      if (!DISABLE_C_PANEL_OTP) {
       const { id, code } = createOtpChallenge({
         email: user.email,
         tenantId: null,
@@ -306,6 +312,8 @@ app.post('/api/cpanel/login', async (req, res) => {
       }
       await auditLogger.custom(req, 'cpanel_login_otp_challenge_sent', 'auth', { email: user.email, deviceId, ip });
       return res.status(200).json({ requiresOtp: true, challengeId: id, message: 'Verification code sent to your email.' });
+      }
+      // OTP disabled temporarily: treat device as known.
     }
 
     const token = crypto.randomBytes(32).toString('hex');
