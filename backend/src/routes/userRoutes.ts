@@ -278,7 +278,10 @@ router.post('/login', async (req, res) => {
     const { tenant_code, email, password } = req.body || {};
     const tenantCode = normalizeTenantCode(tenant_code);
     const normalizedEmail = String(email || '').trim();
-    const normalizedPassword = String(password || '');
+    // Keep normalization aligned with the main tenant login handler.
+    const normalizedPassword = String(password || '')
+      .trim()
+      .replace(/[\u200B-\u200D\uFEFF]/g, '');
 
     if (!tenantCode || !normalizedEmail || !normalizedPassword) {
       return safeJson(res, { error: 'Invalid login credentials' }, 401);

@@ -60,8 +60,6 @@ export default function UsersPage() {
     try {
       setLoading(true);
       setError(null);
-
-      const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
       const fetchBoth = async () => {
         const [usersRes, tenantsRes] = await Promise.all([
           fetch(`/api/cpanel/users`, { credentials: 'include', cache: 'no-store' }),
@@ -72,31 +70,22 @@ export default function UsersPage() {
         return { usersRes, tenantsRes, usersJson, tenantsJson };
       };
 
-      // Retry once on 429 to handle temporary throttling.
-      const maxAttempts = 2;
-      let attempt = 0;
-      while (attempt < maxAttempts) {
-        attempt += 1;
-        const { usersRes, tenantsRes, usersJson, tenantsJson } = await fetchBoth();
+      const { usersRes, tenantsRes, usersJson, tenantsJson } = await fetchBoth();
 
-        const shouldRetry =
-          (usersRes.status === 429 || tenantsRes.status === 429) && attempt < maxAttempts;
-
-        if (shouldRetry) {
-          await sleep(2000);
-          continue;
-        }
-
-        if (!usersRes.ok) {
-          throw new Error(usersJson?.error || usersJson?.message || `Failed to load users (${usersRes.status})`);
-        }
-        if (!tenantsRes.ok) {
-          throw new Error(tenantsJson?.error || tenantsJson?.message || `Failed to load tenants (${tenantsRes.status})`);
-        }
-        setUsers(usersJson.users || []);
-        setTenantsForInvite(tenantsJson.tenants || []);
-        break;
+      if (usersRes.status === 429 || tenantsRes.status === 429) {
+        // Do not retry on 429 inside the UI; retries can amplify throttling from the platform.
+        throw new Error('Temporarily throttled (429). Please wait a moment and try again.');
       }
+
+      if (!usersRes.ok) {
+        throw new Error(usersJson?.error || usersJson?.message || `Failed to load users (${usersRes.status})`);
+      }
+      if (!tenantsRes.ok) {
+        throw new Error(tenantsJson?.error || tenantsJson?.message || `Failed to load tenants (${tenantsRes.status})`);
+      }
+
+      setUsers(usersJson.users || []);
+      setTenantsForInvite(tenantsJson.tenants || []);
     } catch (e: any) { 
       setError(e.message || 'Failed to load users'); 
       console.error('Load users error:', e);

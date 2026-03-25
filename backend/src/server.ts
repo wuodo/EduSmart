@@ -144,7 +144,10 @@ app.post('/api/users/login', async (req, res) => {
     const tenantCode = String(tenant_code || '').trim();
     const normalizedEmail = String(email || '').trim();
     // Trim in case the client accidentally includes whitespace around the password.
-    const normalizedPassword = String(password || '').trim();
+    // Also strip zero-width characters which can get copied into password fields.
+    const normalizedPassword = String(password || '')
+      .trim()
+      .replace(/[\u200B-\u200D\uFEFF]/g, '');
     if (!tenantCode || !normalizedEmail || !normalizedPassword) {
       if (res.headersSent) return;
       return res.status(401).json({ error: 'Invalid login credentials' });
