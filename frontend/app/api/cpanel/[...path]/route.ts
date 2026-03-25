@@ -32,24 +32,33 @@ async function proxy(req: NextRequest) {
     // Forward request body reliably (avoids intermittent JSON/body parsing quirks)
     const buf = await req.arrayBuffer();
     // Don't set an empty body
-    if (buf.byteLength > 0) init.body = Buffer.from(buf);
+    if (buf.byteLength > 0) {
+      // Use ArrayBuffer directly; avoids any edge-case where Buffer wrapping
+      // results in the backend receiving a non-JSON body.
+      init.body = buf;
+    }
   }
   
   try {
     const res = await fetch(url, init);
-    const contentType = res.headers.get('content-type') || '';
 
-    const respHeaders: Record<string, string> = { 'content-type': contentType.includes('application/json') ? 'application/json' : contentType };
+    const contentType = res.headers.get('content-type') || '';
+    const respHeaders: Record<string, string> = {
+      'content-type': contentType.includes('application/json') ? 'application/json' : contentType,
+    };
     const setCookie = res.headers.get('set-cookie');
     if (setCookie) respHeaders['set-cookie'] = setCookie;
 
-    if (contentType.includes('application/json')) {
-      const data = await res.json();
-      return new Response(JSON.stringify(data), { status: res.status, headers: respHeaders });
+    // Always read as text first; then try to JSON-parse.
+    // This ensures the UI sees `{ error: ... }` messages even if the backend
+    // returned a slightly different Content-Type.
+    const bodyText = await res.text();
+    try {
+      const parsed = JSON.parse(bodyText);
+      return new Response(JSON.stringify(parsed), { status: res.status, headers: { ...respHeaders, 'content-type': 'application/json' } });
+    } catch {
+      return new Response(bodyText, { status: res.status, headers: respHeaders });
     }
-
-    const body = await res.text();
-    return new Response(body, { status: res.status, headers: respHeaders });
   } catch (error) {
     console.error('Proxy error:', error);
     return new Response(JSON.stringify({ error: 'Proxy request failed' }), { 
