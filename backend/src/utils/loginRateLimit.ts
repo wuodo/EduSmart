@@ -4,9 +4,10 @@
  * Keys are cleaned up periodically to avoid memory growth.
  */
 
-// TEMPORARY: Disable rate limiting to unblock tenant/admin provisioning.
-// Re-enable by setting this to false in a later commit.
-const DISABLE_LOGIN_RATE_LIMIT = true
+// Disable rate limiting (prevents HTTP 429 lockouts during login).
+// Override by setting DISABLE_LOGIN_RATE_LIMIT=false in the environment if needed.
+const DISABLE_LOGIN_RATE_LIMIT =
+  String(process.env.DISABLE_LOGIN_RATE_LIMIT ?? 'true').toLowerCase() === 'true'
 
 const MAX_ATTEMPTS = 3
 const LOCKOUT_MS = 15 * 60 * 1000 // 15 minutes

@@ -26,7 +26,7 @@ import crypto from 'crypto';
 import { rbacGuard } from './middleware/rbac';
 import { requireAuth } from './middleware/requireAuth';
 import { auditLogger } from './utils/auditLogger';
-import { isLocked, recordFailedAttempt, clearAttempts, getRemainingLockoutMs } from './utils/loginRateLimit';
+import { recordFailedAttempt, clearAttempts } from './utils/loginRateLimit';
 import { createOtpChallenge, verifyOtpChallenge } from './utils/otpChallenge';
 import { sendOtpCodeEmail } from './utils/email';
 import {
@@ -151,16 +151,6 @@ app.post('/api/users/login', async (req, res) => {
 
     const ip = clientIp(req);
     const identifier = `${tenantCode}:${normalizedEmail}`;
-    if (isLocked('tenant', ip, identifier)) {
-      const remaining = Math.ceil(getRemainingLockoutMs('tenant', ip, identifier) / 60000);
-      if (!res.headersSent) {
-        return res.status(429).json({
-          error: 'Too many failed attempts. Please try again in ' + remaining + ' minute(s).',
-          retryAfter: remaining * 60,
-        });
-      }
-      return;
-    }
 
     const asId = Number.parseInt(tenantCode, 10);
     let tenant: any = null;
@@ -266,16 +256,6 @@ app.post('/api/cpanel/login', async (req, res) => {
 
     const ip = clientIp(req);
     const normalizedEmail = String(email || '').trim();
-    if (isLocked('cpanel', ip, normalizedEmail)) {
-      const remaining = Math.ceil(getRemainingLockoutMs('cpanel', ip, normalizedEmail) / 60000);
-      if (!res.headersSent) {
-        return res.status(429).json({
-          error: 'Too many failed attempts. Please try again in ' + remaining + ' minute(s).',
-          retryAfter: remaining * 60,
-        });
-      }
-      return;
-    }
 
     const user = await prisma.user.findFirst({
       where: {
