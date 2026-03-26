@@ -1049,13 +1049,12 @@ export default function FollowupList({ followups, inquiries, onRefresh }: Props)
                 <h4 className={formSectionTitleClass}>Inquiry Details</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className={labelClass}>Inquiry ID *</label>
+                    <label className={labelClass}>Inquiry ID</label>
                     <input
                       type="text"
                       value={editData.inquiryId}
-                      onChange={e => setEditData({ ...editData, inquiryId: e.target.value })}
-                      className={inputClass}
-                      required
+                      readOnly
+                      className={`${inputClass} bg-gray-100 text-gray-500 cursor-not-allowed select-none`}
                     />
                   </div>
                   {!isAdmissionsOfficer && (
@@ -1106,13 +1105,13 @@ export default function FollowupList({ followups, inquiries, onRefresh }: Props)
                     </select>
                   </div>
                   <div>
-                    <label className={labelClass}>Scheduled For *</label>
+                    <label className={labelClass}>Scheduled For{['completed','cancelled'].includes(editData.status) ? '' : ' *'}</label>
                     <input
                       type="datetime-local"
                       value={editData.scheduledFor ? (typeof editData.scheduledFor === 'string' ? editData.scheduledFor.slice(0, 16) : new Date(editData.scheduledFor).toISOString().slice(0, 16)) : ''}
-                      onChange={e => setEditData({ ...editData, scheduledFor: new Date(e.target.value).toISOString() })}
+                      onChange={e => setEditData({ ...editData, scheduledFor: e.target.value ? new Date(e.target.value).toISOString() : '' })}
                       className={inputClass}
-                      required
+                      required={!['completed','cancelled'].includes(editData.status)}
                     />
                   </div>
                 </div>

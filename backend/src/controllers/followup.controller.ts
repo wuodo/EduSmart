@@ -188,9 +188,11 @@ export const updateFollowup = async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     const tenantId = await getTenantId(req as any);
 
+    const existing = await prisma.followup.findFirst({ where: { id, tenantId }, include: { inquiry: true } });
+    if (!existing) return safeJson(res, { error: 'Follow-up not found' }, 404);
+
     if (role === 'admissions_officer') {
-      const existing = await prisma.followup.findFirst({ where: { id, tenantId }, include: { inquiry: true } });
-      const isOwner = existing && (
+      const isOwner = (
         existing.createdBy === email ||
         existing.assignedTo === email ||
         existing.inquiry?.createdBy === email
@@ -210,7 +212,7 @@ export const updateFollowup = async (req: Request, res: Response) => {
         inquiryId: parseInt(inquiryId),
         inquiryName: inquiry.fullName,
         type,
-        scheduledFor: new Date(scheduledFor),
+        scheduledFor: scheduledFor ? new Date(scheduledFor) : existing?.scheduledFor ?? new Date(),
         status,
         assignedTo,
         notes,
@@ -221,11 +223,15 @@ export const updateFollowup = async (req: Request, res: Response) => {
       },
       include: { inquiry: true }
     });
-    // If completed and paid, update inquiry
-    if (status === 'completed' && paymentStatus === 'Paid') {
+    // When followup is completed, always sync paymentStatus to inquiry (Paid or Not Paid)
+    if (status === 'completed') {
       await prisma.inquiry.update({
         where: { id: parseInt(inquiryId), tenantId },
-        data: { paymentStatus, paymentCode, paymentDate: paymentDate ? new Date(paymentDate) : null }
+        data: {
+          paymentStatus: paymentStatus || null,
+          paymentCode: paymentStatus === 'Paid' ? (paymentCode || null) : null,
+          paymentDate: paymentStatus === 'Paid' && paymentDate ? new Date(paymentDate) : null
+        }
       });
     }
     

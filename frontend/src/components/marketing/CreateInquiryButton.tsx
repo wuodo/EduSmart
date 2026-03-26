@@ -538,23 +538,30 @@ export default function CreateInquiryButton({
               <div className="bg-gray-50/60 p-2 border border-gray-200">
                 <h4 className="font-semibold text-[#00a396] text-xs uppercase tracking-wide mb-1">Lead Tag(s)</h4>
                 <div className="flex flex-wrap gap-1.5 mt-1">
-                  {leadTags.map(tag => (
-                    <label key={tag} className="flex items-center gap-1 text-xs font-medium bg-white px-2 py-1 border border-gray-300 hover:border-teal-500 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.leadTags.includes(tag)}
-                        onChange={e => {
-                          if (e.target.checked) {
-                            setFormData({ ...formData, leadTags: [...formData.leadTags, tag] })
-                          } else {
-                            setFormData({ ...formData, leadTags: formData.leadTags.filter(t => t !== tag) })
-                          }
-                        }}
-                        className="w-3 h-3 text-teal-600 focus:ring-teal-500 border-gray-300"
-                      />
-                      <span>{tag.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
-                    </label>
-                  ))}
+                  {leadTags.map(tag => {
+                    const EXCLUSIVE: LeadTag[] = ['hot', 'warm', 'cold']
+                    const isExclusive = EXCLUSIVE.includes(tag as LeadTag)
+                    return (
+                      <label key={tag} className="flex items-center gap-1 text-xs font-medium bg-white px-2 py-1 border border-gray-300 hover:border-teal-500 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.leadTags.includes(tag)}
+                          onChange={e => {
+                            if (e.target.checked) {
+                              const base = isExclusive
+                                ? formData.leadTags.filter(t => !EXCLUSIVE.includes(t as LeadTag))
+                                : formData.leadTags
+                              setFormData({ ...formData, leadTags: [...base, tag] })
+                            } else {
+                              setFormData({ ...formData, leadTags: formData.leadTags.filter(t => t !== tag) })
+                            }
+                          }}
+                          className="w-3 h-3 text-teal-600 focus:ring-teal-500 border-gray-300"
+                        />
+                        <span>{tag.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                      </label>
+                    )
+                  })}
                 </div>
               </div>
 

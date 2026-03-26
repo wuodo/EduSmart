@@ -184,8 +184,17 @@ router.get('/check-phone', async (req, res) => {
     if (!tenantId) return safeJson(res, { exists: false }, 200);
     const phone = String(req.query.phone || '').trim();
     if (!phone) return safeJson(res, { exists: false }, 200);
+    // Normalize to all format variants so 0712345678 == 254712345678 == +254712345678
+    const digits = phone.replace(/\D/g, '');
+    let core = digits;
+    if (digits.startsWith('254') && digits.length >= 12) core = digits.slice(3);
+    else if (digits.startsWith('0') && digits.length >= 10) core = digits.slice(1);
+    const variants = Array.from(new Set([phone, `0${core}`, `254${core}`, `+254${core}`, core]));
     const existing = await prisma.inquiry.findFirst({
-      where: { tenantId, phone: { equals: phone, mode: 'insensitive' } },
+      where: {
+        tenantId,
+        OR: variants.map(v => ({ phone: { equals: v, mode: 'insensitive' as const } })),
+      },
       select: { id: true, fullName: true, programOfInterest: true, createdAt: true, createdBy: true },
       orderBy: { createdAt: 'desc' },
     });
