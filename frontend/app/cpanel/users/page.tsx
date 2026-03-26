@@ -49,7 +49,7 @@ export default function UsersPage() {
   const [showCreateModal, setShowCreateModal] = React.useState(false);
   const [selectedUserIds, setSelectedUserIds] = React.useState<number[]>([]);
   const [showPasswordModal, setShowPasswordModal] = React.useState(false);
-  const [newUserData, setNewUserData] = React.useState<{email: string, password: string} | null>(null);
+  const [newUserData, setNewUserData] = React.useState<{email: string, password: string, tenant: {id: number, name: string, subdomain: string | null} | null} | null>(null);
   const [showResetModal, setShowResetModal] = React.useState(false);
   const [resetUserId, setResetUserId] = React.useState<number | null>(null);
   const [newPassword, setNewPassword] = React.useState('');
@@ -126,7 +126,7 @@ export default function UsersPage() {
       
       // Show password modal with credentials
       if (result.success && result.initialPassword) {
-        setNewUserData({ email: inviteEmail, password: result.initialPassword });
+        setNewUserData({ email: inviteEmail, password: result.initialPassword, tenant: result.tenant || null });
         setShowPasswordModal(true);
         setSuccess(`User ${inviteEmail} created successfully!`);
       }
@@ -439,6 +439,16 @@ export default function UsersPage() {
           <div className="bg-white dark:bg-gray-800 p-4 rounded shadow-xl max-w-md w-full border dark:border-gray-700">
             <h3 className="text-base font-semibold mb-3">User Created Successfully</h3>
             <div className="space-y-4">
+              {newUserData.tenant && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Institution ID <span className="text-xs font-normal text-gray-500">(enter this in the login form)</span></label>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded px-3 py-2 font-mono text-sm text-blue-900 dark:text-blue-100 flex items-center justify-between">
+                    <span>{newUserData.tenant.subdomain || newUserData.tenant.id}</span>
+                    <span className="ml-3 text-xs text-blue-600 dark:text-blue-400 font-sans font-normal">({newUserData.tenant.name})</span>
+                  </div>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Also accepted: numeric ID <strong>{newUserData.tenant.id}</strong> or full name.</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                 <div className="bg-gray-50 dark:bg-gray-700 border dark:border-gray-600 rounded px-3 py-2 font-mono text-sm text-gray-900 dark:text-gray-100">{newUserData.email}</div>
@@ -449,7 +459,7 @@ export default function UsersPage() {
                   <span>{newUserData.password}</span>
                   <button onClick={copyPassword} className="ml-2 px-2 py-1 bg-yellow-200 dark:bg-yellow-800/60 hover:bg-yellow-300 dark:hover:bg-yellow-700 rounded text-xs">Copy</button>
                 </div>
-                <p className="text-xs text-amber-600 dark:text-amber-300 mt-1">Save this password - it will not be shown again.</p>
+                <p className="text-xs text-amber-600 dark:text-amber-300 mt-1">Save this password — it will not be shown again.</p>
               </div>
             </div>
             <div className="mt-6 flex justify-end">

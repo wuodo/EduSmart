@@ -150,6 +150,7 @@ app.post('/api/users/login', async (req, res) => {
       .trim()
       .replace(/[\u200B-\u200D\uFEFF]/g, '');
     if (!tenantCode || !normalizedEmail || !normalizedPassword) {
+      console.warn('[login] missing fields:', { tenantCode: !!tenantCode, email: !!normalizedEmail, password: !!normalizedPassword });
       if (res.headersSent) return;
       return res.status(401).json({ error: 'Invalid login credentials' });
     }
@@ -181,6 +182,7 @@ app.post('/api/users/login', async (req, res) => {
       });
     }
     if (!tenant) {
+      console.warn('[login] tenant not found for code:', tenantCode);
       if (res.headersSent) return;
       return res.status(401).json({ error: 'Invalid login credentials' });
     }
@@ -199,6 +201,7 @@ app.post('/api/users/login', async (req, res) => {
       : false;
 
     if (!user || !passwordOk) {
+      console.warn('[login] failed:', { tenantId: tenant.id, email: normalizedEmail, userFound: !!user, passwordOk });
       recordFailedAttempt('tenant', ip, identifier);
       if (!res.headersSent) {
         return res.status(401).json({ error: 'Invalid login credentials' });

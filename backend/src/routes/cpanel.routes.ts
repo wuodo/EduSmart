@@ -512,8 +512,9 @@ router.post('/users/invite', async (req, res) => {
     if (!email) return safeJson(res, { error: 'email required' }, 400);
     
     // Validate tenant exists if tenantId is provided
+    let tenant: any = null;
     if (tenantId) {
-      const tenant = await prisma.tenant.findUnique({ where: { id: Number(tenantId) } });
+      tenant = await prisma.tenant.findUnique({ where: { id: Number(tenantId) } });
       if (!tenant) return safeJson(res, { error: 'Tenant not found' }, 400);
     }
     
@@ -544,7 +545,7 @@ router.post('/users/invite', async (req, res) => {
     
     await auditLogger.custom(req, 'invite_user', 'cpanel', { userId: u.id, tenantId: u.tenantId, role: u.role });
     
-    // Return user data with initial password (super admin needs to share this)
+    // Return user data with initial password AND tenant info so super admin can share institution ID
     return safeJson(res, { 
       success: true, 
       user: {
@@ -555,7 +556,12 @@ router.post('/users/invite', async (req, res) => {
         approved: u.approved,
         createdAt: u.createdAt
       },
-      initialPassword: tempPassword // Return plain password for super admin to share
+      initialPassword: tempPassword, // Return plain password for super admin to share
+      tenant: tenant ? {
+        id: tenant.id,
+        name: tenant.name,
+        subdomain: tenant.subdomain || null,
+      } : null,
     });
   } catch (e) {
     console.error('Invite user error:', e);
