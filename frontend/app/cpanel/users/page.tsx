@@ -70,11 +70,16 @@ export default function UsersPage() {
         return { usersRes, tenantsRes, usersJson, tenantsJson };
       };
 
-      const { usersRes, tenantsRes, usersJson, tenantsJson } = await fetchBoth();
+      let { usersRes, tenantsRes, usersJson, tenantsJson } = await fetchBoth();
 
       if (usersRes.status === 429 || tenantsRes.status === 429) {
-        // Do not retry on 429 inside the UI; retries can amplify throttling from the platform.
-        throw new Error('Temporarily throttled (429). Please wait a moment and try again.');
+        // Single retry after 2 s — Render free tier can throttle briefly on cold start.
+        await new Promise(r => setTimeout(r, 2000));
+        ({ usersRes, tenantsRes, usersJson, tenantsJson } = await fetchBoth());
+      }
+
+      if (usersRes.status === 429 || tenantsRes.status === 429) {
+        throw new Error('Temporarily throttled. Please refresh the page in a moment.');
       }
 
       if (!usersRes.ok) {

@@ -94,7 +94,7 @@ export const resolveTenant = async (req: Request, res: Response, next: NextFunct
     // they must never be blocked here regardless of environment.
     const SELF_RESOLVING_PATHS = [
       /^\/api\/users\/login/,
-      /^\/api\/cpanel\/login/,
+      /^\/api\/cpanel/, // all cpanel routes — super admin auth, no tenant context needed
       /^\/api\/users\/forgot-password/,
       /^\/api\/users\/reset-password/,
       /^\/api\/users\/register/,
