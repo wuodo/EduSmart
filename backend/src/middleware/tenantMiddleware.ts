@@ -90,6 +90,18 @@ export const resolveTenant = async (req: Request, res: Response, next: NextFunct
     (req as any).tenant = tenant || undefined;
     (req as any).tenantIdentifier = tenantIdentifier || undefined;
 
+    // Auth endpoints resolve their own tenant from tenant_code in the body —
+    // they must never be blocked here regardless of environment.
+    const SELF_RESOLVING_PATHS = [
+      /^\/api\/users\/login/,
+      /^\/api\/cpanel\/login/,
+      /^\/api\/users\/forgot-password/,
+      /^\/api\/users\/reset-password/,
+      /^\/api\/users\/register/,
+      /^\/api\/users\/logout/,
+    ];
+    const isSelfResolvingPath = SELF_RESOLVING_PATHS.some(p => p.test(req.path));
+
     // In non-production you may want a convenient fallback; in production we require an explicit tenant.
     // Local dev safety: if running on localhost, allow a fallback tenant even if NODE_ENV is mis-set.
     if (!tenant) {
@@ -104,6 +116,10 @@ export const resolveTenant = async (req: Request, res: Response, next: NextFunct
         if (!fallback) fallback = await prisma.tenant.findFirst({ orderBy: { id: 'asc' } });
         (req as any).tenant = fallback || undefined;
         (req as any).tenantIdentifier = 'default';
+      } else if (isSelfResolvingPath) {
+        // Auth paths handle tenant resolution from request body — allow through without a pre-resolved tenant.
+        (req as any).tenant = undefined;
+        (req as any).tenantIdentifier = undefined;
       } else {
         res.status(400).json({
           success: false,
