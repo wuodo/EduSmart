@@ -143,9 +143,15 @@ router.post('/tenants', async (req, res) => {
 			} catch (e) {
 				console.error('Audit create_tenant failed:', e);
 			}
-		return safeJson(res, { success: true, tenant: t });
-	} catch (e) {
-		return safeJson(res, { error: 'Failed to create tenant' }, 400);
+		return safeJson(res, { success: true, tenant: t }, 201);
+	} catch (e: any) {
+		console.error('[create_tenant] error:', e?.message || e);
+		// Unique constraint violation
+		if (e?.code === 'P2002') {
+			const field = e?.meta?.target?.[0] || 'field';
+			return safeJson(res, { error: `A tenant with that ${field} already exists` }, 409);
+		}
+		return safeJson(res, { error: 'Failed to create tenant', detail: e?.message }, 400);
 	}
 });
 
@@ -563,9 +569,12 @@ router.post('/users/invite', async (req, res) => {
         subdomain: tenant.subdomain || null,
       } : null,
     });
-  } catch (e) {
-    console.error('Invite user error:', e);
-    return safeJson(res, { error: 'Failed to invite user' }, 400);
+  } catch (e: any) {
+    console.error('[invite_user] error:', e?.message || e);
+    if (e?.code === 'P2002') {
+      return safeJson(res, { error: 'User with that email already exists for this tenant' }, 409);
+    }
+    return safeJson(res, { error: 'Failed to invite user', detail: e?.message }, 400);
   }
 });
 

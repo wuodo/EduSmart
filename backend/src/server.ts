@@ -711,7 +711,10 @@ app.use('/api/ask-ai', askAiRoutes);
 app.use('/api/tenants', tenantAdminRoutes);
 app.use('/api', permissionsRoutes);
 
-// CPanel tenant action shims.
+// Mount cpanel router BEFORE shims so it takes precedence.
+app.use('/api/cpanel', cpanelRoutes);
+
+// CPanel tenant action shims (kept as dead-code fallbacks; cpanel router above handles all these routes).
 // These ensure suspend/unsuspend/delete always exist even when the mounted router
 // is partially misconfigured in some environments.
 const safeJson = (res: any, body: any, status?: number): void => {
@@ -1188,7 +1191,7 @@ app.put('/api/cpanel/users/bulk/deactivate', requireSuperAdmin, async (req, res)
   }
 });
 
-app.use('/api/cpanel', cpanelRoutes);
+// cpanel router already mounted above at line ~714.
 
 // Shim: /api/tenants/me for sidebar/branding (when tenant router is not wired in some builds)
 app.get('/api/tenants/me', async (req, res): Promise<void> => {
