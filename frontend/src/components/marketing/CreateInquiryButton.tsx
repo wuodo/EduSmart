@@ -135,6 +135,29 @@ function validate(form: InquiryFormData) {
 
 const DRAFT_KEY = 'inquiry_form_draft'
 
+async function fetchApiCourses(): Promise<{ label: string; options: string[] }[]> {
+  try {
+    const headers: Record<string, string> = {}
+    if (typeof window !== 'undefined') {
+      const t = localStorage.getItem('tenant') || ''
+      if (t) headers['x-tenant'] = t
+    }
+    const res = await fetch(`${WEB_API}/courses`, { credentials: 'include', headers })
+    if (!res.ok) return []
+    const data = await res.json()
+    if (!Array.isArray(data) || data.length === 0) return []
+    const groups: Record<string, string[]> = {}
+    for (const c of data) {
+      const label = `${c.level || 'Other'} Courses`
+      if (!groups[label]) groups[label] = []
+      if (c.name && !groups[label].includes(c.name)) groups[label].push(c.name)
+    }
+    return Object.entries(groups).map(([label, options]) => ({ label, options }))
+  } catch {
+    return []
+  }
+}
+
 interface DuplicateInfo {
   fullName: string
   programOfInterest?: string | null
@@ -162,6 +185,13 @@ export default function CreateInquiryButton({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [duplicateWarning, setDuplicateWarning] = useState<DuplicateInfo | null>(null)
   const phoneCheckRef = useRef<string>('')
+  const [apiProgramGroups, setApiProgramGroups] = useState<{ label: string; options: string[] }[]>([])
+
+  useEffect(() => {
+    fetchApiCourses().then(groups => {
+      if (groups.length > 0) setApiProgramGroups(groups)
+    })
+  }, [])
 
   const checkPhoneDuplicate = async (phone: string) => {
     const trimmed = phone.trim()
@@ -258,8 +288,17 @@ export default function CreateInquiryButton({
     if (!isEdit) localStorage.removeItem(DRAFT_KEY)
   }
 
-  // All programs flattened for dropdown
-  const allPrograms = programGroups.flatMap(group => group.options);
+  // Merge static and API program groups, deduplicating options
+  const mergedProgramGroups = (() => {
+    const staticNames = new Set(programGroups.flatMap(g => g.options))
+    const extra: { label: string; options: string[] }[] = []
+    for (const apiGroup of apiProgramGroups) {
+      const newOpts = apiGroup.options.filter(o => !staticNames.has(o))
+      if (newOpts.length > 0) extra.push({ label: apiGroup.label, options: newOpts })
+    }
+    return [...programGroups, ...extra]
+  })()
+  const allPrograms = mergedProgramGroups.flatMap(group => group.options);
 
   // County/town derived options
   const townOptions = formData.county && kenyaCounties[formData.county as keyof typeof kenyaCounties] ? kenyaCounties[formData.county as keyof typeof kenyaCounties] : []
@@ -268,7 +307,7 @@ export default function CreateInquiryButton({
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="px-4 py-2 bg-emerald-200 text-emerald-950 text-[13px] font-bold rounded-md hover:bg-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+        className="px-4 py-2 bg-orange-600 text-white text-[13px] font-bold rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
       >
         Create Inquiry
       </button>
@@ -389,7 +428,7 @@ export default function CreateInquiryButton({
                       required
                     >
                       <option value="">Select a program</option>
-                      {programGroups.map(group => (
+                      {mergedProgramGroups.map(group => (
                         <optgroup key={group.label} label={group.label}>
                           {group.options.map(opt => (
                             <option key={opt} value={opt}>{opt}</option>

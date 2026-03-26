@@ -427,7 +427,7 @@ export default function DashboardLayout({
                     <path d="M12 22c1.104 0 2-.896 2-2h-4c0 1.104.896 2 2 2Zm7-6v-5a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Z"/>
                   </svg>
                   {deleteRequests.length > 0 && (
-                    <span className="absolute -top-1 right-0 bg-teal-500 text-white text-[10px] leading-none rounded-full px-1 py-0.5">{deleteRequests.length}</span>
+                    <span className="absolute -top-1 right-0 bg-red-500 text-white text-[10px] leading-none rounded-full px-1 py-0.5">{deleteRequests.length}</span>
                   )}
                 </button>
               ) : (
@@ -465,7 +465,7 @@ export default function DashboardLayout({
                   <circle cx="16" cy="12" r=".9" fill="currentColor"/>
                 </svg>
                 {unreadChatCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-teal-500 text-white text-[10px] leading-none rounded-full px-1 py-0.5">{unreadChatCount}</span>
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full px-1 py-0.5">{unreadChatCount}</span>
                 )}
               </button>
 
@@ -506,7 +506,7 @@ export default function DashboardLayout({
                   <circle cx="16" cy="12" r=".9" fill="currentColor"/>
                 </svg>
                 {unreadChatCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-teal-500 text-white text-xs rounded-full px-1">{unreadChatCount}</span>
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1">{unreadChatCount}</span>
                 )}
               </button>
             </div>
@@ -519,7 +519,7 @@ export default function DashboardLayout({
                   <path d="M12 22c1.104 0 2-.896 2-2h-4c0 1.104.896 2 2 2Zm7-6v-5a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Z"/>
                 </svg>
                 {deleteRequests.length > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-teal-500 text-white text-xs rounded-full px-1">{deleteRequests.length}</span>
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1">{deleteRequests.length}</span>
                 )}
               </button>
             ) : (

@@ -43,7 +43,7 @@ export default function FloatingChat({
   const [selected, setSelected] = useState<ChatRoom | null>(null)
   const widgetRef = useRef<HTMLDivElement>(null)
   const dragData = useRef<{ x: number; y: number; dx: number; dy: number } | null>(null)
-  const [size, setSize] = useState<{ w: number; h: number }>({ w: 450, h: 520 })
+  const [size, setSize] = useState<{ w: number; h: number }>({ w: Math.min(450, typeof window !== 'undefined' ? window.innerWidth - 32 : 450), h: Math.min(520, typeof window !== 'undefined' ? window.innerHeight - 120 : 520) })
   const [dragging, setDragging] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [newGroupName, setNewGroupName] = useState('Group Chat')
@@ -189,7 +189,7 @@ export default function FloatingChat({
     return (
       <button
         ref={widgetRef as any}
-        className="fixed z-50 text-white rounded-full shadow-lg"
+        className="fixed z-50 text-white rounded-full shadow-lg bg-transparent"
         style={{ right: 16, bottom: 16, width: 48, height: 48 }}
         onClick={() => setOpen(true)}
         title="Open chat"
@@ -209,7 +209,7 @@ export default function FloatingChat({
   }
 
   return (
-    <div ref={widgetRef} className="fixed z-50" style={{ right: 16, bottom: 16, width: size.w, height: size.h }}>
+    <div ref={widgetRef} className="fixed z-50" style={{ right: 16, bottom: 16, width: Math.min(size.w, typeof window !== 'undefined' ? window.innerWidth - 32 : size.w), height: Math.min(size.h, typeof window !== 'undefined' ? window.innerHeight - 120 : size.h) }}>
       <div className="flex flex-col w-full h-full rounded-lg shadow-xl bg-white border dark:bg-neutral-900 dark:text-neutral-100 overflow-hidden">
         <div data-drag-handle className="relative h-10 flex items-center justify-between px-3 bg-green-600 text-white rounded-t-lg cursor-move select-none dark:bg-emerald-700">
           <div className="min-w-0 flex items-center gap-2">

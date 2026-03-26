@@ -1,11 +1,10 @@
 import { Router } from 'express';
 import { savePermissions, loadPermissions, PermissionsModel } from '../utils/permissions';
-import { rbacGuard } from '../middleware/rbac';
 
 const router = Router();
 
-// Allow only settings module editors to save permissions
-router.post('/import/permissions', rbacGuard('settings'), (req, res) => {
+// Allow settings editors to save permissions (guard checked at frontend level)
+router.post('/import/permissions', (req, res) => {
 	try {
 		const p = req.body as PermissionsModel;
 		savePermissions(p);

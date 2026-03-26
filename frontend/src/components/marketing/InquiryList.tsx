@@ -534,13 +534,13 @@ export default function InquiryList({
       
       <div className="flow-root">
         <div className="-mx-4 sm:-mx-6 lg:-mx-8">
-          <div className="py-2 align-middle sm:px-6 lg:px-8">
+          <div className="py-2 align-middle sm:px-6 lg:px-8 overflow-x-auto">
             {sorted.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No data to show.
               </div>
             ) : (
-            <table className="w-full table-auto md:table-fixed border-separate border-spacing-0 text-[13px] rounded-lg overflow-hidden shadow-sm ring-1 ring-gray-200">
+            <table className="w-full table-auto border-separate border-spacing-0 text-[13px] rounded-lg overflow-hidden shadow-sm ring-1 ring-gray-200">
               <thead className="bg-gray-50/80">
                 <tr>
                   <th scope="col" className={`${thBase} py-2 pl-3 pr-2 sm:pl-4 lg:pl-6 w-[56px]`}>

@@ -658,8 +658,8 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
                             </div>
                             <div className="px-2 py-1">
                               <a
-                                href={`https://wa.me/${String(inquiry.phone || '').replace(/^0/, '254')}?text=${encodeURIComponent(
-                                  `Hello ${inquiry.fullName},\n\nCongratulations! Your admission letter is ready. Your admission date is ${admissionDate}.\n\nPlease contact us for more details.\n\nBest regards,\nAdmissions Office`
+                                href={`https://wa.me/${String(inquiry.phone || '').replace(/\D/g,'').replace(/^0/, '254')}?text=${encodeURIComponent(
+                                  `Dear ${inquiry.fullName},\n\nCongratulations! We are pleased to inform you that your admission letter for *${inquiry.programOfInterest || 'your programme'}* is ready.\n\n📅 Admission Date: ${admissionDate}${inquiry.letterReferenceNumber ? `\n🔖 Reference No: ${inquiry.letterReferenceNumber}` : ''}\n\nPlease visit our admissions office or contact us for your original letter.\n\nBest regards,\nAdmissions Office`
                                 )}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -667,6 +667,41 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
                               >
                                 <FaWhatsappAny className="h-4 w-4" /> Send via WhatsApp
                               </a>
+                            </div>
+                            <div className="px-2 py-1">
+                              <button
+                                className="w-full text-left inline-flex items-center gap-2 px-2 py-1.5 text-[12px] border border-green-300 text-green-900 hover:bg-green-50 disabled:opacity-50"
+                                onClick={async () => {
+                                  if (!navigator.canShare) { alert('PDF sharing is not supported on this browser. Please download and share manually.'); return; }
+                                  try {
+                                    let type = '';
+                                    if (inquiry.programOfInterest?.toLowerCase().includes('diploma')) type = 'diploma';
+                                    else if (inquiry.programOfInterest?.toLowerCase().includes('certificate')) type = 'certificate';
+                                    else if (inquiry.programOfInterest?.toLowerCase().includes('artisan')) type = 'artisan';
+                                    const duration = getCourseDuration(inquiry.programOfInterest || '', type);
+                                    const res = await fetch(`${WEB_API}/admission-letters/generate`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json', ...userHeaders() },
+                                      body: JSON.stringify({ inquiryId: inquiry.id || inquiry._id, name: inquiry.fullName, phone: inquiry.phone, course: inquiry.programOfInterest, duration, admissionDate, staffInitials: 'WL', templateId }),
+                                    });
+                                    const data = await res.json();
+                                    if (!data?.pdf) { alert('Failed to generate PDF for sharing.'); return; }
+                                    const binary = atob(data.pdf);
+                                    const bytes = new Uint8Array(binary.length);
+                                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                                    const file = new File([bytes], `admission-letter-${inquiry.fullName?.replace(/\s+/g,'-')}.pdf`, { type: 'application/pdf' });
+                                    if (navigator.canShare({ files: [file] })) {
+                                      await navigator.share({ files: [file], title: 'Admission Letter', text: `Admission Letter for ${inquiry.fullName}` });
+                                    } else {
+                                      alert('PDF file sharing is not supported on this device. Please use the download option instead.');
+                                    }
+                                  } catch (e: any) {
+                                    if (e?.name !== 'AbortError') alert('Failed to share PDF: ' + (e?.message || 'Unknown error'));
+                                  }
+                                }}
+                              >
+                                <FaWhatsappAny className="h-4 w-4" /> Share PDF (Web Share)
+                              </button>
                             </div>
                             <div className="px-2 py-1">
                               <a

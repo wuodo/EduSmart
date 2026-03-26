@@ -156,14 +156,27 @@ export default function InquiriesPage() {
     }
   }, [])
 
+  const [apiCourses, setApiCourses] = useState<string[]>([])
+  useEffect(() => {
+    fetch(`${WEB_API}/courses`, { credentials: 'include', headers: userHeaders() })
+      .then(r => r.json())
+      .then((data: any[]) => {
+        if (Array.isArray(data)) setApiCourses(data.map(c => c.name).filter(Boolean))
+      })
+      .catch(() => {})
+  }, [])
+
   const programOptions = useMemo(() => {
     const set = new Set<string>()
     for (const i of inquiries || []) {
       const p = String((i as any)?.programOfInterest || '').trim()
       if (p) set.add(p)
     }
+    for (const name of apiCourses) {
+      if (name) set.add(name)
+    }
     return Array.from(set).sort((a, b) => a.localeCompare(b))
-  }, [inquiries])
+  }, [inquiries, apiCourses])
 
   const filteredInquiries = useMemo(() => {
     const statusFilter = status.trim().toLowerCase()

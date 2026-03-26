@@ -148,13 +148,13 @@ export default function FloatingAskAi() {
   if (!open) {
     return (
       <button
-        className="fixed z-50 text-white rounded-full shadow-lg"
+        className="fixed z-50 text-white rounded-full shadow-lg bg-transparent"
         style={{ right: 16, bottom: 88, width: 48, height: 48 }}
         onClick={() => setOpen(true)}
         title="Ask Me"
       >
         <span className="w-full h-full inline-flex items-center justify-center rounded-full bg-orange-600 relative">
-          <span className="text-[12px] font-bold">Ask</span>
+          <span className="text-[10px] font-bold leading-tight">Ask Me</span>
         </span>
       </button>
     )
