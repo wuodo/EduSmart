@@ -166,13 +166,14 @@ app.post('/api/users/login', async (req, res) => {
     const asId = Number.parseInt(tenantCode, 10);
     let tenant: any = null;
     // Treat any digits-only tenant_code (including leading zeros like "03") as an ID.
+    // Do NOT filter by isActive here — check it separately so a suspended tenant gives
+    // a clear error instead of silently matching nothing.
     if (!Number.isNaN(asId) && /^\d+$/.test(tenantCode)) {
-      tenant = await prisma.tenant.findFirst({ where: { id: asId, isActive: true } });
+      tenant = await prisma.tenant.findFirst({ where: { id: asId } });
     }
     if (!tenant) {
       tenant = await prisma.tenant.findFirst({
         where: {
-          isActive: true,
           OR: [
             { subdomain: { equals: tenantCode, mode: 'insensitive' } },
             { name: { equals: tenantCode, mode: 'insensitive' } },
@@ -185,6 +186,11 @@ app.post('/api/users/login', async (req, res) => {
       console.warn('[login] tenant not found for code:', tenantCode);
       if (res.headersSent) return;
       return res.status(401).json({ error: 'Invalid login credentials' });
+    }
+    if (tenant.isActive === false) {
+      console.warn('[login] tenant suspended:', tenant.id);
+      if (res.headersSent) return;
+      return res.status(403).json({ error: 'Institution account is suspended. Please contact support.' });
     }
 
     const user = await prisma.user.findFirst({

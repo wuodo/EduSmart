@@ -32,14 +32,14 @@ async function resolveTenantByCode(tenantCode: string) {
 
   const asId = Number.parseInt(code, 10);
   // Treat any digits-only tenant_code (including leading zeros) as an ID.
+  // Do NOT filter by isActive — caller checks that separately.
   if (!Number.isNaN(asId) && /^\d+$/.test(code)) {
-    const byId = await prisma.tenant.findFirst({ where: { id: asId, isActive: true } });
+    const byId = await prisma.tenant.findFirst({ where: { id: asId } });
     if (byId) return byId;
   }
 
   return prisma.tenant.findFirst({
     where: {
-      isActive: true,
       OR: [
         { subdomain: { equals: code, mode: 'insensitive' } },
         { name: { equals: code, mode: 'insensitive' } },
@@ -291,6 +291,9 @@ router.post('/login', async (req, res) => {
     if (!tenant) {
       await auditLogger.login(req, normalizedEmail, false, { tenantCode, reason: 'tenant_not_found' });
       return safeJson(res, { error: 'Invalid login credentials' }, 401);
+    }
+    if (tenant.isActive === false) {
+      return safeJson(res, { error: 'Institution account is suspended. Please contact support.' }, 403);
     }
 
     const user = await prisma.user.findFirst({
