@@ -48,7 +48,7 @@ function profileCompleteness(inquiry: any): { score: number; missingFields: stri
   if (isBlank(inquiry?.detail?.town)) missing.push('town');
   const score = Math.round(((PROFILE_REQUIRED_FIELDS.length - missing.length) / PROFILE_REQUIRED_FIELDS.length) * 100);
   return { score, missingFields: missing };
-}
+}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 
 function safeJson(res: express.Response, body: any, status?: number) {
   if (res.headersSent) return;
@@ -174,6 +174,25 @@ router.get('/completeness/summary', async (req, res) => {
   } catch (error) {
     if (res.headersSent) return;
     return safeJson(res, { message: 'Error generating completeness summary', error: error instanceof Error ? error.message : String(error) }, 500);
+  }
+});
+
+// Check for duplicate phone number within tenant
+router.get('/check-phone', async (req, res) => {
+  try {
+    const tenantId = await getTenantId(req as any);
+    if (!tenantId) return safeJson(res, { exists: false }, 200);
+    const phone = String(req.query.phone || '').trim();
+    if (!phone) return safeJson(res, { exists: false }, 200);
+    const existing = await prisma.inquiry.findFirst({
+      where: { tenantId, phone: { equals: phone, mode: 'insensitive' } },
+      select: { id: true, fullName: true, programOfInterest: true, createdAt: true, createdBy: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (existing) return safeJson(res, { exists: true, inquiry: existing });
+    return safeJson(res, { exists: false });
+  } catch {
+    return safeJson(res, { exists: false }, 200);
   }
 });
 

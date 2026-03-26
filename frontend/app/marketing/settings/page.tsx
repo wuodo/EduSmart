@@ -10,6 +10,10 @@ import Branding from './Branding';
 import AuditLogs from './AuditLogs';
 import Integrations from './Integrations';
 import SmartFeatures from './SmartFeatures';
+import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+
+const Bars3IconAny: any = Bars3Icon;
+const XMarkIconAny: any = XMarkIcon;
 
 const SECTIONS = [
   { key: 'user', label: 'User Management', module: 'settings' },
@@ -24,10 +28,10 @@ const SECTIONS = [
 ];
 
 export default function MarketingSettingsPage() {
-  const [section, setSection] = useState('system'); // Default to system configuration
+  const [section, setSection] = useState('system');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { canView, loading } = usePermissions();
-  
-  // If permissions are still loading, show a loading state
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -39,31 +43,68 @@ export default function MarketingSettingsPage() {
     );
   }
 
+  const currentSection = SECTIONS.find(s => s.key === section);
+
+  const NavContent = () => (
+    <nav className="flex flex-col gap-1">
+      {SECTIONS.map(s => {
+        const allowed = canView ? canView(s.module) : true;
+        return (
+          <button
+            key={s.key}
+            className={`w-full -mx-2 pr-2 pl-6 py-1.5 text-left text-sm font-medium transition ${
+              section === s.key
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-700/60'
+            } ${!allowed ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
+            onClick={() => { allowed && setSection(s.key); setSidebarOpen(false); }}
+            disabled={!allowed}
+          >
+            {s.label}
+          </button>
+        );
+      })}
+    </nav>
+  );
+
   return (
-    <div className="flex min-h-[80vh]">
-      <aside className="w-64 ml-3 md:ml-4 pr-6 border-r border-gray-200 dark:border-gray-700 sticky top-20 self-start h-[calc(100vh-5rem)] overflow-auto bg-white/70 dark:bg-white/5 backdrop-blur-sm">
-        <h1 className="text-xl font-semibold mb-4 pl-6 pr-2 text-gray-900 dark:text-white">Marketing Settings</h1>
-        <nav className="flex flex-col gap-1">
-          {SECTIONS.map(s => {
-            const allowed = canView ? canView(s.module) : true;
-            return (
-              <button
-                key={s.key}
-                className={`w-full -mx-2 pr-2 pl-6 py-1.5 text-left text-sm font-medium transition ${
-                  section === s.key 
-                    ? 'bg-primary text-white shadow-sm' 
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-700/60'
-                } ${!allowed ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
-                onClick={() => allowed && setSection(s.key)}
-                disabled={!allowed}
-              >
-                {s.label}
-              </button>
-            );
-          })}
-        </nav>
+    <div className="flex min-h-[80vh] relative">
+      {/* Mobile sidebar toggle */}
+      <div className="lg:hidden flex items-center gap-2 absolute top-0 left-0 z-20 px-3 py-2 bg-white/90 dark:bg-gray-800/90 border-b border-gray-200 w-full">
+        <button
+          onClick={() => setSidebarOpen(o => !o)}
+          className="p-1.5 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+        >
+          {sidebarOpen ? <XMarkIconAny className="h-5 w-5" /> : <Bars3IconAny className="h-5 w-5" />}
+        </button>
+        <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">
+          Settings — {currentSection?.label || ''}
+        </span>
+      </div>
+
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — fixed on mobile, static on desktop */}
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 z-40 w-64 flex-shrink-0 
+        ml-0 lg:ml-3 xl:ml-4 pr-6 border-r border-gray-200 dark:border-gray-700
+        bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm
+        lg:sticky lg:top-20 lg:self-start lg:h-[calc(100vh-5rem)] overflow-auto
+        transform transition-transform duration-200
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        pt-14 lg:pt-0
+      `}>
+        <h1 className="text-xl font-semibold mb-4 pl-6 pr-2 pt-4 text-gray-900 dark:text-white">Marketing Settings</h1>
+        <NavContent />
       </aside>
-      <main className="flex-1 pl-8">
+
+      <main className="flex-1 pl-4 lg:pl-8 pt-12 lg:pt-0 min-w-0">
         {section === 'user' && <Guard module="settings"><UserManagementPage /></Guard>}
         {section === 'system' && <Guard module="settings"><SystemConfig /></Guard>}
         {section === 'permissions' && <Guard module="settings"><Permissions /></Guard>}

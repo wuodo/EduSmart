@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { WEB_API } from '@/utils/api'
 import {
   InquiryFormData,
   InquiryStatus,
@@ -134,6 +135,13 @@ function validate(form: InquiryFormData) {
 
 const DRAFT_KEY = 'inquiry_form_draft'
 
+interface DuplicateInfo {
+  fullName: string
+  programOfInterest?: string | null
+  createdAt: string
+  createdBy?: string | null
+}
+
 export default function CreateInquiryButton({
   addInquiry,
   initialData,
@@ -152,6 +160,35 @@ export default function CreateInquiryButton({
   const [isOpen, setIsOpen] = useState(false)
   const [formData, setFormData] = useState<InquiryFormData>(initialData || initialForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [duplicateWarning, setDuplicateWarning] = useState<DuplicateInfo | null>(null)
+  const phoneCheckRef = useRef<string>('')
+
+  const checkPhoneDuplicate = async (phone: string) => {
+    const trimmed = phone.trim()
+    if (!trimmed || isEdit) return
+    if (phoneCheckRef.current === trimmed) return
+    phoneCheckRef.current = trimmed
+    try {
+      const headers: Record<string, string> = {}
+      if (typeof window !== 'undefined') {
+        const t = localStorage.getItem('tenant') || ''
+        if (t) headers['x-tenant'] = t
+      }
+      const res = await fetch(`${WEB_API}/inquiries/check-phone?phone=${encodeURIComponent(trimmed)}`, {
+        credentials: 'include',
+        headers,
+      })
+      if (!res.ok) return
+      const data = await res.json().catch(() => null)
+      if (data?.exists && data?.inquiry) {
+        setDuplicateWarning(data.inquiry)
+      } else {
+        setDuplicateWarning(null)
+      }
+    } catch {
+      // non-blocking
+    }
+  }
 
   // Auto-save draft (only for create mode)
   useEffect(() => {
@@ -176,6 +213,7 @@ export default function CreateInquiryButton({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (duplicateWarning) return
     const v = validate(formData)
     setErrors(v)
     if (Object.keys(v).length === 0) {
@@ -268,7 +306,8 @@ export default function CreateInquiryButton({
                     <input
                       type="tel"
                       value={formData.phone}
-                      onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={e => { setFormData({ ...formData, phone: e.target.value }); setDuplicateWarning(null); phoneCheckRef.current = '' }}
+                      onBlur={e => checkPhoneDuplicate(e.target.value)}
                       className="w-full px-2 py-1.5 text-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
                       required
                     />
@@ -490,6 +529,26 @@ export default function CreateInquiryButton({
                   rows={2}
                 />
               </div>
+
+              {/* Duplicate Phone Warning */}
+              {duplicateWarning && (
+                <div className="border border-amber-300 bg-amber-50 rounded p-3 text-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-amber-800 mb-1">⚠️ Duplicate Phone Number Detected</p>
+                      <p className="text-amber-700">This phone number already exists in the system:</p>
+                      <ul className="mt-1 ml-3 text-amber-800 space-y-0.5 text-xs">
+                        <li><span className="font-semibold">Name:</span> {duplicateWarning.fullName}</li>
+                        <li><span className="font-semibold">Course:</span> {duplicateWarning.programOfInterest || 'N/A'}</li>
+                        <li><span className="font-semibold">Added by:</span> {duplicateWarning.createdBy || 'Unknown'}</li>
+                        <li><span className="font-semibold">Added on:</span> {new Date(duplicateWarning.createdAt).toLocaleDateString()}</li>
+                      </ul>
+                      <p className="mt-1.5 text-xs text-amber-700">This inquiry will not be saved. Please verify the phone number.</p>
+                    </div>
+                    <button type="button" onClick={() => setDuplicateWarning(null)} className="text-amber-500 hover:text-amber-700 text-lg leading-none mt-0.5">×</button>
+                  </div>
+                </div>
+              )}
 
               {/* Submit & Clear Buttons */}
               <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-gray-200">

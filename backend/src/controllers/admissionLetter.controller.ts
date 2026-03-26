@@ -264,6 +264,18 @@ export const downloadAdmissionLetter = async (req: Request, res: Response) => {
     const sequentialNumber = await getSequentialNumber();
     const referenceCode = `JFCM/REG/${monthInitial}${sequentialNumber}/${year}`;
 
+    // Save serial/reference to DB so CSV export shows correct values
+    if (inquiryId) {
+      try {
+        await prisma.inquiry.update({
+          where: { id: parseInt(String(inquiryId)), tenantId } as any,
+          data: { letterStatus: 'Generated', letterReferenceNumber: referenceCode, letterSerialNumber: serialNumber }
+        });
+      } catch (e: any) {
+        if ((e as any).code !== 'P2025') console.warn('Error updating letter status on download:', e);
+      }
+    }
+
     console.log('Loading background image...');
     const bgPath = path.join(__dirname, '../../assets/admission-letter-bg.png');
     if (!fs.existsSync(bgPath)) throw new Error(`Background image not found at: ${bgPath}`);
@@ -399,6 +411,15 @@ export const downloadAdmissionLetter = async (req: Request, res: Response) => {
         y -= fontSize * lineSpacing * 2;
       }
     }
+
+    // Draw closing signature block
+    y -= fontSize * lineSpacing;
+    page1.drawText('Yours faithfully,', { x: contentMargin, y, size: fontSize, font: regularFont, color: rgb(0, 0, 0) });
+    y -= fontSize * lineSpacing * 3.5;
+    // Cover old principal name in background with white rectangle, then draw new name
+    page1.drawRectangle({ x: contentMargin, y: y - 4, width: 200, height: 36, color: rgb(1, 1, 1) });
+    page1.drawText('James Chiaga', { x: contentMargin, y: y + 14, size: 12, font: boldFont, color: rgb(0, 0, 0) });
+    page1.drawText('Principal', { x: contentMargin, y: y, size: 11, font: regularFont, color: rgb(0, 0, 0) });
 
     console.log('Loading static pages...');
     const staticPdfPath = path.join(__dirname, '../../assets/admission-letter-static.pdf');
@@ -639,6 +660,13 @@ async function generateAdmissionLetterBuffer({ name, phone, course, duration, ad
       y -= fontSize * lineSpacing * 2;
     }
   }
+  // Draw closing signature block
+  y -= fontSize * lineSpacing;
+  page1.drawText('Yours faithfully,', { x: contentMargin, y, size: fontSize, font: regularFont, color: rgb(0, 0, 0) });
+  y -= fontSize * lineSpacing * 3.5;
+  page1.drawRectangle({ x: contentMargin, y: y - 4, width: 200, height: 36, color: rgb(1, 1, 1) });
+  page1.drawText('James Chiaga', { x: contentMargin, y: y + 14, size: 12, font: boldFont, color: rgb(0, 0, 0) });
+  page1.drawText('Principal', { x: contentMargin, y: y, size: 11, font: regularFont, color: rgb(0, 0, 0) });
   // Load and append static pages
   const staticPdfPath = path.join(__dirname, '../../assets/admission-letter-static.pdf');
   if (!fs.existsSync(staticPdfPath)) throw new Error(`Static PDF not found at: ${staticPdfPath}`);

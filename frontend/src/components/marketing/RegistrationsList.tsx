@@ -65,6 +65,7 @@ interface RegistrationsListProps {
 }
 
 export default function RegistrationsList({ registrations, inquiries, ownerLabel, showOwnerFilter, owners = [], ownerValue = '', onOwnerChange }: RegistrationsListProps) {
+  const [userRole, setUserRole] = useState<string>('');
   const [viewReg, setViewReg] = useState<Registration | null>(null);
   const [reminderStatus, setReminderStatus] = useState<Record<string, { lastSent: string | null, status: string, lastResponse?: string | null, sentiment?: string | null }>>({});
   const [logModal, setLogModal] = useState<{ open: boolean, reg: Registration | null }>({ open: false, reg: null });
@@ -73,6 +74,20 @@ export default function RegistrationsList({ registrations, inquiries, ownerLabel
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [filters, setFilters] = useState<{ status: string; sentiment: string }>({ status: '', sentiment: '' });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const m = document.cookie.match(/(?:^|; )role=([^;]+)/);
+        const c = m ? decodeURIComponent(m[1]) : '';
+        setUserRole(String(c || localStorage.getItem('userRole') || '').toLowerCase());
+      } catch {
+        setUserRole(String(localStorage.getItem('userRole') || '').toLowerCase());
+      }
+    }
+  }, []);
+
+  const isAdmissionsOfficer = userRole === 'admissions_officer';
 
   const QUICK_RESPONSES: { id: string; label: string; text: string }[] = [
     { id: 'confirmed', label: 'Confirmed', text: 'Yes confirmed. I will report.' },
@@ -404,7 +419,12 @@ export default function RegistrationsList({ registrations, inquiries, ownerLabel
                             {React.createElement(EyeIconAny, { className: 'h-5 w-5' })}
                           </button>
                           {/* Delete */}
-                          <button onClick={() => handleDelete(reg.id)} title="Delete" className="p-1 rounded hover:bg-rose-100 text-rose-500">
+                          <button
+                            onClick={() => !isAdmissionsOfficer && handleDelete(reg.id)}
+                            title={isAdmissionsOfficer ? 'Contact an Admin to delete this record' : 'Delete'}
+                            disabled={isAdmissionsOfficer}
+                            className={`p-1 rounded ${isAdmissionsOfficer ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-rose-100 text-rose-500'}`}
+                          >
                             {React.createElement(TrashIconAny, { className: 'h-5 w-5' })}
                           </button>
                           {/* WhatsApp quick chat */}

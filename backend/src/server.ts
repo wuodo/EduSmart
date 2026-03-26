@@ -21,6 +21,7 @@ import path from 'path';
 import permissionsRoutes from './routes/permissions.routes';
 import cpanelRoutes from './routes/cpanel.routes';
 import askAiRoutes from './routes/askAi.routes';
+import coursesRoutes from './routes/courses.routes';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { rbacGuard } from './middleware/rbac';
@@ -708,6 +709,7 @@ app.use('/api/audit-logs', auditLogsRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/ask-ai', askAiRoutes);
+app.use('/api/courses', coursesRoutes);
 app.use('/api/tenants', tenantAdminRoutes);
 app.use('/api', permissionsRoutes);
 

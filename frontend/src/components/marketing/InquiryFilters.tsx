@@ -86,13 +86,13 @@ export default function InquiryFilters({
 
   return (
     <div className="w-full">
-      <div className="flex flex-wrap md:flex-nowrap items-center gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:flex xl:flex-wrap items-center gap-2">
         <input
           type="text"
           placeholder="Search inquiries..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className={`${inputClass} flex-[1.6] min-w-[170px]`}
+          className={`${inputClass} col-span-2 sm:col-span-3 lg:col-span-2 xl:flex-[1.6] xl:min-w-[170px]`}
         />
         {setStatus && (
           <select

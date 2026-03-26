@@ -34,6 +34,7 @@ const navigation: NavigationItem[] = [
   { name: 'Calendar', href: '/calendar', icon: CalendarDaysIcon },
   { name: 'Admission Letters', href: '/admission-letters', icon: DocumentTextIcon },
   { name: 'Registrations', href: '/registrations', icon: DocumentTextIcon },
+  { name: 'Courses', href: '/courses', icon: DocumentTextIcon },
   { name: 'Campaigns', href: '/marketing/campaigns', icon: MegaphoneIcon },
   { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
   { name: 'Reports', href: '/reports', icon: DocumentTextIcon },
@@ -136,9 +137,9 @@ export default function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
     }
   }, [branding])
 
-  // Only show Settings for admin and senior_staff
+  // Only show Settings and Courses for admin and senior_staff
   const filteredNavigation = navigation.filter(item => {
-    if (item.name === 'Settings') {
+    if (item.name === 'Settings' || item.name === 'Courses') {
       return userRole === 'admin' || userRole === 'senior_staff';
     }
     return true;

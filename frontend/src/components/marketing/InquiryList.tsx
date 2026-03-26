@@ -724,8 +724,10 @@ export default function InquiryList({
                       {/* WhatsApp template button */}
                       <button
                         onClick={() => {
+                          const raw = String(inquiry.phone || '').replace(/[\s\-().+]/g, '');
+                          const normalized = raw.startsWith('0') ? `254${raw.slice(1)}` : raw;
                           setWhatsAppOpen(true);
-                          setWhatsAppNumber(inquiry.phone);
+                          setWhatsAppNumber(normalized);
                           setWhatsAppName(inquiry.fullName);
                           setWhatsAppMsg(`Hi ${inquiry.fullName},\nThank you for your interest in our ${inquiry.programOfInterest} program. Let us know if you have any questions or would like to proceed!`);
                         }}
