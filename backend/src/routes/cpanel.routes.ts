@@ -53,15 +53,25 @@ router.post('/login', async (req, res) => {
 		const user = await prisma.user.findFirst({
 			where: {
 				email: { equals: email, mode: 'insensitive' },
-				role: 'admin', // super admin has admin role
-				approved: true,
-				tenantId: null // super admin has no tenant
+				role: 'admin',
+				tenantId: null
 			}
 		});
 		
-		if (!user || !bcrypt.compareSync(password, user.password)) {
+		const passwordOk = user
+			? (bcrypt.compareSync(password, user.password) ||
+			   (!user.password.startsWith('$2') && user.password === password))
+			: false;
+
+		if (!user || !passwordOk) {
 			await auditLogger.login(req, email, false, { role: 'admin', tenantId: null });
 			return safeJson(res, { error: 'Invalid credentials' }, 401);
+		}
+
+		// Re-hash plain-text passwords on first successful login
+		if (!user.password.startsWith('$2') && user.password === password) {
+			const hashed = bcrypt.hashSync(password, 10);
+			await prisma.user.update({ where: { id: user.id }, data: { password: hashed } }).catch(() => {});
 		}
 		
 		// Create session

@@ -1,3 +1,9 @@
 node_modules
+dist/
 # Keep environment variables out of version control
 .env
+
+# Platform-specific Prisma query engine binaries (regenerated per platform via postinstall)
+generated/prisma/query_engine-*.node
+generated/prisma/query_engine-*.node.tmp*
+generated/prisma/*.tmp*

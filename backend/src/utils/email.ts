@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer'
 
-function hasSmtpConfig(): boolean {
+export function hasSmtpConfig(): boolean {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS)
 }
 

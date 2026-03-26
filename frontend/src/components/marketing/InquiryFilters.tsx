@@ -26,6 +26,8 @@ const intakePeriods = ['January', 'March', 'May', 'July', 'September', 'November
 const genders = ['male', 'female', 'other']
 
 export default function InquiryFilters({
+  status,
+  setStatus,
   source,
   setSource,
   search,
@@ -49,6 +51,8 @@ export default function InquiryFilters({
   owners,
   onClear,
 }: {
+  status?: string;
+  setStatus?: (s: string) => void;
   source: string;
   setSource: (s: string) => void;
   search: string;
@@ -90,6 +94,18 @@ export default function InquiryFilters({
           onChange={(e) => setSearch(e.target.value)}
           className={`${inputClass} flex-[1.6] min-w-[170px]`}
         />
+        {setStatus && (
+          <select
+            value={status || ''}
+            onChange={(e) => setStatus(e.target.value)}
+            className={controlClass}
+          >
+            <option value="">All Status</option>
+            <option value="hot">Hot</option>
+            <option value="warm">Warm</option>
+            <option value="cold">Cold</option>
+          </select>
+        )}
         <select
           value={source}
           onChange={(e) => setSource(e.target.value)}

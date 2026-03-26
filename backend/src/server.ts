@@ -26,9 +26,9 @@ import crypto from 'crypto';
 import { rbacGuard } from './middleware/rbac';
 import { requireAuth } from './middleware/requireAuth';
 import { auditLogger } from './utils/auditLogger';
-import { recordFailedAttempt, clearAttempts } from './utils/loginRateLimit';
+import { recordFailedAttempt, clearAttempts, isLocked } from './utils/loginRateLimit';
 import { createOtpChallenge, verifyOtpChallenge } from './utils/otpChallenge';
-import { sendOtpCodeEmail } from './utils/email';
+import { sendOtpCodeEmail, hasSmtpConfig } from './utils/email';
 import {
   getFollowups,
   getFollowupById,
@@ -45,10 +45,11 @@ import { getComments, createComment, editComment, deleteComment } from './contro
 // Load environment variables
 dotenv.config();
 
-// TEMPORARY: bypass OTP for CPANEL super admin login.
-// This is useful while SMTP/code delivery is not configured.
-// Re-enable OTP later by setting this to false and redeploying.
+// Bypass OTP for CPANEL super admin login.
 const DISABLE_C_PANEL_OTP = true;
+// Bypass OTP for tenant login. Set DISABLE_TENANT_OTP=false to re-enable when SMTP is configured.
+const DISABLE_TENANT_OTP =
+  String(process.env.DISABLE_TENANT_OTP ?? 'true').toLowerCase() !== 'false';
 
 // Prevent unhandled rejections/exceptions from crashing the server
 process.on('unhandledRejection', (reason: any) => {
@@ -93,7 +94,7 @@ app.use(cors({
   origin: corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'x-tenant'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'x-tenant', 'x-user-role', 'x-user-email'],
 }));
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
@@ -156,6 +157,11 @@ app.post('/api/users/login', async (req, res) => {
     const ip = clientIp(req);
     const identifier = `${tenantCode}:${normalizedEmail}`;
 
+    if (isLocked('tenant', ip, identifier)) {
+      if (res.headersSent) return;
+      return res.status(429).json({ error: 'Too many failed attempts. Please wait 15 minutes before trying again.' });
+    }
+
     const asId = Number.parseInt(tenantCode, 10);
     let tenant: any = null;
     // Treat any digits-only tenant_code (including leading zeros like "03") as an ID.
@@ -182,12 +188,17 @@ app.post('/api/users/login', async (req, res) => {
     const user = await prisma.user.findFirst({
       where: {
         email: { equals: normalizedEmail, mode: 'insensitive' },
-        approved: true,
         tenantId: tenant.id,
       }
     });
 
-    if (!user || !bcrypt.compareSync(normalizedPassword, user.password)) {
+    const passwordOk = user
+      ? (bcrypt.compareSync(normalizedPassword, user.password) ||
+         // Fallback: plain-text match for users whose passwords are not yet hashed
+         (!user.password.startsWith('$2') && user.password === normalizedPassword))
+      : false;
+
+    if (!user || !passwordOk) {
       recordFailedAttempt('tenant', ip, identifier);
       if (!res.headersSent) {
         return res.status(401).json({ error: 'Invalid login credentials' });
@@ -195,23 +206,35 @@ app.post('/api/users/login', async (req, res) => {
       return;
     }
 
+    if (user.approved === false) {
+      if (!res.headersSent) return res.status(403).json({ error: 'Account pending approval. Please contact your administrator.' });
+      return;
+    }
+
+    // Re-hash plain-text passwords on successful login
+    if (!user.password.startsWith('$2') && user.password === normalizedPassword) {
+      const hashed = bcrypt.hashSync(normalizedPassword, 10);
+      await prisma.user.update({ where: { id: user.id }, data: { password: hashed } }).catch(() => {});
+    }
+
     clearAttempts('tenant', ip, identifier);
     const deviceId = deviceIdFromReq(req);
-    const knownDevice = await hasKnownDevice(user.email, tenant.id, deviceId);
-    if (!knownDevice) {
-      const { id, code } = createOtpChallenge({
-        email: user.email,
-        tenantId: tenant.id,
-        role: 'tenant',
-        deviceId,
-        ip,
-      });
-      const sent = await sendOtpCodeEmail(user.email, code);
-      if (!sent && process.env.NODE_ENV !== 'production') {
-        console.log(`[DEV] OTP for ${user.email}: ${code}`);
+
+    const skipOtp = DISABLE_TENANT_OTP || !hasSmtpConfig();
+    if (!skipOtp) {
+      const knownDevice = await hasKnownDevice(user.email, tenant.id, deviceId);
+      if (!knownDevice) {
+        const { id, code } = createOtpChallenge({
+          email: user.email,
+          tenantId: tenant.id,
+          role: 'tenant',
+          deviceId,
+          ip,
+        });
+        await sendOtpCodeEmail(user.email, code);
+        await auditLogger.custom(req, 'login_otp_challenge_sent', 'auth', { email: user.email, tenantId: tenant.id, deviceId });
+        return res.status(200).json({ requiresOtp: true, challengeId: id, message: 'Verification code sent to your email.' });
       }
-      await auditLogger.custom(req, 'login_otp_challenge_sent', 'auth', { email: user.email, tenantId: tenant.id, deviceId });
-      return res.status(200).json({ requiresOtp: true, challengeId: id, message: 'Verification code sent to your email.' });
     }
 
     const token = crypto.randomBytes(32).toString('hex');
@@ -266,17 +289,32 @@ app.post('/api/cpanel/login', async (req, res) => {
       where: {
         email: { equals: email, mode: 'insensitive' },
         role: 'admin',
-        approved: true,
         tenantId: null
       }
     });
 
-    if (!user || !bcrypt.compareSync(password, user.password)) {
+    const cpanelPasswordOk = user
+      ? (bcrypt.compareSync(password, user.password) ||
+         (!user.password.startsWith('$2') && user.password === password))
+      : false;
+
+    if (!user || !cpanelPasswordOk) {
       recordFailedAttempt('cpanel', ip, normalizedEmail);
       if (!res.headersSent) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
       return;
+    }
+
+    if (user.approved === false) {
+      if (!res.headersSent) return res.status(403).json({ error: 'Account not approved' });
+      return;
+    }
+
+    // Re-hash plain-text passwords on first successful login
+    if (!user.password.startsWith('$2') && user.password === password) {
+      const hashed = bcrypt.hashSync(password, 10);
+      await prisma.user.update({ where: { id: user.id }, data: { password: hashed } }).catch(() => {});
     }
 
     clearAttempts('cpanel', ip, normalizedEmail);
@@ -349,7 +387,7 @@ app.post('/api/users/login/verify-otp', async (req, res) => {
     });
     if (!tenant || tenant.id !== c.tenantId) return res.status(401).json({ error: 'Invalid verification context' });
     const user = await prisma.user.findFirst({
-      where: { email: { equals: c.email, mode: 'insensitive' }, tenantId: tenant.id, approved: true },
+      where: { email: { equals: c.email, mode: 'insensitive' }, tenantId: tenant.id },
     });
     if (!user) return res.status(401).json({ error: 'Invalid verification context' });
 
@@ -386,7 +424,7 @@ app.post('/api/cpanel/login/verify-otp', async (req, res) => {
     if (c.role !== 'super_admin') return res.status(401).json({ error: 'Invalid verification context' });
     if (String(email).trim().toLowerCase() !== c.email.toLowerCase()) return res.status(401).json({ error: 'Invalid verification context' });
     const user = await prisma.user.findFirst({
-      where: { email: { equals: c.email, mode: 'insensitive' }, role: 'admin', approved: true, tenantId: null },
+      where: { email: { equals: c.email, mode: 'insensitive' }, role: 'admin', tenantId: null },
     });
     if (!user) return res.status(401).json({ error: 'Invalid verification context' });
 
@@ -700,7 +738,8 @@ const verifySuperAdminPassword = async (req: any, confirmPassword: any): Promise
       : await prisma.user.findFirst({ where: { role: 'admin', tenantId: null } });
 
     if (!admin) return false;
-    return bcrypt.compareSync(pwd, admin.password);
+    return bcrypt.compareSync(pwd, admin.password) ||
+      (!admin.password.startsWith('$2') && admin.password === pwd);
   } catch (e) {
     console.error('verifySuperAdminPassword error:', e);
     return false;

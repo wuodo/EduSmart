@@ -34,6 +34,10 @@ function forwardHeaders(req: NextRequest) {
 	}
 	if (auth) h['authorization'] = auth
 	if (tenant) h['x-tenant'] = tenant
+	const userRole = req.headers.get('x-user-role') || req.cookies.get('role')?.value || ''
+	const userEmail = req.headers.get('x-user-email') || ''
+	if (userRole) h['x-user-role'] = userRole
+	if (userEmail) h['x-user-email'] = userEmail
 
 	// When the frontend is accessed via a custom subdomain (e.g. crm.jfccollege.ac.ke),
 	// the backend resolves tenant using host/subdomain. During "login UX" calls like

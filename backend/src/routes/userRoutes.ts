@@ -296,14 +296,28 @@ router.post('/login', async (req, res) => {
     const user = await prisma.user.findFirst({
       where: {
         email: { equals: normalizedEmail, mode: 'insensitive' },
-        approved: true,
         tenantId: tenant.id,
       },
     });
 
-    if (!user || !bcrypt.compareSync(normalizedPassword, user.password)) {
+    const passwordOk = user
+      ? (bcrypt.compareSync(normalizedPassword, user.password) ||
+         (!user.password.startsWith('$2') && user.password === normalizedPassword))
+      : false;
+
+    if (!user || !passwordOk) {
       await auditLogger.login(req, normalizedEmail, false, { tenantId: tenant.id, tenantCode, reason: 'invalid_user_or_password' });
       return safeJson(res, { error: 'Invalid login credentials' }, 401);
+    }
+
+    if (user.approved === false) {
+      return safeJson(res, { error: 'Account pending approval. Please contact your administrator.' }, 403);
+    }
+
+    // Re-hash plain-text passwords on successful login
+    if (!user.password.startsWith('$2') && user.password === normalizedPassword) {
+      const hashed = bcrypt.hashSync(normalizedPassword, 10);
+      await prisma.user.update({ where: { id: user.id }, data: { password: hashed } }).catch(() => {});
     }
 
     const token = crypto.randomBytes(32).toString('hex');
