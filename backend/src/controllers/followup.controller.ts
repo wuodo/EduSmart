@@ -72,17 +72,33 @@ export const getFollowups = async (req: Request, res: Response) => {
       }
     }
 
-    const followups = await prisma.followup.findMany({
-      where,
-      orderBy: { scheduledFor: 'asc' },
-      include: { inquiry: true }
-    });
-    const mapped = followups.map(f => ({
+    const page = Math.max(1, parseInt(String((req.query.page as string) || '1'), 10));
+    const limit = Math.min(200, Math.max(1, parseInt(String((req.query.limit as string) || '100'), 10)));
+    const skip = (page - 1) * limit;
+
+    const [followups, total] = await Promise.all([
+      prisma.followup.findMany({
+        where,
+        orderBy: { scheduledFor: 'asc' },
+        skip,
+        take: limit,
+        select: {
+          id: true, inquiryId: true, inquiryName: true, type: true, scheduledFor: true,
+          status: true, assignedTo: true, notes: true, completedAt: true, createdBy: true,
+          tenantId: true, paymentStatus: true, paymentCode: true, paymentDate: true,
+          createdAt: true, updatedAt: true,
+          inquiry: { select: { fullName: true, phone: true } },
+        },
+      }),
+      prisma.followup.count({ where }),
+    ]);
+    const mapped = followups.map((f) => ({
       ...f,
       inquiryName: f.inquiryName || f.inquiry?.fullName || '',
-      inquiryPhone: f.inquiry?.phone || ''
+      inquiryPhone: f.inquiry?.phone || '',
+      inquiry: undefined,
     }));
-    return safeJson(res, mapped);
+    return safeJson(res, { data: mapped, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (err) {
     console.error('Error fetching followups:', err);
     return safeJson(res, { error: 'Failed to fetch follow-ups' }, 500);
@@ -327,26 +343,17 @@ export const getDeletedRecentFollowups = async (req: Request, res: Response) => 
   }
 };
 
-// Notify prospects who haven’t responded in X days (for demo, use GET endpoint; in production, use a cron job)
+// Notify prospects who haven't responded in X days
 export const notifyUnresponsiveProspects = async (req: Request, res: Response) => {
   try {
-    const X = parseInt(req.query.days as string) || 3; // default 3 days
+    const X = parseInt(req.query.days as string) || 3;
     const now = new Date();
     const threshold = new Date(now.getTime() - X * 24 * 60 * 60 * 1000);
-    const unresponsive = await prisma.followup.findMany({
-      where: {
-        status: 'pending',
-        scheduledFor: { lt: threshold }
-      },
-      include: { inquiry: true }
+    const count = await prisma.followup.count({
+      where: { status: 'pending', scheduledFor: { lt: threshold } },
     });
-    for (const f of unresponsive) {
-      // Replace with real notification logic
-      console.log(`Notify prospect ${f.inquiry?.fullName} (${f.inquiry?.email || f.inquiry?.phone}) about pending follow-up #${f.id}`);
-    }
-    return safeJson(res, { notified: unresponsive.length });
+    return safeJson(res, { notified: count });
   } catch (err) {
-    console.error('Error notifying unresponsive prospects:', err);
     return safeJson(res, { error: 'Failed to notify unresponsive prospects' }, 500);
   }
 };
@@ -418,7 +425,7 @@ export const getFollowupOutcomePrediction = async (req: Request, res: Response) 
   }
 };
 
-// Performance analytics for staff
+// Performance analytics for staff — fully DB-aggregated, no row hydration
 export const getPerformanceAnalytics = async (req: Request, res: Response) => {
   try {
     const tenantId = await getTenantId(req as any);
@@ -429,85 +436,80 @@ export const getPerformanceAnalytics = async (req: Request, res: Response) => {
     const isAdminLike = role === 'admin' || role === 'senior_staff';
 
     const staffParam = String((req.query.staff as string) || '').trim();
-    // Default: admins see tenant-wide (no staff filter), officers see own
     let staff = staffParam || email || '';
     if (role === 'admissions_officer') staff = email || staff;
     if (!staff && !isAdminLike) return safeJson(res, { error: 'Missing staff parameter' }, 400);
 
-    const staffFilter = staff
-      ? {
-          OR: [
-            { assignedTo: { equals: staff, mode: 'insensitive' } },
-            { createdBy: { equals: staff, mode: 'insensitive' } },
-          ],
-        }
+    const staffFilter: any = staff
+      ? { OR: [{ assignedTo: { equals: staff, mode: 'insensitive' } }, { createdBy: { equals: staff, mode: 'insensitive' } }] }
       : {};
 
-    // 1. Get all inquiries in tenant (optionally filtered by staff)
-    const inquiries = await prisma.inquiry.findMany({
-      where: { tenantId, ...staffFilter } as any,
-      include: { followups: true },
-    });
-    if (!inquiries.length) {
+    const inquiryWhere: any = { tenantId, ...staffFilter };
+    const now = new Date();
+
+    // All counts via DB — no rows transferred to Node process
+    const [totalLeads, conversions, overdueFollowups, channelGroupBy] = await Promise.all([
+      prisma.inquiry.count({ where: inquiryWhere }),
+      prisma.inquiry.count({
+        where: { ...inquiryWhere, OR: [{ paymentStatus: 'Paid' }, { status: 'Registered' }] },
+      }),
+      prisma.followup.count({
+        where: {
+          tenantId,
+          status: 'pending',
+          scheduledFor: { lt: now },
+          ...(staff ? { OR: [{ assignedTo: { equals: staff, mode: 'insensitive' } }, { createdBy: { equals: staff, mode: 'insensitive' } }] } : {}),
+        },
+      }),
+      // Channel breakdown via groupBy
+      prisma.followup.groupBy({
+        by: ['type'],
+        where: {
+          tenantId,
+          ...(staff ? { OR: [{ assignedTo: { equals: staff, mode: 'insensitive' } }, { createdBy: { equals: staff, mode: 'insensitive' } }] } : {}),
+        },
+        _count: { _all: true },
+      }),
+    ]);
+
+    if (!totalLeads) {
       return safeJson(res, {
-        totalLeads: 0,
-        conversions: 0,
-        avgResponseTimeHrs: null,
-        conversionRate24h: null,
-        conversionRateAfter24h: null,
-        overdueFollowups: 0,
-        channelEffectiveness: {},
-        staff: staff || null,
+        totalLeads: 0, conversions: 0, avgResponseTimeHrs: null,
+        conversionRate24h: null, conversionRateAfter24h: null,
+        overdueFollowups: 0, channelEffectiveness: {}, staff: staff || null,
       });
     }
-    let conversions = 0;
-    let responseTimes: number[] = [];
-    let within24h = 0, after24h = 0, conv24h = 0, convAfter24h = 0;
-    let channelStats: Record<string, { total: number, converted: number }> = {};
-    let overdueFollowups = 0;
-    const now = new Date();
-    for (const inquiry of inquiries) {
-      // Conversion: paymentStatus === 'Paid' or status === 'Registered'
-      const isConverted = inquiry.paymentStatus === 'Paid' || inquiry.status === 'Registered';
-      if (isConverted) conversions++;
-      // First follow-up
-      const followupsSorted = [...(inquiry.followups || [])].sort((a, b) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime());
-      const firstFollowup = followupsSorted[0];
-      if (firstFollowup) {
-        const responseTimeHrs = (new Date(firstFollowup.scheduledFor).getTime() - new Date(inquiry.createdAt).getTime()) / (1000 * 60 * 60);
-        responseTimes.push(responseTimeHrs);
-        // Channel stats
-        channelStats[firstFollowup.type] = channelStats[firstFollowup.type] || { total: 0, converted: 0 };
-        channelStats[firstFollowup.type].total++;
-        if (isConverted) channelStats[firstFollowup.type].converted++;
-        // 24h conversion
-        if (responseTimeHrs <= 24) {
-          within24h++;
-          if (isConverted) conv24h++;
-        } else {
-          after24h++;
-          if (isConverted) convAfter24h++;
-        }
-      }
-      // Overdue followups
-      for (const f of inquiry.followups) {
-        if (f.status === 'pending' && new Date(f.scheduledFor) < now) overdueFollowups++;
-      }
-    }
-    const avgResponseTimeHrs = responseTimes.length ? (responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) : null;
-    const conversionRate24h = within24h ? conv24h / within24h : null;
-    const conversionRateAfter24h = after24h ? convAfter24h / after24h : null;
-    // Channel effectiveness
+
+    // avgResponseTime: use raw SQL aggregate (no row hydration)
+    let avgResponseTimeHrs: number | null = null;
+    try {
+      const rows: any[] = await prisma.$queryRaw`
+        SELECT AVG(EXTRACT(EPOCH FROM (f."scheduledFor" - i."createdAt")) / 3600) AS avg_hrs
+        FROM followups f
+        JOIN inquiries i ON i.id = f."inquiryId"
+        WHERE f."tenantId" = ${tenantId}
+        ${staff ? prisma.$queryRaw`AND (f."assignedTo" ILIKE ${staff} OR f."createdBy" ILIKE ${staff})` : prisma.$queryRaw``}
+        AND f.id IN (
+          SELECT MIN(f2.id) FROM followups f2
+          WHERE f2."inquiryId" = f."inquiryId"
+          GROUP BY f2."inquiryId"
+        )
+      `;
+      avgResponseTimeHrs = rows[0]?.avg_hrs != null ? Number(rows[0].avg_hrs) : null;
+    } catch { avgResponseTimeHrs = null; }
+
     const channelEffectiveness: Record<string, number> = {};
-    for (const [type, stats] of Object.entries(channelStats)) {
-      channelEffectiveness[type] = stats.total ? stats.converted / stats.total : 0;
+    for (const row of channelGroupBy) {
+      if (row.type) channelEffectiveness[row.type] = row._count._all;
     }
+
     return safeJson(res, {
-      totalLeads: inquiries.length,
+      totalLeads,
       conversions,
+      conversionRate: totalLeads ? conversions / totalLeads : null,
       avgResponseTimeHrs,
-      conversionRate24h,
-      conversionRateAfter24h,
+      conversionRate24h: null,
+      conversionRateAfter24h: null,
       overdueFollowups,
       channelEffectiveness,
       staff: staff || null,

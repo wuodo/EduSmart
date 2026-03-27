@@ -14,10 +14,14 @@ router.get('/events', async (req, res) => {
   try {
     const followups = await prisma.followup.findMany({
       where: { tenantId: (req as any).tenant?.id },
-      select: { id: true, inquiryName: true, scheduledFor: true, status: true }
+      select: { id: true, inquiryName: true, scheduledFor: true, status: true },
+      take: 500,
+      orderBy: { scheduledFor: 'asc' },
     })
     const tasks = await prisma.task.findMany({
-      where: { tenantId: (req as any).tenant?.id }
+      where: { tenantId: (req as any).tenant?.id },
+      take: 500,
+      orderBy: { dueDate: 'asc' },
     })
     const events = [
       ...followups.map(f => ({
@@ -47,7 +51,7 @@ router.get('/tasks', async (req, res) => {
     const owner = String((req.query.owner as string) || '').trim()
     const where: any = { tenantId: (req as any).tenant?.id }
     if (owner) where.ownerEmail = owner
-    const tasks = await prisma.task.findMany({ where, orderBy: { dueDate: 'asc' } })
+    const tasks = await prisma.task.findMany({ where, orderBy: { dueDate: 'asc' }, take: 200 })
     return safeJson(res, { tasks })
   } catch (e) {
     return safeJson(res, { error: 'Failed to fetch tasks' }, 500)
@@ -154,7 +158,7 @@ router.get('/reminders/due', async (req, res) => {
     if (req.query.reminderAt) {
       where.reminderAt = { gte: now, lte: until }
     }
-    const tasks = await prisma.task.findMany({ where })
+    const tasks = await prisma.task.findMany({ where, take: 100 })
     return safeJson(res, { tasks })
   } catch (e) {
     return safeJson(res, { error: 'Failed to fetch due reminders' }, 500)

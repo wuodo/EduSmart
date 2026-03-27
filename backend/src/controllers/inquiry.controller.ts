@@ -86,37 +86,46 @@ const logError = (error: any, context: string) => {
 };
 
 export const inquiryController = {
-  // Get all inquiries
+  // Get all inquiries (paginated)
   async getAllInquiries(req: Request, res: Response) {
     try {
       const userRole = getUserRole(req);
       const userEmail = getUserEmail(req);
       const owner = String((req.query.owner as string) || '').trim();
+      const page = Math.max(1, parseInt(String(req.query.page || '1'), 10));
+      const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '50'), 10)));
+      const skip = (page - 1) * limit;
 
       const where: any = {};
       if (userRole === 'admissions_officer') {
         where.OR = [
           { createdBy: userEmail || '__none__' },
           { assignedTo: userEmail || '__none__' },
-          { followups: { some: { createdBy: userEmail || '__none__' } } }
         ];
       } else if (userRole === 'admin' || userRole === 'senior_staff') {
         if (owner) {
-          where.OR = [
-            { createdBy: owner },
-            { assignedTo: owner },
-            { followups: { some: { createdBy: owner } } }
-          ];
+          where.OR = [{ createdBy: owner }, { assignedTo: owner }];
         }
       }
 
-      const inquiries = await prisma.inquiry.findMany({ 
-        where,
-        orderBy: { createdAt: 'desc' } 
-      });
-      // Map 'name' to 'fullName' for frontend compatibility
-      const mapped = inquiries.map(i => ({ ...i, fullName: i.fullName }));
-      return res.json(mapped);
+      const [inquiries, total] = await Promise.all([
+        prisma.inquiry.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+          select: {
+            id: true, fullName: true, phone: true, email: true, status: true,
+            programOfInterest: true, source: true, paymentStatus: true,
+            createdAt: true, updatedAt: true, createdBy: true, assignedTo: true,
+            letterStatus: true, tenantId: true, intakePeriod: true, gender: true,
+            kcseGrade: true, studyMode: true, score: true, sentiment: true,
+            nextFollowupAt: true, dropoffStage: true,
+          },
+        }),
+        prisma.inquiry.count({ where }),
+      ]);
+      return res.json({ data: inquiries, total, page, limit, pages: Math.ceil(total / limit) });
     } catch (error) {
       logError(error, 'getAllInquiries');
       if (res.headersSent) return;
@@ -142,7 +151,6 @@ export const inquiryController = {
   // Create new inquiry
   async createInquiry(req: Request, res: Response) {
     try {
-      console.log('Received inquiry creation request:', req.body);
       const { documents, fullName, ...rest } = req.body;
 
       // Validate required fields
@@ -182,7 +190,7 @@ export const inquiryController = {
       const inquiry = await prisma.inquiry.create({
         data: {
           ...rest,
-          fullName, // Use fullName as per schema
+          fullName,
           documents: safeDocuments,
           status: rest.status || 'hot',
           createdAt: new Date(),
@@ -195,10 +203,9 @@ export const inquiryController = {
         }
       });
 
-      console.log('Created inquiry:', inquiry);
       return res.status(201).json(inquiry);
     } catch (error) {
-      console.error('Error details:', error); // Detailed error logging
+      if (res.headersSent) return;
       return res.status(400).json({ 
         message: 'Error creating inquiry', 
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -264,36 +271,27 @@ export const inquiryController = {
     }
   },
 
-  // Search inquiries
+  // Search inquiries (paginated)
   async searchInquiries(req: Request, res: Response) {
     try {
       const { query, source, status, dateRange } = req.query;
       const userRole = getUserRole(req);
       const userEmail = getUserEmail(req);
       const owner = String((req.query.owner as string) || '').trim();
+      const page = Math.max(1, parseInt(String(req.query.page || '1'), 10));
+      const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '50'), 10)));
+      const skip = (page - 1) * limit;
 
       const where: any = {};
-      
-      // Apply user access control first
       if (userRole === 'admissions_officer') {
-        where.OR = [
-          { createdBy: userEmail || '__none__' },
-          { assignedTo: userEmail || '__none__' },
-          { followups: { some: { createdBy: userEmail || '__none__' } } }
-        ];
+        where.OR = [{ createdBy: userEmail || '__none__' }, { assignedTo: userEmail || '__none__' }];
       } else if (userRole === 'admin' || userRole === 'senior_staff') {
         if (owner) {
-          where.OR = [
-            { createdBy: owner },
-            { assignedTo: owner },
-            { followups: { some: { createdBy: owner } } }
-          ];
+          where.OR = [{ createdBy: owner }, { assignedTo: owner }];
         }
       }
-      
-      // Apply search filters using AND logic
+
       const searchConditions: any = {};
-      
       if (query) {
         searchConditions.OR = [
           { fullName: { contains: query as string, mode: 'insensitive' } },
@@ -305,21 +303,28 @@ export const inquiryController = {
       if (status) searchConditions.status = status;
       if (dateRange) {
         const [startDate, endDate] = (dateRange as string).split(',');
-        searchConditions.createdAt = {
-          gte: new Date(startDate),
-          lte: new Date(endDate)
-        };
+        searchConditions.createdAt = { gte: new Date(startDate), lte: new Date(endDate) };
       }
-      
-      // Combine user access control with search conditions using AND
-      const finalWhere = Object.keys(searchConditions).length > 0 
+
+      const finalWhere = Object.keys(searchConditions).length > 0
         ? { AND: [where, searchConditions] }
         : where;
-      
-      const inquiries = await prisma.inquiry.findMany({ where: finalWhere });
-      // Map 'name' to 'fullName'
-      const mapped = inquiries.map(i => ({ ...i, fullName: i.fullName }));
-      return res.json(mapped);
+
+      const [inquiries, total] = await Promise.all([
+        prisma.inquiry.findMany({
+          where: finalWhere,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+          select: {
+            id: true, fullName: true, phone: true, email: true, status: true,
+            programOfInterest: true, source: true, paymentStatus: true,
+            createdAt: true, createdBy: true, assignedTo: true, tenantId: true,
+          },
+        }),
+        prisma.inquiry.count({ where: finalWhere }),
+      ]);
+      return res.json({ data: inquiries, total, page, limit, pages: Math.ceil(total / limit) });
     } catch (error) {
       if (res.headersSent) return;
       return res.status(500).json({ message: 'Error searching inquiries', error: error instanceof Error ? error.message : String(error) });
@@ -346,6 +351,9 @@ export const inquiryController = {
       if (!Array.isArray(inquiries) || inquiries.length === 0) {
         return res.status(400).json({ message: 'No inquiries provided' });
       }
+      if (inquiries.length > 500) {
+        return res.status(400).json({ message: 'Bulk limit is 500 records per request' });
+      }
       const mappedInquiries = inquiries.map(({ fullName, name, email, phone, message, ...rest }: any) => ({
         name: fullName || name,
         email,
@@ -353,11 +361,9 @@ export const inquiryController = {
         message,
         ...rest
       }));
-      const created = await prisma.inquiry.createMany({ data: mappedInquiries });
-      // Return the created inquiries with fullName
-      const all = await prisma.inquiry.findMany({ orderBy: { createdAt: 'desc' } });
-      const mapped = all.map(i => ({ ...i, fullName: i.fullName }));
-      return res.json({ successCount: created.count, inquiries: mapped });
+      const created = await prisma.inquiry.createMany({ data: mappedInquiries, skipDuplicates: true });
+      // Return count only — never load all inquiries post-bulk
+      return res.json({ successCount: created.count });
     } catch (error) {
       if (res.headersSent) return;
       return res.status(500).json({ message: 'Bulk inquiry creation failed', error: error instanceof Error ? error.message : String(error) });
@@ -366,29 +372,28 @@ export const inquiryController = {
 
   // --- SMART ANALYTICS ENDPOINTS ---
 
-  // 1. Overdue follow-ups
+  // 1. Overdue follow-ups (capped at 100)
   async getOverdueFollowups(req: Request, res: Response) {
     try {
       const now = new Date();
       const userFilter = buildUserFilter(req);
-      
-      let overdueQuery: any = {
-        where: {
-          nextFollowupAt: { lt: now },
-          status: { not: 'Registered' },
-        },
-        orderBy: { nextFollowupAt: 'asc' }
+      const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '50'), 10)));
+
+      const where: any = {
+        nextFollowupAt: { lt: now },
+        status: { not: 'Registered' },
+        ...userFilter,
       };
-      
-      // Apply user filter
-      if (Object.keys(userFilter).length > 0) {
-        overdueQuery.where = {
-          ...overdueQuery.where,
-          ...userFilter
-        };
-      }
-      
-      const overdue = await prisma.inquiry.findMany(overdueQuery);
+
+      const overdue = await prisma.inquiry.findMany({
+        where,
+        orderBy: { nextFollowupAt: 'asc' },
+        take: limit,
+        select: {
+          id: true, fullName: true, phone: true, programOfInterest: true,
+          nextFollowupAt: true, status: true, assignedTo: true, createdBy: true,
+        },
+      });
       return res.json(overdue);
     } catch (error) {
       if (res.headersSent) return;
@@ -396,25 +401,32 @@ export const inquiryController = {
     }
   },
 
-  // 2. Source effectiveness
+  // 2. Source effectiveness (single groupBy — no N+1)
   async getSourceEffectiveness(req: Request, res: Response) {
     try {
       const userFilter = buildUserFilter(req);
-      
-      // Get all sources for the user's data
-      const sources = await prisma.inquiry.findMany({
-        where: userFilter,
-        select: { source: true },
-        distinct: ['source']
-      });
-      const sourceList = sources.map(s => s.source).filter(Boolean);
-      
-      // For each source, count inquiries and paid registrations
-      const data = await Promise.all(sourceList.map(async (source) => {
-        const total = await prisma.inquiry.count({ where: { ...userFilter, source } });
-        const paid = await prisma.inquiry.count({ where: { ...userFilter, source, paymentStatus: 'Paid' } });
-        return { source, total, paid, conversionRate: total ? Math.round((paid / total) * 100) : 0 };
-      }));
+
+      const [totalBySource, paidBySource] = await Promise.all([
+        prisma.inquiry.groupBy({
+          by: ['source'],
+          where: userFilter,
+          _count: { _all: true },
+        }),
+        prisma.inquiry.groupBy({
+          by: ['source'],
+          where: { ...userFilter, paymentStatus: 'Paid' },
+          _count: { _all: true },
+        }),
+      ]);
+
+      const paidMap = new Map(paidBySource.map((r) => [r.source, r._count._all]));
+      const data = totalBySource
+        .filter((r) => r.source)
+        .map((r) => {
+          const total = r._count._all;
+          const paid = paidMap.get(r.source) ?? 0;
+          return { source: r.source, total, paid, conversionRate: total ? Math.round((paid / total) * 100) : 0 };
+        });
       return res.json(data);
     } catch (error) {
       if (res.headersSent) return;

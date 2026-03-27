@@ -107,12 +107,21 @@ router.get('/', async (req, res) => {
       }
     }
 
-    const inquiries = await prisma.inquiry.findMany({
-      where,
-      include: { detail: true },
-      orderBy: { createdAt: 'desc' }
-    });
-    return safeJson(res, inquiries);
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10));
+    const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit || '50'), 10)));
+    const skip = (page - 1) * limit;
+
+    const [inquiries, total] = await Promise.all([
+      prisma.inquiry.findMany({
+        where,
+        include: { detail: true },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.inquiry.count({ where }),
+    ]);
+    return safeJson(res, { data: inquiries, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (error) {
     if (res.headersSent) return;
     return safeJson(res, { message: 'Error fetching inquiries', error: error instanceof Error ? error.message : String(error) }, 500);
@@ -213,7 +222,7 @@ router.get('/deleted-recent', async (req, res) => {
     const role = getRole(req);
     const email = getEmail(req).toLowerCase();
     const limit = Math.max(1, Math.min(200, Number(req.query.limit) || 50));
-    const items = listArchivedRecords(1000)
+    const items = listArchivedRecords(200)
       .filter((e) => e.type === 'inquiry' && e.tenantId === tenantId)
       .filter((e) => {
         if (role === 'admin' || role === 'senior_staff') return true;

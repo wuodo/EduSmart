@@ -5,6 +5,41 @@ import path from 'path';
 import prisma from '../lib/prisma';
 import archiver from 'archiver';
 
+// ---------------------------------------------------------------------------
+// Static assets cached once at module load — eliminates per-request disk I/O
+// and prevents duplicate large binary allocations on every PDF generation.
+// ---------------------------------------------------------------------------
+let _bgBytes: Buffer | null = null;
+let _stampBytes: Buffer | null = null;
+let _staticPdfBytes: Buffer | null = null;
+
+function getBgBytes(): Buffer {
+  if (!_bgBytes) {
+    const p = path.join(__dirname, '../../assets/admission-letter-bg.png');
+    if (!fs.existsSync(p)) throw new Error(`Background image not found at: ${p}`);
+    _bgBytes = fs.readFileSync(p);
+  }
+  return _bgBytes;
+}
+
+function getStampBytes(): Buffer {
+  if (!_stampBytes) {
+    const p = path.join(__dirname, '../../assets/stamp.png');
+    if (!fs.existsSync(p)) throw new Error(`Stamp image not found at: ${p}`);
+    _stampBytes = fs.readFileSync(p);
+  }
+  return _stampBytes;
+}
+
+function getStaticPdfBytes(): Buffer {
+  if (!_staticPdfBytes) {
+    const p = path.join(__dirname, '../../assets/admission-letter-static.pdf');
+    if (!fs.existsSync(p)) throw new Error(`Static PDF not found at: ${p}`);
+    _staticPdfBytes = fs.readFileSync(p);
+  }
+  return _staticPdfBytes;
+}
+
 // Helper to read user identity from authenticated session context
 function getUserEmailHeader(req: Request): string {
   return String((req as any).user?.email || '').trim();
@@ -61,22 +96,48 @@ function resolveLetterTemplateId(
   return 'detailed';
 }
 
-// Persistent counter per intake initial (J/M/S/N) → stored in data/intake-initial-count.json
-async function getNextIntakeInitialCounter(initial: string): Promise<number> {
+// ---------------------------------------------------------------------------
+// Counter caches — each file is read once (lazy) then held in-process.
+// Writes are deferred via setImmediate so they never block the request path.
+// ---------------------------------------------------------------------------
+const _intakeCounts: Record<string, number> = {};
+let _intakeCountsLoaded = false;
+const _intakeCountPath = path.join(__dirname, '../../data/intake-initial-count.json');
+
+const _userLetterCounts: Record<string, number> = {};
+let _userLetterCountsLoaded = false;
+const _userLetterCountPath = path.join(__dirname, '../../data/letter-count-by-user.json');
+
+let _seqCount = 0;
+let _seqCountLoaded = false;
+const _seqCountPath = path.join(__dirname, '../../data/letter-count.json');
+
+function _loadJsonSync<T>(filePath: string, fallback: T): T {
   try {
-    const countPath = path.join(__dirname, '../../data/intake-initial-count.json');
-    let counts: Record<string, number> = {};
-    if (fs.existsSync(countPath)) {
-      counts = JSON.parse(fs.readFileSync(countPath, 'utf8'));
-    }
-    const next = (counts[initial] || 0) + 1;
-    counts[initial] = next;
-    fs.writeFileSync(countPath, JSON.stringify(counts));
-    return next;
-  } catch (e) {
-    console.warn('Failed to read/write intake-initial-count.json; defaulting to 1:', e);
-    return 1;
+    if (fs.existsSync(filePath)) return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch { /* ignore */ }
+  return fallback;
+}
+
+function _saveJsonAsync(filePath: string, data: unknown) {
+  setImmediate(() => {
+    try {
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, JSON.stringify(data), 'utf8');
+    } catch { /* non-critical */ }
+  });
+}
+
+function getNextIntakeInitialCounter(initial: string): number {
+  if (!_intakeCountsLoaded) {
+    const loaded = _loadJsonSync<Record<string, number>>(_intakeCountPath, {});
+    Object.assign(_intakeCounts, loaded);
+    _intakeCountsLoaded = true;
   }
+  const next = (_intakeCounts[initial] || 0) + 1;
+  _intakeCounts[initial] = next;
+  _saveJsonAsync(_intakeCountPath, _intakeCounts);
+  return next;
 }
 
 // Helper function to validate date format (DD/MM/YYYY)
@@ -100,48 +161,28 @@ const formatStampDate = (date: Date): string => {
   return `${day}/${month}/${year}`;
 };
 
-// Helper function to get sequential letter number (per user)
-async function getNextLetterNumberForUser(userEmail: string): Promise<string> {
-  try {
-    const countPath = path.join(__dirname, '../../data/letter-count-by-user.json');
-    let counts: Record<string, number> = {};
-    if (fs.existsSync(countPath)) {
-      counts = JSON.parse(fs.readFileSync(countPath, 'utf8'));
-    }
-    const key = (userEmail || 'unknown').toLowerCase();
-    const next = (counts[key] || 0) + 1;
-    counts[key] = next;
-    fs.writeFileSync(countPath, JSON.stringify(counts));
-    return next.toString().padStart(4, '0');
-  } catch (err) {
-    console.error('Error getting per-user letter number:', err);
-    return '0001';
+function getNextLetterNumberForUser(userEmail: string): string {
+  if (!_userLetterCountsLoaded) {
+    const loaded = _loadJsonSync<Record<string, number>>(_userLetterCountPath, {});
+    Object.assign(_userLetterCounts, loaded);
+    _userLetterCountsLoaded = true;
   }
+  const key = (userEmail || 'unknown').toLowerCase();
+  const next = (_userLetterCounts[key] || 0) + 1;
+  _userLetterCounts[key] = next;
+  _saveJsonAsync(_userLetterCountPath, _userLetterCounts);
+  return next.toString().padStart(4, '0');
 }
 
-// Removed legacy intake count; using intake initial instead
-
-// Helper function to get sequential number
-const getSequentialNumber = async (): Promise<string> => {
-  try {
-    // Read the current count from a file
-    const countPath = path.join(__dirname, '../../data/letter-count.json');
-    let count = 1;
-    
-    if (fs.existsSync(countPath)) {
-      const data = JSON.parse(fs.readFileSync(countPath, 'utf8'));
-      count = data.count + 1;
-    }
-    
-    // Update the count
-    fs.writeFileSync(countPath, JSON.stringify({ count }));
-    
-    // Return padded number
-    return count.toString().padStart(4, '0');
-  } catch (err) {
-    console.error('Error getting sequential number:', err);
-    return '0001'; // Fallback
+function getSequentialNumber(): string {
+  if (!_seqCountLoaded) {
+    const data = _loadJsonSync<{ count: number }>(_seqCountPath, { count: 0 });
+    _seqCount = data.count || 0;
+    _seqCountLoaded = true;
   }
+  _seqCount += 1;
+  _saveJsonAsync(_seqCountPath, { count: _seqCount });
+  return _seqCount.toString().padStart(4, '0');
 };
 
 export const generateAdmissionLetter = async (req: Request, res: Response) => {
@@ -166,7 +207,7 @@ export const generateAdmissionLetter = async (req: Request, res: Response) => {
 
     const userEmail = getUserEmailHeader(req);
     const staffInitials = await getStaffInitialsForUser(userEmail);
-    const letterNumber = await getNextLetterNumberForUser(userEmail);
+    const letterNumber = getNextLetterNumberForUser(userEmail);
 
     let intakeInitial = 'X';
     try {
@@ -176,14 +217,14 @@ export const generateAdmissionLetter = async (req: Request, res: Response) => {
       console.warn('Could not fetch inquiry for intake initial:', e);
     }
 
-    const intakeSeq = await getNextIntakeInitialCounter(intakeInitial);
+    const intakeSeq = getNextIntakeInitialCounter(intakeInitial);
     const currentDate = new Date();
     const monthName = getMonthName(currentDate);
     const day = currentDate.getDate();
     const serialNumber = `${staffInitials}/L${letterNumber}/${monthName}${day}/${intakeInitial}${intakeSeq}`;
     const monthInitial = getMonthInitial(currentDate);
     const year = currentDate.getFullYear().toString().slice(-2);
-    const sequentialNumber = await getSequentialNumber();
+    const sequentialNumber = getSequentialNumber();
     const referenceCode = `JFCM/REG/${monthInitial}${sequentialNumber}/${year}`;
 
     // Best-effort status update; don't fail the whole request if the record
@@ -236,7 +277,7 @@ export const downloadAdmissionLetter = async (req: Request, res: Response) => {
 
     const userEmail = getUserEmailHeader(req);
     const staffInitials = await getStaffInitialsForUser(userEmail);
-    const letterNumber = await getNextLetterNumberForUser(userEmail);
+    const letterNumber = getNextLetterNumberForUser(userEmail);
 
     const tenantId = (req as any).tenant?.id;
 
@@ -254,14 +295,14 @@ export const downloadAdmissionLetter = async (req: Request, res: Response) => {
       }
     }
 
-    const intakeSeq = await getNextIntakeInitialCounter(intakeInitial);
+    const intakeSeq = getNextIntakeInitialCounter(intakeInitial);
     const currentDate = new Date();
     const monthName = getMonthName(currentDate);
     const dayNum = currentDate.getDate();
     const serialNumber = `${staffInitials}/L${letterNumber}/${monthName}${dayNum}/${intakeInitial}${intakeSeq}`;
     const monthInitial = getMonthInitial(currentDate);
     const year = currentDate.getFullYear().toString().slice(-2);
-    const sequentialNumber = await getSequentialNumber();
+    const sequentialNumber = getSequentialNumber();
     const referenceCode = `JFCM/REG/${monthInitial}${sequentialNumber}/${year}`;
 
     // Save serial/reference to DB so CSV export shows correct values
@@ -276,34 +317,23 @@ export const downloadAdmissionLetter = async (req: Request, res: Response) => {
       }
     }
 
-    console.log('Loading background image...');
-    const bgPath = path.join(__dirname, '../../assets/admission-letter-bg.png');
-    if (!fs.existsSync(bgPath)) throw new Error(`Background image not found at: ${bgPath}`);
-    const bgBytes = fs.readFileSync(bgPath);
+    const bgBytes = getBgBytes();
+    const stampBytes = getStampBytes();
 
-    console.log('Loading stamp image...');
-    const stampPath = path.join(__dirname, '../../assets/stamp.png');
-    if (!fs.existsSync(stampPath)) throw new Error(`Stamp image not found at: ${stampPath}`);
-    const stampBytes = fs.readFileSync(stampPath);
-
-    console.log('Creating PDF document...');
     const pdfDoc = await PDFDocument.create();
     const a4Width = 595.28;
     const a4Height = 841.89;
     const page1 = pdfDoc.addPage([a4Width, a4Height]);
 
-    console.log('Loading fonts...');
     const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const serialFont = await pdfDoc.embedFont(StandardFonts.Courier);
 
     const mmToPoints = (mm: number) => mm * 2.83465;
 
-    console.log('Embedding background image...');
     const bgImage = await pdfDoc.embedPng(bgBytes);
     page1.drawImage(bgImage, { x: 0, y: 0, width: a4Width, height: a4Height });
 
-    console.log('Embedding stamp image...');
     const stampImage = await pdfDoc.embedPng(stampBytes);
     const stampWidth = 100;
     const stampHeight = 100;
@@ -335,7 +365,6 @@ export const downloadAdmissionLetter = async (req: Request, res: Response) => {
       size: 10, font: serialFont, color: rgb(0, 0, 0)
     });
 
-    console.log('Drawing text content...');
     const lineHeight = 20;
     let currentY = a4Height - referenceTopMargin;
 
@@ -421,39 +450,18 @@ export const downloadAdmissionLetter = async (req: Request, res: Response) => {
     page1.drawText('James Chiaga', { x: contentMargin, y: y + 14, size: 12, font: boldFont, color: rgb(0, 0, 0) });
     page1.drawText('Principal', { x: contentMargin, y: y, size: 11, font: regularFont, color: rgb(0, 0, 0) });
 
-    console.log('Loading static pages...');
-    const staticPdfPath = path.join(__dirname, '../../assets/admission-letter-static.pdf');
-    if (!fs.existsSync(staticPdfPath)) throw new Error(`Static PDF not found at: ${staticPdfPath}`);
-    const staticPdfBytes = fs.readFileSync(staticPdfPath);
-    const staticDoc = await PDFDocument.load(staticPdfBytes);
+    const staticDoc = await PDFDocument.load(getStaticPdfBytes());
     const copiedPages = await pdfDoc.copyPages(staticDoc, staticDoc.getPageIndices());
     copiedPages.forEach((p) => pdfDoc.addPage(p));
 
-    console.log('Saving PDF...');
     const pdfBytes = await pdfDoc.save();
-
-    // Return JSON with base64-encoded PDF; frontend will handle download
     const filename = `admission-letter-${name.replace(/\s+/g, '-')}.pdf`;
     const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
 
-    // Extra safety: don't attempt to write if another middleware already sent a response
-    if (res.headersSent) {
-      return;
-    }
-
-    return res.json({
-      success: true,
-      filename,
-      pdf: pdfBase64,
-      referenceCode,
-      serialNumber,
-      templateId: resolvedTemplate
-    });
+    if (res.headersSent) return;
+    return res.json({ success: true, filename, pdf: pdfBase64, referenceCode, serialNumber, templateId: resolvedTemplate });
   } catch (err) {
-    console.error('Error generating admission letter PDF:', err);
-    if (res.headersSent) {
-      return;
-    }
+    if (res.headersSent) return;
     return res.status(500).json({
       error: 'Failed to generate admission letter',
       details: err instanceof Error ? err.message : 'Unknown error'
@@ -474,16 +482,10 @@ async function generateAdmissionLetterBuffer({ name, phone, course, duration, ad
   const serialNumber = `${staffInitials}/L${letterNumber}/${monthName}${day}/${intakeSegment || 'X1'}`;
   const monthInitial = getMonthInitial(currentDate);
   const year = currentDate.getFullYear().toString().slice(-2);
-  const sequentialNumber = await getSequentialNumber();
+  const sequentialNumber = getSequentialNumber();
   const referenceCode = `JFCM/REG/${monthInitial}${sequentialNumber}/${year}`;
-  // Load background image for page 1
-  const bgPath = path.join(__dirname, '../../assets/admission-letter-bg.png');
-  if (!fs.existsSync(bgPath)) throw new Error(`Background image not found at: ${bgPath}`);
-  const bgBytes = fs.readFileSync(bgPath);
-  // Load stamp image
-  const stampPath = path.join(__dirname, '../../assets/stamp.png');
-  if (!fs.existsSync(stampPath)) throw new Error(`Stamp image not found at: ${stampPath}`);
-  const stampBytes = fs.readFileSync(stampPath);
+  const bgBytes = getBgBytes();
+  const stampBytes = getStampBytes();
   // Create a new PDF with A4 size
   const pdfDoc = await PDFDocument.create();
   const a4Width = 595.28;
@@ -667,11 +669,7 @@ async function generateAdmissionLetterBuffer({ name, phone, course, duration, ad
   page1.drawRectangle({ x: contentMargin, y: y - 4, width: 200, height: 36, color: rgb(1, 1, 1) });
   page1.drawText('James Chiaga', { x: contentMargin, y: y + 14, size: 12, font: boldFont, color: rgb(0, 0, 0) });
   page1.drawText('Principal', { x: contentMargin, y: y, size: 11, font: regularFont, color: rgb(0, 0, 0) });
-  // Load and append static pages
-  const staticPdfPath = path.join(__dirname, '../../assets/admission-letter-static.pdf');
-  if (!fs.existsSync(staticPdfPath)) throw new Error(`Static PDF not found at: ${staticPdfPath}`);
-  const staticPdfBytes = fs.readFileSync(staticPdfPath);
-  const staticDoc = await PDFDocument.load(staticPdfBytes);
+  const staticDoc = await PDFDocument.load(getStaticPdfBytes());
   const copiedPages = await pdfDoc.copyPages(staticDoc, staticDoc.getPageIndices());
   copiedPages.forEach((p) => pdfDoc.addPage(p));
   // Save the PDF
@@ -689,6 +687,9 @@ export const bulkGenerateAdmissionLetters = async (req: Request, res: Response) 
     const { inquiries, admissionDate, templateId } = req.body;
     if (!Array.isArray(inquiries) || inquiries.length === 0) {
       return res.status(400).json({ error: 'No inquiries provided' });
+    }
+    if (inquiries.length > 20) {
+      return res.status(400).json({ error: 'Bulk limit is 20 letters per request to prevent memory exhaustion' });
     }
     if (!admissionDate || !isValidDateFormat(admissionDate)) {
       return res.status(400).json({ error: 'Invalid admission date format', message: 'Admission date must be in DD/MM/YYYY format (e.g., 05/09/2025)' });
@@ -715,10 +716,10 @@ export const bulkGenerateAdmissionLetters = async (req: Request, res: Response) 
         } catch {}
       }
       // Get next sequence for this intake initial and build segment like S11
-      const seq = await getNextIntakeInitialCounter(intakeInitial);
+      const seq = getNextIntakeInitialCounter(intakeInitial);
       const intakeSegment = `${intakeInitial}${seq}`;
       // Per-user letter number
-      const perUserLetterNumber = await getNextLetterNumberForUser(userEmail);
+      const perUserLetterNumber = getNextLetterNumberForUser(userEmail);
       const { buffer, filename, referenceCode, serialNumber } = await generateAdmissionLetterBuffer({ ...inquiry, admissionDate, staffInitials, intakeSegment, letterNumber: perUserLetterNumber, templateId });
       archive.append(buffer, { name: filename });
       // Optionally update letterStatus in DB here

@@ -97,8 +97,11 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'x-tenant', 'x-user-role', 'x-user-email'],
 }));
-app.use(express.json({ limit: '20mb' }));
-app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+// PDF bulk generation needs up to ~10mb; all other endpoints stay at 2mb.
+app.use('/api/admission-letters/bulk', express.json({ limit: '10mb' }));
+app.use('/api/admission-letters/generate', express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 // serve static assets directory for uploaded logos
 app.use('/assets', (req, res, next) => {
   const p = path.join(__dirname, '..', 'assets');
@@ -108,8 +111,17 @@ app.use('/assets', (req, res, next) => {
 
 // Session table is now managed by Prisma schema
 
-// Session middleware: attach req.user if session cookie is valid
-app.use(async (req, _res, next) => {
+// Memory monitoring — logs every 5 minutes; visible in Render log stream
+setInterval(() => {
+  const m = process.memoryUsage();
+  const mb = (v: number) => (v / 1024 / 1024).toFixed(1);
+  if (parseFloat(mb(m.rss)) > 400) {
+    console.warn(`[MEM] rss=${mb(m.rss)}MB heap=${mb(m.heapUsed)}/${mb(m.heapTotal)}MB ext=${mb(m.external)}MB`);
+  }
+}, 5 * 60 * 1000).unref();
+
+// Session middleware: attach req.user if session cookie is valid (API routes only)
+app.use('/api', async (req, _res, next) => {
   try {
     const cookie = req.headers['cookie'] || '';
     const match = /(?:^|; )session=([^;]+)/.exec(cookie);
@@ -476,7 +488,7 @@ testConnection();
 // Routes
 // Use the tenant-scoped router as the single source of truth.
 // Mounting multiple routers on the same path can cause duplicate handlers and ERR_HTTP_HEADERS_SENT.
-// Shim: provide stable GET /api/inquiries endpoints for UI + reports
+// Shim: provide stable GET /api/inquiries endpoints for UI + reports (paginated)
 app.get('/api/inquiries', async (req, res) => {
   try {
     const tenantId = await getInquiryTenantId(req as any);
@@ -484,10 +496,13 @@ app.get('/api/inquiries', async (req, res) => {
     const role = String((req as any).user?.role || '').toLowerCase();
     const email = String((req as any).user?.email || '').toLowerCase();
     const owner = String(req.query.owner || '').trim().toLowerCase();
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10));
+    const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit || '50'), 10)));
+    const skip = (page - 1) * limit;
 
     const where: any = { tenantId };
     if (role === 'admissions_officer') {
-      if (!email) return res.json([]);
+      if (!email) return res.json({ data: [], total: 0, page, limit, pages: 0 });
       where.OR = [
         { createdBy: { equals: email, mode: 'insensitive' } },
         { assignedTo: { equals: email, mode: 'insensitive' } },
@@ -501,12 +516,17 @@ app.get('/api/inquiries', async (req, res) => {
       }
     }
 
-    const inquiries = await prisma.inquiry.findMany({
-      where,
-      include: { detail: true },
-      orderBy: { createdAt: 'desc' },
-    });
-    return res.json(inquiries);
+    const [inquiries, total] = await Promise.all([
+      prisma.inquiry.findMany({
+        where,
+        include: { detail: true },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.inquiry.count({ where }),
+    ]);
+    return res.json({ data: inquiries, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (e: any) {
     if (!res.headersSent) return res.status(500).json({ message: e?.message || 'Error fetching inquiries' });
     return;
@@ -1133,6 +1153,8 @@ app.get('/api/cpanel/users', requireSuperAdmin, async (_req, res) => {
   try {
     const users = await prisma.user.findMany({
       select: { id: true, email: true, role: true, approved: true, tenantId: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
     });
     return safeJson(res, { users });
   } catch (e) {
@@ -1145,6 +1167,8 @@ app.get('/api/cpanel/tenants', requireSuperAdmin, async (_req, res) => {
   try {
     const tenants = await prisma.tenant.findMany({
       select: { id: true, name: true, subdomain: true, domain: true, isActive: true, createdAt: true, updatedAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
     });
     return safeJson(res, { tenants });
   } catch (e) {

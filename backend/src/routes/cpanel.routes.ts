@@ -124,7 +124,9 @@ router.use(async (req, res, next) => {
 router.get('/tenants', async (_req, res) => {
 	try {
 		const tenants = await prisma.tenant.findMany({
-			select: { id: true, name: true, subdomain: true, domain: true, isActive: true, createdAt: true, updatedAt: true }
+			select: { id: true, name: true, subdomain: true, domain: true, isActive: true, createdAt: true, updatedAt: true },
+			orderBy: { createdAt: 'desc' },
+			take: 200,
 		});
 		return safeJson(res, { tenants });
 	} catch (e) {
@@ -480,7 +482,11 @@ router.post('/tenants/:id/logo', async (req, res) => {
 // --- Global Users ---
 router.get('/users', async (_req, res) => {
 	try {
-		const users = await prisma.user.findMany({ select: { id: true, email: true, role: true, approved: true, tenantId: true, createdAt: true } });
+		const users = await prisma.user.findMany({
+			select: { id: true, email: true, role: true, approved: true, tenantId: true, createdAt: true },
+			orderBy: { createdAt: 'desc' },
+			take: 500,
+		});
 		return safeJson(res, { users });
 	} catch (e) {
 		return safeJson(res, { error: 'Failed to list users' }, 500);
@@ -1311,20 +1317,21 @@ router.get('/health', async (_req, res) => {
 	}
 });
 
-// --- Usage ---
+// --- Usage (parallel counts — no N+1) ---
 router.get('/usage', async (_req, res) => {
   try {
-    const tenants = await prisma.tenant.findMany({ select: { id: true, name: true } });
-    const rows = [] as any[];
-    for (const t of tenants) {
-      const [users, inquiries, followups, tasks] = await Promise.all([
-        prisma.user.count({ where: { tenantId: t.id } }),
-        prisma.inquiry.count({ where: { tenantId: t.id } }),
-        prisma.followup.count({ where: { tenantId: t.id } }),
-        prisma.task.count({ where: { tenantId: t.id } }),
-      ]);
-      rows.push({ tenantId: t.id, tenant: t.name, users, inquiries, followups, tasks });
-    }
+    const tenants = await prisma.tenant.findMany({ select: { id: true, name: true }, take: 100 });
+    const rows = await Promise.all(
+      tenants.map(async (t) => {
+        const [users, inquiries, followups, tasks] = await Promise.all([
+          prisma.user.count({ where: { tenantId: t.id } }),
+          prisma.inquiry.count({ where: { tenantId: t.id } }),
+          prisma.followup.count({ where: { tenantId: t.id } }),
+          prisma.task.count({ where: { tenantId: t.id } }),
+        ]);
+        return { tenantId: t.id, tenant: t.name, users, inquiries, followups, tasks };
+      })
+    );
     return safeJson(res, { tenants: rows });
   } catch (e) {
     return safeJson(res, { error: 'Failed to load usage' }, 500);
@@ -1383,7 +1390,7 @@ router.post('/billing/mpesa/callback', async (req, res) => {
 // --- DLP Delete Requests Review (cross-tenant) ---
 router.get('/delete-requests', async (_req, res) => {
   try {
-    const list = await prisma.deleteRequest.findMany({ orderBy: { createdAt: 'desc' } });
+    const list = await prisma.deleteRequest.findMany({ orderBy: { createdAt: 'desc' }, take: 200 });
     return safeJson(res, { requests: list });
   } catch (e) {
     return safeJson(res, { error: 'Failed to list delete requests' }, 500);
@@ -1551,29 +1558,30 @@ router.post('/tenants/:id/backup', async (req, res) => {
     const tenant = await prisma.tenant.findUnique({ where: { id } });
     if (!tenant) return safeJson(res, { error: 'Tenant not found' }, 404);
 
-    // Export core tenant-scoped tables to JSON blobs
-    const [users, inquiries, inquiryDetails, followups, followupComments, tasks] = await Promise.all([
-      prisma.user.findMany({ where: { tenantId: id } }),
-      prisma.inquiry.findMany({ where: { tenantId: id } }),
-      prisma.inquiryDetail.findMany({ where: { inquiry: { tenantId: id } } }),
-      prisma.followup.findMany({ where: { tenantId: id } }),
-      prisma.followupComment.findMany({ where: { followup: { tenantId: id } } }),
-      prisma.task.findMany({ where: { tenantId: id } }),
-    ]);
-
-    const payload = {
-      meta: {
-        tenant: { id: tenant.id, name: tenant.name, subdomain: tenant.subdomain },
-        generatedAt: new Date().toISOString(),
-        versions: { app: '1.0.0' }
-      },
-      data: { users, inquiries, inquiryDetails, followups, followupComments, tasks }
-    };
-
-    // Return a downloadable JSON backup
+    // Stream backup table-by-table to avoid holding full payload in memory
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename=tenant-${tenant.id}-backup.json`);
-    return res.status(200).send(JSON.stringify(payload));
+    res.status(200);
+    res.write('{"meta":' + JSON.stringify({
+      tenant: { id: tenant.id, name: tenant.name, subdomain: tenant.subdomain },
+      generatedAt: new Date().toISOString(),
+      versions: { app: '1.0.0' }
+    }) + ',"data":{');
+
+    const tables: Array<{ key: string; query: Promise<any[]> }> = [
+      { key: 'users', query: prisma.user.findMany({ where: { tenantId: id } }) },
+      { key: 'inquiries', query: prisma.inquiry.findMany({ where: { tenantId: id } }) },
+      { key: 'inquiryDetails', query: prisma.inquiryDetail.findMany({ where: { inquiry: { tenantId: id } } }) },
+      { key: 'followups', query: prisma.followup.findMany({ where: { tenantId: id } }) },
+      { key: 'followupComments', query: prisma.followupComment.findMany({ where: { followup: { tenantId: id } } }) },
+      { key: 'tasks', query: prisma.task.findMany({ where: { tenantId: id } }) },
+    ];
+    for (let i = 0; i < tables.length; i++) {
+      const rows = await tables[i].query;
+      res.write(`${i > 0 ? ',' : ''}"${tables[i].key}":${JSON.stringify(rows)}`);
+    }
+    res.write('}}');
+    return res.end();
   } catch (e) {
     return safeJson(res, { error: 'Failed to create backup' }, 500);
   }

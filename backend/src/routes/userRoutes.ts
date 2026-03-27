@@ -118,7 +118,9 @@ router.get('/', async (req, res) => {
         gender: true,
         phone: true,
         createdAt: true
-      }
+      },
+      take: 200,
+      orderBy: { createdAt: 'desc' },
     });
     return safeJson(res, users);
   } catch (error) {
