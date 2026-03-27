@@ -4,10 +4,9 @@
  * Keys are cleaned up periodically to avoid memory growth.
  */
 
-// Rate limiting is permanently disabled.
-const DISABLE_LOGIN_RATE_LIMIT = true
+const DISABLE_LOGIN_RATE_LIMIT = false
 
-const MAX_ATTEMPTS = 3
+const MAX_ATTEMPTS = 5
 const LOCKOUT_MS = 15 * 60 * 1000 // 15 minutes
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
 
@@ -15,9 +14,12 @@ type Entry = { count: number; lockedUntil: number }
 
 const store = new Map<string, Entry>()
 
-function getKey(prefix: string, ip: string, identifier: string): string {
+function getKey(prefix: string, _ip: string, identifier: string): string {
+  // Key by identifier (tenantCode:email) only — NOT by IP.
+  // On shared hosting (Render), all users egress through the same IP so
+  // IP-keyed rate limiting would lock out every user when one fails 3 times.
   const normalized = identifier.toLowerCase().trim()
-  return `${prefix}:${ip}:${normalized}`
+  return `${prefix}:${normalized}`
 }
 
 export function isLocked(prefix: string, ip: string, identifier: string): boolean {

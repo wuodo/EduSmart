@@ -78,30 +78,41 @@ export async function middleware(request: NextRequest) {
   }
 
   // If tenant is suspended, force logout + redirect to login.
-  // This is important for the "suspend tenant => immediate logout" requirement.
+  // The check is cached in a short-lived cookie (tenantOk=1, TTL 2 min) so it fires
+  // at most once per 2 minutes instead of on every single page navigation.
   const shouldCheckTenant = isAuthenticated && !isLoginPage && !isRootPage && !path.startsWith('/cpanel');
   if (shouldCheckTenant) {
-    try {
-      const url = new URL('/api/proxy/tenants/me', request.url);
-      const res = await fetch(url.toString(), {
-        cache: 'no-store',
-        headers: {
-          cookie: request.headers.get('cookie') || '',
-        },
-      });
+    const alreadyVerified = request.cookies.get('tenantOk')?.value === '1';
+    if (!alreadyVerified) {
+      try {
+        const url = new URL('/api/proxy/tenants/me', request.url);
+        const res = await fetch(url.toString(), {
+          cache: 'no-store',
+          headers: { cookie: request.headers.get('cookie') || '' },
+        });
+        const data = await res.json().catch(() => null);
+        const isActive = data?.tenant?.isActive;
 
-      const data = await res.json().catch(() => null);
-      const isActive = data?.tenant?.isActive;
-
-      if (!res.ok || data?.success === false || isActive === false) {
-        const r = NextResponse.redirect(new URL('/', request.url));
-        // Clear auth cookies, but keep `tenant` so login page can show "Contact Admin".
-        r.cookies.delete('isAuthenticated');
-        r.cookies.delete('role');
-        return r;
+        if (!res.ok || data?.success === false || isActive === false) {
+          const r = NextResponse.redirect(new URL('/', request.url));
+          r.cookies.delete('isAuthenticated');
+          r.cookies.delete('role');
+          r.cookies.delete('tenantOk');
+          return r;
+        }
+        // Cache the positive result — avoids a backend call on every page for 2 minutes
+        const next = NextResponse.next();
+        next.cookies.set('tenantOk', '1', {
+          httpOnly: true,
+          path: '/',
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 120, // 2 minutes
+        });
+        return next;
+      } catch {
+        // If check fails, don't block the user.
       }
-    } catch {
-      // If check fails, don't block the user (avoid breaking the app if backend is momentarily down).
     }
   }
 

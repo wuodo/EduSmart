@@ -19,25 +19,14 @@ function normalizeTenantCode(value: unknown): string {
   return String(value || '').trim();
 }
 
-function mapDbRoleToAppRole(role: string): 'admin' | 'manager' | 'staff' {
-  const r = String(role || '').toLowerCase();
-  if (r === 'admin') return 'admin';
-  if (r === 'senior_staff') return 'manager';
-  return 'staff';
-}
-
 async function resolveTenantByCode(tenantCode: string) {
   const code = normalizeTenantCode(tenantCode);
   if (!code) return null;
-
   const asId = Number.parseInt(code, 10);
-  // Treat any digits-only tenant_code (including leading zeros) as an ID.
-  // Do NOT filter by isActive — caller checks that separately.
   if (!Number.isNaN(asId) && /^\d+$/.test(code)) {
     const byId = await prisma.tenant.findFirst({ where: { id: asId } });
     if (byId) return byId;
   }
-
   return prisma.tenant.findFirst({
     where: {
       OR: [
@@ -274,92 +263,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login endpoint
-router.post('/login', async (req, res) => {
-  try {
-    const { tenant_code, email, password } = req.body || {};
-    const tenantCode = normalizeTenantCode(tenant_code);
-    const normalizedEmail = String(email || '').trim();
-    // Keep normalization aligned with the main tenant login handler.
-    const normalizedPassword = String(password || '')
-      .trim()
-      .replace(/[\u200B-\u200D\uFEFF]/g, '');
-
-    if (!tenantCode || !normalizedEmail || !normalizedPassword) {
-      return safeJson(res, { error: 'Invalid login credentials' }, 401);
-    }
-
-    const tenant = await resolveTenantByCode(tenantCode);
-    if (!tenant) {
-      await auditLogger.login(req, normalizedEmail, false, { tenantCode, reason: 'tenant_not_found' });
-      return safeJson(res, { error: 'Invalid login credentials' }, 401);
-    }
-    if (tenant.isActive === false) {
-      return safeJson(res, { error: 'Institution account is suspended. Please contact support.' }, 403);
-    }
-
-    const user = await prisma.user.findFirst({
-      where: {
-        email: { equals: normalizedEmail, mode: 'insensitive' },
-        tenantId: tenant.id,
-      },
-    });
-
-    const passwordOk = user
-      ? (bcrypt.compareSync(normalizedPassword, user.password) ||
-         (!user.password.startsWith('$2') && user.password === normalizedPassword))
-      : false;
-
-    if (!user || !passwordOk) {
-      await auditLogger.login(req, normalizedEmail, false, { tenantId: tenant.id, tenantCode, reason: 'invalid_user_or_password' });
-      return safeJson(res, { error: 'Invalid login credentials' }, 401);
-    }
-
-    if (user.approved === false) {
-      return safeJson(res, { error: 'Account pending approval. Please contact your administrator.' }, 403);
-    }
-
-    // Re-hash plain-text passwords on successful login
-    if (!user.password.startsWith('$2') && user.password === normalizedPassword) {
-      const hashed = bcrypt.hashSync(normalizedPassword, 10);
-      await prisma.user.update({ where: { id: user.id }, data: { password: hashed } }).catch(() => {});
-    }
-
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
-    await prisma.$executeRaw`
-      INSERT INTO sessions (token, "userId", "tenantId", "expiresAt", "lastUsedAt")
-      VALUES (${token}, ${user.id}, ${tenant.id}, ${expiresAt}, NOW())
-    `;
-    await auditLogger.login(req, normalizedEmail, true, { role: user.role, tenantId: tenant.id, tenantCode });
-
-    if (!res.headersSent) {
-      res.cookie('session', token, {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        expires: expiresAt,
-        path: '/',
-      });
-    }
-
-    const appRole = mapDbRoleToAppRole(String(user.role));
-    return safeJson(res, {
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: appRole,
-        tenant_id: tenant.id,
-      },
-      dbRole: user.role,
-      name: user.name || user.email,
-    });
-  } catch (error) {
-    return safeJson(res, { error: 'Login error' }, 500);
-  }
-});
-
 // Logout endpoint: delete session
 router.post('/logout', async (req, res) => {
   try {
@@ -383,6 +286,7 @@ router.post('/logout', async (req, res) => {
     }
     
     res.clearCookie('session', { path: '/' });
+    res.clearCookie('tenantOk', { path: '/' });
     
     // Log logout
     if (userEmail) {

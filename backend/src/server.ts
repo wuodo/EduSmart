@@ -214,9 +214,8 @@ app.post('/api/users/login', async (req, res) => {
     });
 
     const passwordOk = user
-      ? (bcrypt.compareSync(normalizedPassword, user.password) ||
-         // Fallback: plain-text match for users whose passwords are not yet hashed
-         (!user.password.startsWith('$2') && user.password === normalizedPassword))
+      ? ((!user.password.startsWith('$2') && user.password === normalizedPassword) ||
+         await bcrypt.compare(normalizedPassword, user.password))
       : false;
 
     if (!user || !passwordOk) {
@@ -316,8 +315,8 @@ app.post('/api/cpanel/login', async (req, res) => {
     });
 
     const cpanelPasswordOk = user
-      ? (bcrypt.compareSync(password, user.password) ||
-         (!user.password.startsWith('$2') && user.password === password))
+      ? ((!user.password.startsWith('$2') && user.password === password) ||
+         await bcrypt.compare(password, user.password))
       : false;
 
     if (!user || !cpanelPasswordOk) {
