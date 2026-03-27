@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import prisma from '../lib/prisma';
 
 export type RolePerm = { name: string; permissions: string[] };
 export type ModulesAccess = { [key: string]: string[] };
@@ -63,16 +64,80 @@ export function loadPermissions(): PermissionsModel {
 	return cached;
 }
 
-export function savePermissions(p: PermissionsModel) {
+export function savePermissions(p: PermissionsModel): void {
 	try {
 		fs.mkdirSync(path.dirname(PERMISSIONS_PATH), { recursive: true });
 		fs.writeFileSync(PERMISSIONS_PATH, JSON.stringify(p, null, 2));
 		cached = p;
 		mtime = Date.now();
 	} catch (e) {
-		// swallow for now
+		console.error('[permissions] Failed to write permissions file:', e);
+		// Still update in-memory cache so current process sees the change
+		cached = p;
 	}
 }
+
+// ---------------------------------------------------------------------------
+// DB-backed persistence — stores permissions inside the CpanelConfig row so
+// they survive Render container restarts (ephemeral filesystem).
+// ---------------------------------------------------------------------------
+
+export async function loadPermissionsFromDb(): Promise<PermissionsModel> {
+	try {
+		const row = await (prisma as any).cpanelConfig.findUnique({ where: { id: 1 } });
+		const data = (row?.data as any)?.permissions;
+		if (data?.roles) return normalizePermissions(data as PermissionsModel);
+	} catch (e) {
+		console.error('[permissions] DB load failed, falling back to file:', e);
+	}
+	return loadPermissions();
+}
+
+export async function savePermissionsToDb(p: PermissionsModel): Promise<void> {
+	let dbOk = false;
+	try {
+		const existing = await (prisma as any).cpanelConfig.findUnique({ where: { id: 1 } });
+		const current: Record<string, unknown> = (existing?.data && typeof existing.data === 'object'
+			? existing.data
+			: {}) as Record<string, unknown>;
+		await (prisma as any).cpanelConfig.upsert({
+			where: { id: 1 },
+			update: { data: { ...current, permissions: p } },
+			create: { id: 1, data: { permissions: p } },
+		});
+		dbOk = true;
+	} catch (e) {
+		console.error('[permissions] DB save failed:', e);
+	}
+	// Always mirror to file as a secondary backup
+	savePermissions(p);
+	if (!dbOk) {
+		throw new Error('Permissions saved to file only — DB write failed. Data may revert on restart.');
+	}
+}
+
+// Bootstrap: on startup ensure the DB row contains the current permissions
+// so a freshly-deployed container gets the last-saved state from the DB.
+;(async () => {
+	try {
+		const row = await (prisma as any).cpanelConfig.findUnique({ where: { id: 1 } });
+		if (!row?.data || !(row.data as any)?.permissions) {
+			// No permissions in DB yet — seed from file
+			const initial = loadPermissions();
+			const current: Record<string, unknown> = (row?.data && typeof row.data === 'object'
+				? row.data
+				: {}) as Record<string, unknown>;
+			await (prisma as any).cpanelConfig.upsert({
+				where: { id: 1 },
+				update: { data: { ...current, permissions: initial } },
+				create: { id: 1, data: { permissions: initial } },
+			});
+			console.log('[permissions] Seeded permissions into DB from file.');
+		}
+	} catch (e) {
+		console.error('[permissions] Bootstrap DB seed failed:', e);
+	}
+})();
 
 export function allowedMethodsFor(role: string): Set<string> {
 	const perms = (loadPermissions().roles.find(r => r.name === role)?.permissions || []).map(p => p.toLowerCase());

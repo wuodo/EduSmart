@@ -20,6 +20,7 @@ import prisma from './lib/prisma';
 import path from 'path';
 import permissionsRoutes from './routes/permissions.routes';
 import cpanelRoutes from './routes/cpanel.routes';
+import marketingSettingsRoutes from './routes/marketingSettings.routes';
 import askAiRoutes from './routes/askAi.routes';
 import coursesRoutes from './routes/courses.routes';
 import bcrypt from 'bcryptjs';
@@ -719,6 +720,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/approvals', approvalsRoutes);
 app.use('/api/delete-requests', deleteRequestsRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/marketing-settings', marketingSettingsRoutes);
 // Shim: directly expose audit logs endpoints to avoid 404s in environments
 // where the router mounting might be misconfigured. Controllers enforce role checks.
 app.get('/api/audit-logs', listAuditLogs);

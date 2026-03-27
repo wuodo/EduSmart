@@ -2,6 +2,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import prisma from '../lib/prisma';
+import { loadCpanelFromDb, saveCpanelToDb } from '../utils/cpanelStore';
 
 type Audience = 'all' | 'role';
 
@@ -47,6 +48,23 @@ function saveStore(store: NotificationStore) {
     fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
     fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), 'utf8');
   } catch {}
+}
+
+async function loadStoreFromDb(): Promise<NotificationStore> {
+  try {
+    const cfg = await loadCpanelFromDb();
+    const data = (cfg as any).notifications as NotificationStore | undefined;
+    if (data && Array.isArray(data.broadcasts)) return data;
+  } catch {}
+  return loadStore();
+}
+
+async function saveStoreToDb(store: NotificationStore): Promise<void> {
+  try {
+    const cfg = await loadCpanelFromDb();
+    await saveCpanelToDb({ ...cfg, notifications: store } as any);
+  } catch {}
+  saveStore(store);
 }
 
 function toReadMap(entry: string[] | Record<string, string> | undefined): Record<string, string> {
@@ -107,11 +125,11 @@ function canReceive(n: BroadcastNotification, role: string, tenantId: number | n
   return false;
 }
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { email, role, tenantId } = currentUser(req);
   if (!email) return res.status(401).json({ error: 'Not authenticated' });
-  const store = loadStore();
-  if (pruneStore(store)) saveStore(store);
+  const store = await loadStoreFromDb();
+  if (pruneStore(store)) await saveStoreToDb(store);
   const readMap = toReadMap(store.reads[email]);
   const readSet = new Set(Object.keys(readMap));
   const items = store.broadcasts
@@ -126,11 +144,11 @@ router.get('/', (req, res) => {
   return res.json({ notifications: items });
 });
 
-router.get('/unread-count', (req, res) => {
+router.get('/unread-count', async (req, res) => {
   const { email, role, tenantId } = currentUser(req);
   if (!email) return res.status(401).json({ error: 'Not authenticated' });
-  const store = loadStore();
-  if (pruneStore(store)) saveStore(store);
+  const store = await loadStoreFromDb();
+  if (pruneStore(store)) await saveStoreToDb(store);
   const readMap = toReadMap(store.reads[email]);
   const readSet = new Set(Object.keys(readMap));
   const count = store.broadcasts.filter((n) => canReceive(n, role, tenantId) && !readSet.has(n.id)).length;
@@ -143,8 +161,8 @@ router.get('/sent', async (req, res) => {
   if (!(role === 'admin' || role === 'senior_staff' || role === 'manager')) {
     return res.status(403).json({ error: 'Only admins, managers, or senior staff can view sent broadcasts' });
   }
-  const store = loadStore();
-  if (pruneStore(store)) saveStore(store);
+  const store = await loadStoreFromDb();
+  if (pruneStore(store)) await saveStoreToDb(store);
   const myBroadcasts = store.broadcasts
     .filter((n) => n.createdBy === email)
     .sort((a, b) => +(new Date(b.createdAt)) - +(new Date(a.createdAt)))
@@ -192,29 +210,23 @@ router.get('/sent', async (req, res) => {
   return res.json({ notifications: items });
 });
 
-router.put('/:id/read', (req, res) => {
+router.put('/:id/read', async (req, res) => {
   const { email } = currentUser(req);
   if (!email) return res.status(401).json({ error: 'Not authenticated' });
   const id = String(req.params.id || '').trim();
   if (!id) return res.status(400).json({ error: 'Missing notification id' });
-  const store = loadStore();
-  if (pruneStore(store)) {
-    // continue after cleanup
-  }
+  const store = await loadStoreFromDb();
   const map = toReadMap(store.reads[email]);
   if (!map[id]) map[id] = new Date().toISOString();
   store.reads[email] = map;
-  saveStore(store);
+  await saveStoreToDb(store);
   return res.json({ success: true });
 });
 
-router.put('/read-all', (req, res) => {
+router.put('/read-all', async (req, res) => {
   const { email, role, tenantId } = currentUser(req);
   if (!email) return res.status(401).json({ error: 'Not authenticated' });
-  const store = loadStore();
-  if (pruneStore(store)) {
-    // continue after cleanup
-  }
+  const store = await loadStoreFromDb();
   const ids = store.broadcasts.filter((n) => canReceive(n, role, tenantId)).map((n) => n.id);
   const map = toReadMap(store.reads[email]);
   const now = new Date().toISOString();
@@ -222,11 +234,11 @@ router.put('/read-all', (req, res) => {
     if (!map[id]) map[id] = now;
   }
   store.reads[email] = map;
-  saveStore(store);
+  await saveStoreToDb(store);
   return res.json({ success: true, readCount: ids.length });
 });
 
-router.post('/broadcast', (req: any, res) => {
+router.post('/broadcast', async (req: any, res) => {
   const { email, role, tenantId } = currentUser(req);
   if (!email) return res.status(401).json({ error: 'Not authenticated' });
   if (!(role === 'admin' || role === 'senior_staff' || role === 'manager')) {
@@ -250,10 +262,8 @@ router.post('/broadcast', (req: any, res) => {
   if (expiresAtRaw && Number.isNaN(+expiresAt!)) return res.status(400).json({ error: 'Invalid expiresAt' });
   if (publishAt && expiresAt && +expiresAt <= +publishAt) return res.status(400).json({ error: 'expiresAt must be after publishAt' });
 
-  const store = loadStore();
-  if (pruneStore(store)) {
-    // continue after cleanup
-  }
+  const store = await loadStoreFromDb();
+  pruneStore(store);
   const n: BroadcastNotification = {
     id: `n_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     title,
@@ -270,7 +280,7 @@ router.post('/broadcast', (req: any, res) => {
   };
   store.broadcasts.unshift(n);
   if (store.broadcasts.length > 2000) store.broadcasts = store.broadcasts.slice(0, 2000);
-  saveStore(store);
+  await saveStoreToDb(store);
   return res.status(201).json({ success: true, notification: n });
 });
 
