@@ -198,6 +198,15 @@ export default function MarketingPage() {
 
   const todaysWorkload = todaysTasks.length + todaysFollowups.length;
 
+  const MS_48H = 48 * 60 * 60 * 1000
+  const awaitingFirstTouch = inquiries.filter((i) => {
+    const id = String((i as any).id ?? '')
+    if (!id) return false
+    if ((i as any).firstResponseAt) return false
+    const created = new Date(i.createdAt).getTime()
+    return Date.now() - created > MS_48H
+  }).length
+
   // Status funnel (real data)
   const statusOrder = ['new', 'contacted', 'qualified', 'hot', 'registered', 'lost'];
   const statusCounts = statusOrder.map(statusKey =>
@@ -357,6 +366,50 @@ export default function MarketingPage() {
             <ArrowPathIconAny className="w-4 h-4 mr-1" />
             Refresh data
           </button>
+        </div>
+      </div>
+
+      {/* Today / queue — actionable shortcuts */}
+      <div className="rounded-lg border border-teal-300/60 dark:border-teal-700 bg-gradient-to-br from-teal-50/90 to-white dark:from-teal-950/35 dark:to-gray-900 px-4 py-3 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wide text-teal-800 dark:text-teal-200">Today&apos;s focus</div>
+            <p className="text-[13px] text-gray-700 dark:text-gray-300 mt-1 max-w-2xl">
+              Start with overdue follow-ups and leads waiting too long for first contact. Use{' '}
+              <kbd className="px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 text-[10px] bg-white dark:bg-gray-800">Ctrl</kbd>
+              +
+              <kbd className="px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 text-[10px] bg-white dark:bg-gray-800">K</kbd>
+              {' '}to jump anywhere.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/followups"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-[12px] font-semibold bg-amber-600 text-white hover:bg-amber-700 hover:opacity-95 rounded-md shadow-sm"
+            >
+              <ExclamationTriangleIconAny className="h-4 w-4" />
+              Overdue ({overdueFollowups})
+            </Link>
+            <Link
+              href="/inquiries"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-[12px] font-semibold border-2 border-orange-300 dark:border-orange-700 text-orange-900 dark:text-orange-100 bg-orange-50/80 dark:bg-orange-950/40 hover:bg-orange-100 dark:hover:bg-orange-900/50 rounded-md"
+            >
+              No first touch 48h+ ({awaitingFirstTouch})
+            </Link>
+            <Link
+              href="/inquiries"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-[12px] font-semibold border border-sky-400 text-sky-800 dark:text-sky-200 bg-white dark:bg-gray-800 hover:bg-sky-50 dark:hover:bg-gray-700 rounded-md"
+            >
+              Hot / warm priority ({hotWarmWithoutCompletedFollowup})
+            </Link>
+            <Link
+              href="/calendar"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-[12px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md"
+            >
+              <CalendarIconAny className="h-4 w-4" />
+              Calendar
+            </Link>
+          </div>
         </div>
       </div>
 

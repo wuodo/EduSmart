@@ -12,6 +12,9 @@ import { cachedApiFetch } from '@/utils/apiClient';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import FloatingChat from '@/components/marketing/FloatingChat';
 import FloatingAskAi from '@/components/askAi/FloatingAskAi';
+import CommandPalette, { CommandPaletteTriggerButton, openCommandPalette } from '@/components/crm/CommandPalette';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+const MagnifyingGlassIconAny: any = MagnifyingGlassIcon
 
 const moduleNames: { [key: string]: string } = {
   '/': 'Dashboard',
@@ -413,6 +416,14 @@ export default function DashboardLayout({
           <div className="flex items-center gap-1 xs:gap-2 sm:gap-3 md:gap-4 lg:gap-6 flex-shrink-0 min-w-0">
                          {/* Mobile controls - Profile, notifications, mentions, time */}
             <div className="flex lg:hidden items-center gap-2">
+               <button
+                 type="button"
+                 onClick={() => openCommandPalette()}
+                 className="text-white hover:text-yellow-200 mobile-touch-friendly"
+                 title="Search (Ctrl+K)"
+               >
+                 <MagnifyingGlassIconAny className="h-5 w-5" />
+               </button>
                {/* Theme toggle - mobile */}
                <ThemeToggle />
                {/* Profile icon */}
@@ -497,6 +508,7 @@ export default function DashboardLayout({
             
             {/* Desktop controls - hidden on mobile */}
             <div className="hidden md:flex items-center gap-4">
+              <CommandPaletteTriggerButton />
               <div className="flex flex-col items-end mr-3 sm:mr-6">
                 <span suppressHydrationWarning className="text-white text-compact-xs font-medium">{dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                 <span suppressHydrationWarning className="text-white text-compact-xs">{dateTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}</span>
@@ -949,6 +961,7 @@ export default function DashboardLayout({
           onClose={() => setFloatingChat(null)}
         />
         <FloatingAskAi />
+        <CommandPalette />
       </div>
     </div>
   );

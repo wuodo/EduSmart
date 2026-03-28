@@ -30,6 +30,7 @@ import {
   primaryButtonClass,
   secondaryButtonClass,
 } from '@/styles/modalForm'
+import NextBestActionsPanel from '@/components/crm/NextBestActionsPanel'
 
 const PencilIcon: any = PencilSquareIcon;
 const TrashIconAny: any = TrashIcon;
@@ -819,6 +820,7 @@ export default function InquiryList({
               <h2 className={modalTitleClass}>Inquiry Details</h2>
               <button onClick={() => setShowModal(false)} className={modalCloseButtonClass} aria-label="Close">✕</button>
             </div>
+            <NextBestActionsPanel inquiry={selected} />
             <div className="overflow-x-auto">
               <table className="w-full text-xs sm:text-sm border border-neutral-light">
                 <tbody>

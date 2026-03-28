@@ -163,6 +163,8 @@ export default function InquiriesPage() {
       setLetterShareHighlightId(openI)
       if (qs.get('fromAdmissionShare') === '1') setAdmissionShareBanner(true)
     }
+    const qSearch = (qs.get('q') || qs.get('search') || '').trim()
+    if (qSearch) setSearch(qSearch)
   }, [])
 
   const stripLetterShareQuery = useCallback(() => {
