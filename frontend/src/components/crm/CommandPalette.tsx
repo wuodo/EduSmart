@@ -15,6 +15,7 @@ import {
   CalendarIcon,
   ClipboardDocumentListIcon,
   BoltIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline'
 
 const MagnifyingGlassIconAny: any = MagnifyingGlassIcon
@@ -28,6 +29,7 @@ const AcademicCapIconAny: any = AcademicCapIcon
 const CalendarIconAny: any = CalendarIcon
 const ClipboardDocumentListIconAny: any = ClipboardDocumentListIcon
 const BoltIconAny: any = BoltIcon
+const SparklesIconAny: any = SparklesIcon
 
 function userHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {}
@@ -52,13 +54,26 @@ const NAV: NavItem[] = [
   { id: 'courses', label: 'Courses', href: '/courses', icon: AcademicCapIconAny, keywords: 'programs' },
   { id: 'rep', label: 'Reports', href: '/reports', icon: ChartBarIconAny, keywords: 'export csv' },
   { id: 'an', label: 'Analytics', href: '/analytics', icon: ChartBarIconAny, keywords: 'charts' },
-  { id: 'set', label: 'Marketing settings', href: '/settings', icon: Cog6ToothIconAny, keywords: 'admin config smart' },
+  {
+    id: 'set',
+    label: 'Marketing settings',
+    href: '/settings',
+    icon: Cog6ToothIconAny,
+    keywords: 'admin configuration users permissions branding integrations marketing cpanel',
+  },
   {
     id: 'auto',
     label: 'Automations',
     href: '/settings?section=auto',
     icon: BoltIconAny,
-    keywords: 'automation rules workflow triggers follow-up marketing settings',
+    keywords: 'automation rules workflow triggers follow-up inquiry status',
+  },
+  {
+    id: 'smartfeat',
+    label: 'Smart Features',
+    href: '/settings?section=smart',
+    icon: SparklesIconAny,
+    keywords: 'smart features lead scoring duplicate detection dormant sla reminders capacity',
   },
 ]
 
