@@ -40,6 +40,17 @@ function getStaticPdfBytes(): Buffer {
   return _staticPdfBytes;
 }
 
+// Cache the PARSED PDFDocument (not just raw bytes). PDFDocument.load() re-parses the
+// entire document tree on every call — costs 500ms–1s. The cached object is read-only:
+// pdfDoc.copyPages(staticDoc, ...) reads but never mutates the source document.
+let _staticPdfDoc: import('pdf-lib').PDFDocument | null = null;
+async function getStaticPdfDoc(): Promise<import('pdf-lib').PDFDocument> {
+  if (!_staticPdfDoc) {
+    _staticPdfDoc = await PDFDocument.load(getStaticPdfBytes());
+  }
+  return _staticPdfDoc;
+}
+
 // Helper to read user identity from authenticated session context
 function getUserEmailHeader(req: Request): string {
   return String((req as any).user?.email || '').trim();
@@ -126,6 +137,31 @@ function _saveJsonAsync(filePath: string, data: unknown) {
       fs.writeFileSync(filePath, JSON.stringify(data), 'utf8');
     } catch { /* non-critical */ }
   });
+}
+
+// ---------------------------------------------------------------------------
+// In-process PDF buffer cache — eliminates repeated generation for the
+// preview → download → share pattern on the same letter within a session.
+// Key: `${tenantId}:${inquiryId|name}:${admissionDate}:${resolvedTemplate}`
+// Ceiling: 50 entries × ~1 MB = ~50 MB. TTL: 30 minutes.
+// ---------------------------------------------------------------------------
+const _pdfCache = new Map<string, { buffer: Buffer; ts: number }>();
+const PDF_CACHE_TTL_MS = 30 * 60 * 1000;
+const PDF_CACHE_MAX = 50;
+
+function getCachedPdf(key: string): Buffer | null {
+  const entry = _pdfCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > PDF_CACHE_TTL_MS) { _pdfCache.delete(key); return null; }
+  return entry.buffer;
+}
+
+function setCachedPdf(key: string, buffer: Buffer): void {
+  if (_pdfCache.size >= PDF_CACHE_MAX) {
+    const oldest = [..._pdfCache.entries()].reduce((a, b) => a[1].ts < b[1].ts ? a : b);
+    _pdfCache.delete(oldest[0]);
+  }
+  _pdfCache.set(key, { buffer, ts: Date.now() });
 }
 
 function getNextIntakeInitialCounter(initial: string): number {
@@ -262,10 +298,11 @@ export const generateAdmissionLetter = async (req: Request, res: Response) => {
   }
 };
 
-// Download admission letter as PDF
+// Download admission letter as PDF — streams binary PDF directly (eliminates base64 overhead).
+// Checks in-process buffer cache first; generates only on cache miss.
+// Cache key: tenant:inquiryId:admissionDate:templateId — covers preview/download/share pattern.
 export const downloadAdmissionLetter = async (req: Request, res: Response) => {
   try {
-    console.log('Starting PDF generation...');
     const { inquiryId, name, phone, course, duration, admissionDate, templateId } = req.body;
 
     if (!admissionDate || !isValidDateFormat(admissionDate)) {
@@ -274,192 +311,68 @@ export const downloadAdmissionLetter = async (req: Request, res: Response) => {
         message: 'Admission date must be in DD/MM/YYYY format (e.g., 05/09/2025)'
       });
     }
-
-    const userEmail = getUserEmailHeader(req);
-    const staffInitials = await getStaffInitialsForUser(userEmail);
-    const letterNumber = getNextLetterNumberForUser(userEmail);
+    if (!name || !phone) {
+      return res.status(400).json({ error: 'name and phone are required' });
+    }
 
     const tenantId = (req as any).tenant?.id;
-
-    let intakeInitial = 'X';
-    let effectiveCourse = String(course || '').trim();
-    if (inquiryId) {
-      try {
-        const inquiryRecord = await prisma.inquiry.findFirst({ where: { id: parseInt(inquiryId), tenantId } });
-        intakeInitial = getIntakeInitial(inquiryRecord?.intakePeriod as any);
-        if (!effectiveCourse && inquiryRecord?.programOfInterest) {
-          effectiveCourse = String(inquiryRecord.programOfInterest);
-        }
-      } catch (e) {
-        console.warn('Could not fetch inquiry for intake initial:', e);
-      }
-    }
-
-    const intakeSeq = getNextIntakeInitialCounter(intakeInitial);
-    const currentDate = new Date();
-    const monthName = getMonthName(currentDate);
-    const dayNum = currentDate.getDate();
-    const serialNumber = `${staffInitials}/L${letterNumber}/${monthName}${dayNum}/${intakeInitial}${intakeSeq}`;
-    const monthInitial = getMonthInitial(currentDate);
-    const year = currentDate.getFullYear().toString().slice(-2);
-    const sequentialNumber = getSequentialNumber();
-    const referenceCode = `JFCM/REG/${monthInitial}${sequentialNumber}/${year}`;
-
-    // Save serial/reference to DB so CSV export shows correct values
-    if (inquiryId) {
-      try {
-        await prisma.inquiry.update({
-          where: { id: parseInt(String(inquiryId)), tenantId } as any,
-          data: { letterStatus: 'Generated', letterReferenceNumber: referenceCode, letterSerialNumber: serialNumber }
-        });
-      } catch (e: any) {
-        if ((e as any).code !== 'P2025') console.warn('Error updating letter status on download:', e);
-      }
-    }
-
-    const bgBytes = getBgBytes();
-    const stampBytes = getStampBytes();
-
-    const pdfDoc = await PDFDocument.create();
-    const a4Width = 595.28;
-    const a4Height = 841.89;
-    const page1 = pdfDoc.addPage([a4Width, a4Height]);
-
-    const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const serialFont = await pdfDoc.embedFont(StandardFonts.Courier);
-
-    const mmToPoints = (mm: number) => mm * 2.83465;
-
-    const bgImage = await pdfDoc.embedPng(bgBytes);
-    page1.drawImage(bgImage, { x: 0, y: 0, width: a4Width, height: a4Height });
-
-    const stampImage = await pdfDoc.embedPng(stampBytes);
-    const stampWidth = 100;
-    const stampHeight = 100;
-    const stampX = a4Width - mmToPoints(88) - stampWidth;
-    const stampY = a4Height - mmToPoints(250);
-    page1.drawImage(stampImage, { x: stampX, y: stampY, width: stampWidth, height: stampHeight });
-
-    const stampDateText = formatStampDate(currentDate);
-    const stampDateWidth = boldFont.widthOfTextAtSize(stampDateText, 10);
-    page1.drawText(stampDateText, {
-      x: stampX + (stampWidth - stampDateWidth) / 2,
-      y: stampY + stampHeight / 2 - mmToPoints(2.5),
-      size: 10, font: boldFont, color: rgb(0, 0.125, 0.922)
-    });
-
-    const serialTopMargin = mmToPoints(17);
-    const serialRightMargin = mmToPoints(28);
-    const referenceTopMargin = mmToPoints(66);
-    const contentMargin = mmToPoints(21.6);
-    const rightMargin = a4Width - contentMargin;
-    const titleTopMargin = mmToPoints(110);
-    const bodyTopMargin = mmToPoints(120);
-    const bodyWidth = a4Width - (2 * contentMargin);
-
-    const serialNumberWidth = serialFont.widthOfTextAtSize(serialNumber, 10);
-    page1.drawText(serialNumber, {
-      x: a4Width - serialRightMargin - serialNumberWidth,
-      y: a4Height - serialTopMargin,
-      size: 10, font: serialFont, color: rgb(0, 0, 0)
-    });
-
-    const lineHeight = 20;
-    let currentY = a4Height - referenceTopMargin;
-
-    page1.drawText(`Our Ref: ${referenceCode}`, { x: contentMargin, y: currentY, size: 12, font: regularFont, color: rgb(0, 0, 0) });
-    currentY -= lineHeight;
-    page1.drawText('Your Ref: ……………………………', { x: contentMargin, y: currentY, size: 12, font: regularFont, color: rgb(0, 0, 0) });
-    currentY -= lineHeight * 1.5;
-    page1.drawText(name, { x: contentMargin, y: currentY, size: 12, font: boldFont, color: rgb(0.157, 0.475, 0.714) });
-    currentY -= lineHeight;
-    page1.drawText(phone, { x: contentMargin, y: currentY, size: 12, font: regularFont, color: rgb(0, 0, 0) });
-    currentY -= lineHeight;
-    page1.drawText(`Dear ${name.split(' ')[0]},`, { x: contentMargin, y: currentY, size: 12, font: regularFont, color: rgb(0, 0, 0) });
-
-    const formattedCurrentDate = formatStampDate(currentDate);
-    const dateWidth = boldFont.widthOfTextAtSize(formattedCurrentDate, 12);
-    page1.drawText(formattedCurrentDate, { x: rightMargin - dateWidth, y: a4Height - referenceTopMargin, size: 12, font: boldFont, color: rgb(0, 0, 0) });
-
-    const title = "RE: OFFER OF ADMISSION";
-    const titleWidth = boldFont.widthOfTextAtSize(title, 14);
-    page1.drawText(title, { x: contentMargin, y: a4Height - titleTopMargin, size: 14, font: boldFont, color: rgb(0, 0, 0) });
-
-    const underlineY = a4Height - titleTopMargin - 2;
-    page1.drawLine({ start: { x: contentMargin, y: underlineY }, end: { x: contentMargin + titleWidth, y: underlineY }, thickness: 1, color: rgb(0, 0, 0) });
-
+    const userEmail = getUserEmailHeader(req);
     const resolvedTemplate = resolveLetterTemplateId(templateId);
+    const filename = `admission-letter-${String(name).replace(/\s+/g, '-')}.pdf`;
 
-    const paragraphs =
-      resolvedTemplate === 'short'
-        ? [
-            `Congratulations! You have been offered admission to JFC Munene College of Health Sciences for ${effectiveCourse || course}. Please report on ${admissionDate} between 8:00a.m and 5:00p.m.`,
-            `This program will take a duration of ${duration} and includes industrial attachment. Kindly come with all required documents and personal effects.`,
-          ]
-        : resolvedTemplate === 'detailed'
-          ? [
-              'JFC Munene College of health sciences is a premier middle level college registered with the Ministry of Education and Technical Vocational Education and Training Authority (TVETA) Registration number TVETA/PRIVATE/TVC/0090/2021, Nutritionists & Dieticians Institute (KNDI) registration number KNDI/ACCR/IL/084. We are offering Diploma, Certificate, Craft and Artisan Level Programs. Our programs are examined by Kenya National Examination Council (KNEC) and Technical Vocational Education and Training-Curriculum Development Assessment and Certification Council (TVET-CDACC) under the Ministry of Education.',
-              `On behalf of the Admission Selection Committee, it is my great pleasure to offer you admission to JFC Munene College of Health Sciences ${effectiveCourse || course} at our Thika campus. Your acceptance reflects the admissions committee's evaluation of your interest and your ability to benefit from this program. This is an intensive program that will take a duration of ${duration} and three months of industrial attachment. You are therefore expected to report on ${admissionDate} between 8:00a.m and 5:00p.m.`,
-              'We offer state of the art accommodation for all our students at a cost of ksh 22,750 per term and this is inclusive of meals and bed. Students are expected to report with their beddings and personal effects. Attached to this letter are admission requirements and medical report that must be filled at an NHIF accredited Hospital, to be submitted during the admission day.'
-            ]
-          : [
-              `On behalf of the Admission Selection Committee, it is my great pleasure to offer you admission to JFC Munene College of Health Sciences ${course} at our Thika campus.`,
-              `This is an intensive program that will take a duration of ${duration}. You are expected to report on ${admissionDate} between 8:00a.m and 5:00p.m.`,
-              'Please come with all required documents indicated in the attached admission requirements.'
-            ];
-
-    const fontSize = 12;
-    const lineSpacing = 1.2;
-    let y = a4Height - bodyTopMargin;
-
-    for (const paragraph of paragraphs) {
-      const words = paragraph.split(' ');
-      let x = contentMargin;
-      let line = '';
-      let isBold = false;
-
-      for (const word of words) {
-        const shouldBeBold = word.includes(course) || word.includes(duration) || word.includes(admissionDate);
-        const testLine = line + word + ' ';
-        const testWidth = (shouldBeBold ? boldFont : regularFont).widthOfTextAtSize(testLine, fontSize);
-
-        if (testWidth > bodyWidth && line !== '') {
-          page1.drawText(line, { x, y, size: fontSize, font: isBold ? boldFont : regularFont, color: rgb(0, 0, 0) });
-          line = word + ' ';
-          y -= fontSize * lineSpacing;
-          isBold = shouldBeBold;
-        } else {
-          line = testLine;
-          isBold = shouldBeBold;
-        }
-      }
-
-      if (line) {
-        page1.drawText(line, { x, y, size: fontSize, font: isBold ? boldFont : regularFont, color: rgb(0, 0, 0) });
-        y -= fontSize * lineSpacing * 2;
-      }
+    // Cache check — skip all DB + generation work on hit
+    const cacheKey = `${tenantId ?? 0}:${inquiryId ?? name}:${admissionDate}:${resolvedTemplate}`;
+    const cached = getCachedPdf(cacheKey);
+    if (cached) {
+      if (res.headersSent) return;
+      res.set('Content-Type', 'application/pdf');
+      res.set('Content-Disposition', `attachment; filename="${filename}"`);
+      res.set('X-Cache', 'HIT');
+      return res.send(cached);
     }
 
-    // Draw closing signature block
-    y -= fontSize * lineSpacing;
-    page1.drawText('Yours faithfully,', { x: contentMargin, y, size: fontSize, font: regularFont, color: rgb(0, 0, 0) });
-    y -= fontSize * lineSpacing * 3.5;
-    // Cover old principal name in background with white rectangle, then draw new name
-    page1.drawRectangle({ x: contentMargin, y: y - 4, width: 200, height: 36, color: rgb(1, 1, 1) });
-    page1.drawText('James Chiaga', { x: contentMargin, y: y + 14, size: 12, font: boldFont, color: rgb(0, 0, 0) });
-    page1.drawText('Principal', { x: contentMargin, y: y, size: 11, font: regularFont, color: rgb(0, 0, 0) });
+    // Cache MISS — fetch inquiry + user in parallel to minimise DB round trips
+    const numericId = inquiryId ? parseInt(String(inquiryId), 10) : NaN;
+    const [staffInitials, inquiryRecord] = await Promise.all([
+      getStaffInitialsForUser(userEmail),
+      !Number.isNaN(numericId)
+        ? prisma.inquiry.findFirst({ where: { id: numericId, tenantId } })
+        : Promise.resolve(null),
+    ]);
 
-    const staticDoc = await PDFDocument.load(getStaticPdfBytes());
-    const copiedPages = await pdfDoc.copyPages(staticDoc, staticDoc.getPageIndices());
-    copiedPages.forEach((p) => pdfDoc.addPage(p));
+    const intakeInitial = getIntakeInitial((inquiryRecord?.intakePeriod as any) ?? undefined);
+    const effectiveCourse = String(course || (inquiryRecord?.programOfInterest ?? '') || '').trim();
+    const letterNumber = getNextLetterNumberForUser(userEmail);
+    const intakeSeq = getNextIntakeInitialCounter(intakeInitial);
+    const intakeSegment = `${intakeInitial}${intakeSeq}`;
 
-    const pdfBytes = await pdfDoc.save();
-    const filename = `admission-letter-${name.replace(/\s+/g, '-')}.pdf`;
-    const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
+    const { buffer, referenceCode, serialNumber } = await generateAdmissionLetterBuffer({
+      name, phone,
+      course: effectiveCourse,
+      duration, admissionDate,
+      staffInitials, intakeSegment, letterNumber, templateId,
+    });
+
+    // Store in cache — next preview/download/share within 30 min is instant
+    setCachedPdf(cacheKey, buffer);
+
+    // Persist metadata to DB — fire-and-forget so the download is not blocked by DB latency
+    if (!Number.isNaN(numericId)) {
+      prisma.inquiry.update({
+        where: { id: numericId, tenantId } as any,
+        data: { letterStatus: 'Generated', letterReferenceNumber: referenceCode, letterSerialNumber: serialNumber },
+      }).catch((e: any) => {
+        if (e?.code !== 'P2025') console.warn('[admission-letter] DB update failed:', e?.message);
+      });
+    }
 
     if (res.headersSent) return;
-    return res.json({ success: true, filename, pdf: pdfBase64, referenceCode, serialNumber, templateId: resolvedTemplate });
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="${filename}"`);
+    res.set('X-Cache', 'MISS');
+    res.set('X-Reference-Code', referenceCode);
+    res.set('X-Serial-Number', serialNumber);
+    return res.send(buffer);
   } catch (err) {
     if (res.headersSent) return;
     return res.status(500).json({
@@ -669,7 +582,7 @@ async function generateAdmissionLetterBuffer({ name, phone, course, duration, ad
   page1.drawRectangle({ x: contentMargin, y: y - 4, width: 200, height: 36, color: rgb(1, 1, 1) });
   page1.drawText('James Chiaga', { x: contentMargin, y: y + 14, size: 12, font: boldFont, color: rgb(0, 0, 0) });
   page1.drawText('Principal', { x: contentMargin, y: y, size: 11, font: regularFont, color: rgb(0, 0, 0) });
-  const staticDoc = await PDFDocument.load(getStaticPdfBytes());
+  const staticDoc = await getStaticPdfDoc();
   const copiedPages = await pdfDoc.copyPages(staticDoc, staticDoc.getPageIndices());
   copiedPages.forEach((p) => pdfDoc.addPage(p));
   // Save the PDF
@@ -695,46 +608,63 @@ export const bulkGenerateAdmissionLetters = async (req: Request, res: Response) 
       return res.status(400).json({ error: 'Invalid admission date format', message: 'Admission date must be in DD/MM/YYYY format (e.g., 05/09/2025)' });
     }
     const tenantId = (req as any).tenant?.id;
-
-    // Prepare ZIP
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', 'attachment; filename="admission-letters.zip"');
-    const archive = archiver('zip', { zlib: { level: 9 } });
-    archive.pipe(res);
-
-    // Resolve staff initials and per-user counter context
     const userEmail = getUserEmailHeader(req);
     const staffInitials = await getStaffInitialsForUser(userEmail);
 
-    // For each inquiry, generate PDF and append to ZIP
-    for (const inquiry of inquiries) {
-      let intakeInitial = 'X';
-      if (inquiry.inquiryId) {
-        try {
-          const record = await prisma.inquiry.findFirst({ where: { id: parseInt(inquiry.inquiryId), tenantId } });
-          intakeInitial = getIntakeInitial(record?.intakePeriod as any);
-        } catch {}
-      }
-      // Get next sequence for this intake initial and build segment like S11
+    // Phase 1: Fetch all inquiry records in parallel (one DB round trip per inquiry, concurrent)
+    const inquiryRecords = await Promise.all(
+      inquiries.map(inq =>
+        inq.inquiryId
+          ? prisma.inquiry.findFirst({ where: { id: parseInt(String(inq.inquiryId), 10), tenantId } }).catch(() => null)
+          : Promise.resolve(null)
+      )
+    );
+
+    // Phase 2: Pre-compute counters synchronously — in-memory and instant, no race conditions
+    const prepared = inquiries.map((inq, i) => {
+      const intakeInitial = getIntakeInitial((inquiryRecords[i]?.intakePeriod as any) ?? undefined);
       const seq = getNextIntakeInitialCounter(intakeInitial);
       const intakeSegment = `${intakeInitial}${seq}`;
-      // Per-user letter number
-      const perUserLetterNumber = getNextLetterNumberForUser(userEmail);
-      const { buffer, filename, referenceCode, serialNumber } = await generateAdmissionLetterBuffer({ ...inquiry, admissionDate, staffInitials, intakeSegment, letterNumber: perUserLetterNumber, templateId });
+      const letterNumber = getNextLetterNumberForUser(userEmail);
+      return { inq, intakeSegment, letterNumber };
+    });
+
+    // Phase 3: Generate PDFs in parallel batches of 5 (CPU-bound work parallelised)
+    const CONCURRENCY = 5;
+    const results: Array<{ buffer: Buffer; filename: string; referenceCode: string; serialNumber: string; inq: any }> = [];
+    for (let i = 0; i < prepared.length; i += CONCURRENCY) {
+      const batch = prepared.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.all(
+        batch.map(({ inq, intakeSegment, letterNumber }) =>
+          generateAdmissionLetterBuffer({ ...inq, admissionDate, staffInitials, intakeSegment, letterNumber, templateId })
+            .then(r => ({ ...r, inq }))
+        )
+      );
+      results.push(...batchResults);
+    }
+
+    // Phase 4: Stream all buffers into ZIP (compression 6: good ratio, minimal CPU vs level 9)
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="admission-letters.zip"');
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.pipe(res);
+    for (const { buffer, filename } of results) {
       archive.append(buffer, { name: filename });
-      // Optionally update letterStatus in DB here
-      if (inquiry.inquiryId) {
-        try { await prisma.inquiry.update({
-          where: { id: parseInt(inquiry.inquiryId), tenantId } as any,
-          data: {
-          letterStatus: 'Generated',
-          letterReferenceNumber: referenceCode,
-          letterSerialNumber: serialNumber
-          }
-        }); } catch {}
-      }
     }
     await archive.finalize();
+
+    // Fire-and-forget DB updates after response has been sent
+    Promise.all(
+      results.map(({ referenceCode, serialNumber, inq }) =>
+        inq.inquiryId
+          ? prisma.inquiry.update({
+              where: { id: parseInt(String(inq.inquiryId), 10), tenantId } as any,
+              data: { letterStatus: 'Generated', letterReferenceNumber: referenceCode, letterSerialNumber: serialNumber },
+            }).catch(() => {})
+          : Promise.resolve()
+      )
+    ).catch(() => {});
+
     return;
   } catch (err) {
     console.error('Error in bulkGenerateAdmissionLetters:', err);

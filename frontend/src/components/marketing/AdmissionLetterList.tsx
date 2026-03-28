@@ -279,66 +279,43 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
   const handleDownloadLetter = async (inquiry: any) => {
     setLoading(true);
     try {
-      // Determine course type
       let type = '';
       if (inquiry.programOfInterest?.toLowerCase().includes('diploma')) type = 'diploma';
       else if (inquiry.programOfInterest?.toLowerCase().includes('certificate')) type = 'certificate';
       else if (inquiry.programOfInterest?.toLowerCase().includes('artisan')) type = 'artisan';
       const duration = getCourseDuration(inquiry.programOfInterest || '', type);
-      // Call backend (via proxy or direct base URL) expecting JSON + base64 PDF
       const res = await fetch(`${WEB_API}/admission-letters/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...userHeaders() },
         body: JSON.stringify({
-          // Prefer numeric SQL id; fall back to legacy _id if needed
           inquiryId: inquiry.id || inquiry._id,
           name: inquiry.fullName,
           phone: inquiry.phone,
           course: inquiry.programOfInterest,
-          duration: duration,
-          admissionDate: admissionDate,
+          duration,
+          admissionDate,
           staffInitials: 'WL',
           templateId,
         }),
       });
-
-      const data = await res.json().catch(() => null);
-      if (!res.ok || !data?.pdf) {
-        const message =
-          data?.details ||
-          data?.message ||
-          data?.error ||
-          `Failed to generate PDF (status ${res.status})`;
-        throw new Error(message);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.details || data?.message || data?.error || `Failed (${res.status})`);
       }
-
+      // Backend now streams binary PDF — no base64 decode needed
+      const blob = await res.blob();
       const filename =
-        data.filename ||
-        `admission-letter-${inquiry.fullName.replace(/\s+/g, '-')}.pdf`;
-
-      // Decode base64 PDF into a Blob and trigger download
-      const binary = atob(data.pdf);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      const blob = new Blob([bytes], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      await fetch(`${WEB_API}/inquiries/${inquiry._id || inquiry.id}/letter-status`, {
+        res.headers.get('content-disposition')?.match(/filename="?([^"]+)"?/)?.[1]
+        ?? `admission-letter-${inquiry.fullName.replace(/\s+/g, '-')}.pdf`;
+      saveAs(blob, filename);
+      fetch(`${WEB_API}/inquiries/${inquiry._id || inquiry.id}/letter-status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...userHeaders() },
         body: JSON.stringify({ letterStatus: 'Downloaded' }),
-      });
+      }).catch(() => {});
       onRefresh();
     } catch (err) {
-      console.error("Download fetch error:", err);
+      console.error('Download fetch error:', err);
       alert(`Failed to generate admission letter: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
@@ -356,7 +333,6 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
       else if (inquiry.programOfInterest?.toLowerCase().includes('certificate')) type = 'certificate'
       else if (inquiry.programOfInterest?.toLowerCase().includes('artisan')) type = 'artisan'
       const duration = getCourseDuration(inquiry.programOfInterest || '', type)
-
       const res = await fetch(`${WEB_API}/admission-letters/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...userHeaders() },
@@ -371,17 +347,12 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
           templateId,
         }),
       })
-
-      const data = await res.json().catch(() => null)
-      if (!res.ok || !data?.pdf) {
-        const message = data?.details || data?.message || data?.error || `Failed to generate preview (status ${res.status})`
-        throw new Error(message)
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.details || data?.message || data?.error || `Failed (${res.status})`)
       }
-
-      const binary = atob(data.pdf)
-      const bytes = new Uint8Array(binary.length)
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-      const blob = new Blob([bytes], { type: 'application/pdf' })
+      // Backend streams binary PDF — create object URL directly from blob
+      const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
       if (previewUrl) {
         try { window.URL.revokeObjectURL(previewUrl) } catch {}
@@ -684,12 +655,10 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
                                       headers: { 'Content-Type': 'application/json', ...userHeaders() },
                                       body: JSON.stringify({ inquiryId: inquiry.id || inquiry._id, name: inquiry.fullName, phone: inquiry.phone, course: inquiry.programOfInterest, duration, admissionDate, staffInitials: 'WL', templateId }),
                                     });
-                                    const data = await res.json();
-                                    if (!data?.pdf) { alert('Failed to generate PDF for sharing.'); return; }
-                                    const binary = atob(data.pdf);
-                                    const bytes = new Uint8Array(binary.length);
-                                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                                    const file = new File([bytes], `admission-letter-${inquiry.fullName?.replace(/\s+/g,'-')}.pdf`, { type: 'application/pdf' });
+                                    if (!res.ok) { alert('Failed to generate PDF for sharing.'); return; }
+                                    // Backend streams binary PDF — read blob directly, no base64 decode
+                                    const blob = await res.blob();
+                                    const file = new File([blob], `admission-letter-${inquiry.fullName?.replace(/\s+/g,'-')}.pdf`, { type: 'application/pdf' });
                                     if (navigator.canShare({ files: [file] })) {
                                       await navigator.share({ files: [file], title: 'Admission Letter', text: `Admission Letter for ${inquiry.fullName}` });
                                     } else {
