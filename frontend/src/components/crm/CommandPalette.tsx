@@ -14,6 +14,7 @@ import {
   AcademicCapIcon,
   CalendarIcon,
   ClipboardDocumentListIcon,
+  BoltIcon,
 } from '@heroicons/react/24/outline'
 
 const MagnifyingGlassIconAny: any = MagnifyingGlassIcon
@@ -26,6 +27,7 @@ const Cog6ToothIconAny: any = Cog6ToothIcon
 const AcademicCapIconAny: any = AcademicCapIcon
 const CalendarIconAny: any = CalendarIcon
 const ClipboardDocumentListIconAny: any = ClipboardDocumentListIcon
+const BoltIconAny: any = BoltIcon
 
 function userHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {}
@@ -51,6 +53,13 @@ const NAV: NavItem[] = [
   { id: 'rep', label: 'Reports', href: '/reports', icon: ChartBarIconAny, keywords: 'export csv' },
   { id: 'an', label: 'Analytics', href: '/analytics', icon: ChartBarIconAny, keywords: 'charts' },
   { id: 'set', label: 'Marketing settings', href: '/settings', icon: Cog6ToothIconAny, keywords: 'admin config smart' },
+  {
+    id: 'auto',
+    label: 'Automations',
+    href: '/settings?section=auto',
+    icon: BoltIconAny,
+    keywords: 'automation rules workflow triggers follow-up marketing settings',
+  },
 ]
 
 type InquiryRow = {

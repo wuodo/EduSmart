@@ -1,5 +1,6 @@
 'use client'
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { usePermissions, Guard } from './PermissionsContext';
 import UserManagementPage from './UserManagement';
 import SystemConfig from './SystemConfig';
@@ -25,14 +26,34 @@ const SECTIONS = [
   { key: 'branding', label: 'Branding & Appearance', module: 'settings' },
   { key: 'audit', label: 'Audit & Logs', module: 'settings' },
   { key: 'integrations', label: 'Integrations', module: 'settings' },
-  { key: 'smart', label: 'Other Smart Features', module: 'settings' },
   { key: 'auto', label: 'Automations', module: 'settings' },
+  { key: 'smart', label: 'Other Smart Features', module: 'settings' },
 ];
 
 export default function MarketingSettingsPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [section, setSection] = useState('system');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { canView, loading } = usePermissions();
+  const { canView } = usePermissions();
+
+  useEffect(() => {
+    const s = searchParams.get('section');
+    if (!s || !SECTIONS.some((x) => x.key === s)) return;
+    setSection(s);
+  }, [searchParams]);
+
+  const goSection = useCallback(
+    (key: string) => {
+      setSection(key);
+      setSidebarOpen(false);
+      const next = new URLSearchParams(searchParams.toString());
+      next.set('section', key);
+      router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   const currentSection = SECTIONS.find(s => s.key === section);
 
@@ -48,7 +69,7 @@ export default function MarketingSettingsPage() {
                 ? 'bg-primary text-white shadow-sm'
                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-700/60'
             } ${!allowed ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
-            onClick={() => { allowed && setSection(s.key); setSidebarOpen(false); }}
+            onClick={() => allowed && goSection(s.key)}
             disabled={!allowed}
           >
             {s.label}
@@ -91,7 +112,11 @@ export default function MarketingSettingsPage() {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         pt-14 lg:pt-0
       `}>
-        <h1 className="text-xl font-semibold mb-4 pl-6 pr-2 pt-4 text-gray-900 dark:text-white">Marketing Settings</h1>
+        <h1 className="text-xl font-semibold mb-1 pl-6 pr-2 pt-4 text-gray-900 dark:text-white">Marketing Settings</h1>
+        <p className="text-xs text-gray-500 dark:text-gray-400 pl-6 pr-2 mb-3">
+          Choose a section below (scroll on small screens).{' '}
+          <span className="text-gray-600 dark:text-gray-300">Automations</span> is under Integrations.
+        </p>
         <NavContent />
       </aside>
 

@@ -27,6 +27,13 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+/** Align with PermissionsContext: UI role "manager" maps to senior_staff for access. */
+function normalizeNavRole(role: string): string {
+  const r = (role || '').toLowerCase().trim()
+  if (r === 'manager') return 'senior_staff'
+  return r
+}
+
 const navigation: NavigationItem[] = [
   // Main dashboard
   { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
@@ -143,13 +150,14 @@ export default function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
     }
   }, [branding])
 
-  // Only show Settings and Courses for admin and senior_staff
+  // Only show Settings and Courses for admin and senior_staff (and manager → senior_staff)
+  const navRole = normalizeNavRole(userRole)
   const filteredNavigation = navigation.filter(item => {
     if (item.name === 'Settings' || item.name === 'Courses') {
-      return userRole === 'admin' || userRole === 'senior_staff';
+      return navRole === 'admin' || navRole === 'senior_staff'
     }
-    return true;
-  });
+    return true
+  })
 
   return (
     <>
