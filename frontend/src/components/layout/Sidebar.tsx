@@ -57,13 +57,17 @@ function SidebarItem({ item, pathname, onClose, collapsed }: {
           onClick={onClose}
         className={`group flex items-center px-2 py-1.5 text-compact-sm font-medium transition-colors ${
           isActive
-            ? 'bg-white/15 text-white border-l-4 pl-1.5'
-            : 'text-white hover:bg-white/10'
+            ? 'bg-white/15 border-l-4 pl-1.5'
+            : 'hover:bg-white/10'
         }`}
-        style={isActive ? { borderLeftColor: 'var(--brand-accent, #14b8a6)' } : {}}
+        style={{
+          color: 'var(--brand-sidebar-text, #ffffff)',
+          ...(isActive ? { borderLeftColor: 'var(--brand-sidebar-active, var(--brand-accent, #14b8a6))' } : {})
+        }}
         >
           <item.icon
-            className={`mr-2 h-4 w-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-white/80 group-hover:text-white'}`}
+            className="mr-2 h-4 w-4 flex-shrink-0"
+            style={{ color: 'var(--brand-sidebar-text, #ffffff)', opacity: isActive ? 1 : 0.8 }}
             aria-hidden="true"
           />
           {!collapsed && (item.name || item.title)}
@@ -163,7 +167,7 @@ export default function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         flex flex-col border-r border-white/10 sidebar-static
       `}
-      style={{ backgroundColor: 'var(--brand-primary, #003366)' }}
+      style={{ backgroundColor: 'var(--brand-sidebar-bg, var(--brand-primary, #003366))' }}
       >
         <div className="flex h-14 items-center justify-between px-4 border-b border-white/20">
           <div className="flex items-center gap-2">

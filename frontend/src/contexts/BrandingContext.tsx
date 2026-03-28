@@ -3,6 +3,19 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { cachedApiFetch } from '@/utils/apiClient'
 
+export interface BrandingConfig {
+  headerIconColor?: string
+  sidebarBg?: string
+  sidebarTextColor?: string
+  sidebarActiveColor?: string
+  darkHeaderBg?: string
+  darkSidebarBg?: string
+  tableHeaderBg?: string
+  tableHeaderTextColor?: string
+  actionBtnColor?: string
+  actionBtnTextColor?: string
+}
+
 export interface Branding {
   primaryColor?: string
   secondaryColor?: string
@@ -10,6 +23,7 @@ export interface Branding {
   logo?: string
   name?: string
   subdomain?: string
+  brandingConfig?: BrandingConfig
 }
 
 interface BrandingContextType {
@@ -78,6 +92,19 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty('--primary', toHslParts(primary))
     root.style.setProperty('--secondary', toHslParts(secondary))
     root.style.setProperty('--accent', toHslParts(accent))
+
+    // Extended branding config — each field falls back to a sensible default
+    const cfg = branding?.brandingConfig || {}
+    root.style.setProperty('--brand-header-icon',        cfg.headerIconColor    || '#ffffff')
+    root.style.setProperty('--brand-sidebar-bg',         cfg.sidebarBg          || primary)
+    root.style.setProperty('--brand-sidebar-text',       cfg.sidebarTextColor   || '#ffffff')
+    root.style.setProperty('--brand-sidebar-active',     cfg.sidebarActiveColor || accent)
+    root.style.setProperty('--brand-dark-header-bg',     cfg.darkHeaderBg       || '#1e293b')
+    root.style.setProperty('--brand-dark-sidebar-bg',    cfg.darkSidebarBg      || '#0f172a')
+    root.style.setProperty('--brand-table-header-bg',    cfg.tableHeaderBg      || '#f1f5f9')
+    root.style.setProperty('--brand-table-header-text',  cfg.tableHeaderTextColor || '#374151')
+    root.style.setProperty('--brand-action-btn',         cfg.actionBtnColor     || primary)
+    root.style.setProperty('--brand-action-btn-text',    cfg.actionBtnTextColor || '#ffffff')
   }, [branding])
 
   const value = useMemo(() => ({ branding, refresh }), [branding])

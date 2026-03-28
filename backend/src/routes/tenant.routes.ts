@@ -150,6 +150,7 @@ router.get('/me/branding', async (req, res) => {
         logo: true,
         name: true,
         subdomain: true,
+        brandingConfig: true,
       }
     });
 
@@ -171,7 +172,15 @@ router.put('/me/branding', async (req, res) => {
     const tenant = (await resolveTenantForRequest(req as any)) as any;
     if (!tenant) return safeJson(res, { success: false, message: 'Tenant not found' }, 404);
 
-  const { primaryColor, secondaryColor, accentColor, logo } = req.body || {};
+    const { primaryColor, secondaryColor, accentColor, logo, brandingConfig } = req.body || {};
+
+    // Merge incoming brandingConfig with existing to allow partial updates
+    let mergedConfig: Record<string, unknown> | undefined;
+    if (brandingConfig && typeof brandingConfig === 'object') {
+      const existing = await prisma.tenant.findUnique({ where: { id: tenant.id }, select: { brandingConfig: true } });
+      const prev = (existing?.brandingConfig && typeof existing.brandingConfig === 'object' ? existing.brandingConfig : {}) as Record<string, unknown>;
+      mergedConfig = { ...prev, ...brandingConfig };
+    }
 
     const updated = await prisma.tenant.update({
       where: { id: tenant.id },
@@ -180,6 +189,7 @@ router.put('/me/branding', async (req, res) => {
         secondaryColor: typeof secondaryColor === 'string' ? secondaryColor : undefined,
         accentColor: typeof accentColor === 'string' ? accentColor : undefined,
         logo: typeof logo === 'string' ? logo : undefined,
+        ...(mergedConfig !== undefined ? { brandingConfig: mergedConfig as any } : {}),
       },
       select: {
         primaryColor: true,
@@ -187,13 +197,14 @@ router.put('/me/branding', async (req, res) => {
         accentColor: true,
         logo: true,
         name: true,
+        brandingConfig: true,
       }
     });
 
     // Log branding update
     await auditLogger.updateBranding(req, {
       tenantId: tenant.id,
-      changes: { primaryColor, secondaryColor, accentColor, logo }
+      changes: { primaryColor, secondaryColor, accentColor, logo, brandingConfig }
     });
 
     return safeJson(res, { success: true, branding: updated });

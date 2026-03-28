@@ -29,6 +29,7 @@ model Tenant {
   primaryColor String? @default("#0f766e")   // teal-700
   secondaryColor String? @default("#22c55e") // green-500
   accentColor String? @default("#14b8a6")    // teal-500
+  brandingConfig Json?                        // extended branding: headerIconColor, sidebarBg, sidebarTextColor, sidebarActiveColor, darkHeaderBg, darkSidebarBg, tableHeaderBg, tableHeaderTextColor, actionBtnColor, actionBtnTextColor
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -380,7 +380,7 @@ export default function DashboardLayout({
       <Sidebar isMobileOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} />
       <div className="flex-1 flex flex-col h-full min-w-0">
         {/* Top teal bar, no top padding */}
-        <div className="w-full h-14 flex items-center px-2 xs:px-3 sm:px-6 shadow-sm justify-between overflow-hidden" style={{ backgroundColor: 'var(--brand-primary)' }}>
+        <div className="w-full h-14 flex items-center px-2 xs:px-3 sm:px-6 shadow-sm justify-between overflow-hidden" style={{ backgroundColor: 'var(--brand-primary)', color: 'var(--brand-header-icon, #ffffff)' }}>
           {/* Left side - Tenant name (desktop) and hamburger menu (mobile) */}
           <div className="flex items-center gap-3 min-w-0">
             {/* Mobile hamburger menu */}

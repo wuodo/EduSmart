@@ -381,11 +381,11 @@ export default function InquiryList({
   }
 
   const thBase =
-    'sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700 bg-gray-50/95 dark:bg-gray-700/95 backdrop-blur-sm ' +
-    'px-2 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-100'
+    'sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700 backdrop-blur-sm ' +
+    'px-2 py-2 text-left text-[11px] font-bold uppercase tracking-wider'
 
   return (
-    <div>
+    <div className="flex flex-col">
       {toast && (
         <div className="fixed top-16 right-4 z-50">
           <div
@@ -399,8 +399,10 @@ export default function InquiryList({
           </div>
         </div>
       )}
+      {/* ── Sticky band: summary bar + action buttons ── */}
+      <div className="sticky top-0 z-20 bg-white shadow-sm">
       {/* Summary Bar */}
-      <div className="mb-2 px-3 sm:px-4 py-2 bg-blue-50 border border-blue-200 rounded text-xs">
+      <div className="px-3 sm:px-4 py-2 bg-blue-50 border-b border-blue-200 text-xs">
         {/* Mobile: stacked summary */}
         <div className="block md:hidden space-y-1.5">
           <div className="flex items-center justify-between">
@@ -441,8 +443,37 @@ export default function InquiryList({
           })}
         </div>
       </div>
+      {isAdminLike && canDelete && (
+        <div className="px-3 py-1.5 bg-white border-b border-gray-100 flex items-center justify-end gap-2">
+          <span className="text-xs text-gray-500">{selectedIds.length} selected</span>
+          <button
+            type="button"
+            onClick={async () => {
+              const next = !showDeletedPanel
+              setShowDeletedPanel(next)
+              if (next) await loadDeletedItems()
+            }}
+            className="px-3 py-1.5 rounded-md border bg-white hover:bg-gray-50 text-xs font-semibold"
+            title="Show recently deleted inquiries"
+          >
+            {showDeletedPanel ? 'Hide Recently Deleted' : 'Restore Recently Deleted'}
+          </button>
+          <button
+            type="button"
+            onClick={handleBulkDelete}
+            disabled={loading || selectedIds.length === 0}
+            className="px-3 py-1.5 rounded-md text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold"
+            style={{ backgroundColor: 'var(--brand-action-btn, #dc2626)', color: 'var(--brand-action-btn-text, #ffffff)' }}
+            title="Delete selected inquiries"
+          >
+            Delete Selected
+          </button>
+        </div>
+      )}
+      </div>{/* end sticky band */}
+
       {showDeletedPanel && (
-        <div className="mb-3 border rounded bg-amber-50/40">
+        <div className="border-b border-amber-200 bg-amber-50/40">
           <div className="px-3 py-2 text-xs font-semibold border-b">
             Recently Deleted Inquiries
             <span className="ml-2 font-normal text-gray-600">Use "Send Restore Request" on each row.</span>
@@ -505,43 +536,17 @@ export default function InquiryList({
           )}
         </div>
       )}
-      {isAdminLike && canDelete && (
-        <div className="mb-2 flex items-center justify-end gap-2">
-          <span className="text-xs text-gray-600">{selectedIds.length} selected</span>
-          <button
-            type="button"
-            onClick={async () => {
-              const next = !showDeletedPanel
-              setShowDeletedPanel(next)
-              if (next) await loadDeletedItems()
-            }}
-            className="px-3 py-1.5 rounded-md border bg-white hover:bg-gray-50 text-xs font-semibold"
-            title="Show recently deleted inquiries"
-          >
-            {showDeletedPanel ? 'Hide Recently Deleted' : 'Restore Recently Deleted'}
-          </button>
-          <button
-            type="button"
-            onClick={handleBulkDelete}
-            disabled={loading || selectedIds.length === 0}
-            className="px-3 py-1.5 rounded-md bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold"
-            title="Delete selected inquiries"
-          >
-            Delete Selected
-          </button>
-        </div>
-      )}
       
       <div className="flow-root">
         <div className="-mx-4 sm:-mx-6 lg:-mx-8">
-          <div className="py-2 align-middle sm:px-6 lg:px-8 overflow-x-auto">
+          <div className="py-2 align-middle sm:px-6 lg:px-8 overflow-auto" style={{ maxHeight: 'calc(100vh - 260px)' }}>
             {sorted.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No data to show.
               </div>
             ) : (
             <table className="w-full table-auto border-separate border-spacing-0 text-[13px] rounded-lg overflow-hidden shadow-sm ring-1 ring-gray-200">
-              <thead className="bg-gray-50/80">
+              <thead style={{ backgroundColor: 'var(--brand-table-header-bg, #f1f5f9)', color: 'var(--brand-table-header-text, #374151)' }}>
                 <tr>
                   <th scope="col" className={`${thBase} py-2 pl-3 pr-2 sm:pl-4 lg:pl-6 w-[56px]`}>
                     #
