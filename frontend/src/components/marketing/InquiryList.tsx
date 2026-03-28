@@ -42,12 +42,16 @@ export default function InquiryList({
   canEdit = true,
   canDelete = true,
   showHiddenCols = false,
+  highlightInquiryId = null,
+  onHighlightConsumed,
 }: {
   inquiries: Inquiry[],
   onRefresh: () => void,
   canEdit?: boolean,
   canDelete?: boolean,
-  showHiddenCols?: boolean
+  showHiddenCols?: boolean,
+  highlightInquiryId?: string | null,
+  onHighlightConsumed?: () => void,
 }) {
   const [selected, setSelected] = useState<Inquiry | null>(null)
   const [showModal, setShowModal] = useState(false)
@@ -126,6 +130,8 @@ export default function InquiryList({
   const [whatsAppName, setWhatsAppName] = useState('');
   const [whatsAppMsg, setWhatsAppMsg] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+  const [pulseRowId, setPulseRowId] = useState<string | null>(null);
 
   // Sort inquiries by createdAt (latest first)
   const sorted = [...inquiries].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -134,6 +140,23 @@ export default function InquiryList({
     const visible = new Set(sorted.map((i) => String(i.id)))
     setSelectedIds((prev) => prev.filter((id) => visible.has(String(id))))
   }, [inquiries])
+
+  useEffect(() => {
+    const hid = (highlightInquiryId || '').trim();
+    if (!hid) return;
+    if (!sorted.some((i) => String(i.id) === hid)) return;
+    const t = window.setTimeout(() => {
+      const row = rowRefs.current[hid];
+      if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setExpanded((prev) => ({ ...prev, [hid]: true }));
+        setPulseRowId(hid);
+        window.setTimeout(() => setPulseRowId((cur) => (cur === hid ? null : cur)), 6000);
+      }
+      onHighlightConsumed?.();
+    }, 400);
+    return () => clearTimeout(t);
+  }, [highlightInquiryId, sorted, onHighlightConsumed])
 
   const allSelected = sorted.length > 0 && selectedIds.length === sorted.length
 
@@ -630,7 +653,10 @@ export default function InquiryList({
                   }
                   return (
                   <React.Fragment key={inquiry.id || index}>
-                  <tr className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <tr
+                    ref={(el) => { rowRefs.current[String(inquiry.id)] = el }}
+                    className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${pulseRowId === String(inquiry.id) ? 'ring-2 ring-teal-600/70 ring-inset bg-teal-50/30' : ''}`}
+                  >
                     <td className="whitespace-nowrap border-b border-gray-100 py-1.5 pl-3 pr-2 text-[13px] text-gray-700 sm:pl-4 lg:pl-6">
                       <button className="mr-2 md:hidden text-gray-600" title="Expand" onClick={() => setExpanded(prev => ({ ...prev, [inquiry.id]: !prev[inquiry.id] }))}>{expanded[inquiry.id] ? '▾' : '▸'}</button>
                       {index + 1}
@@ -646,7 +672,18 @@ export default function InquiryList({
                       </td>
                     )}
                     <td className="border-b border-gray-100 px-2 py-1.5 text-[13px] font-medium text-gray-800 break-words md:truncate">
-                      {inquiry.fullName}
+                      <span>{inquiry.fullName}</span>
+                      {inquiry.smartMeta?.dormant && (
+                        <span className="ml-1.5 align-middle text-[10px] uppercase tracking-wide text-amber-800 bg-amber-50 border border-amber-200 rounded px-1 py-0.5">Dormant</span>
+                      )}
+                      {inquiry.smartMeta?.intakeWarning && (
+                        <span
+                          className="ml-1.5 align-middle text-[10px] uppercase tracking-wide text-rose-800 bg-rose-50 border border-rose-200 rounded px-1 py-0.5"
+                          title={inquiry.smartMeta.intakeFillPercent != null ? `Approximately ${inquiry.smartMeta.intakeFillPercent}% of configured seats` : 'Program nearing capacity'}
+                        >
+                          Capacity
+                        </span>
+                      )}
                     </td>
                     <td className="whitespace-nowrap border-b border-gray-100 px-2 py-1.5 text-[13px] text-gray-800">
                       {inquiry.phone}

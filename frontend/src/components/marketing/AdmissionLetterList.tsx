@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { saveAs } from 'file-saver'
 import Papa from 'papaparse'
@@ -54,7 +55,32 @@ const statusColors: Record<string, string> = {
   'Acknowledged': 'bg-green-200 text-green-900',
 };
 
+function buildAdmissionLetterShareMessage(inquiry: any, admissionDate: string) {
+  const name = inquiry.fullName || inquiry.name || 'Student';
+  const prog = inquiry.programOfInterest || 'your programme';
+  const refLine = inquiry.letterReferenceNumber ? `\nReference No: ${inquiry.letterReferenceNumber}` : '';
+  return (
+    `Dear ${name},\n\n` +
+    `Congratulations. We are pleased to inform you that your admission letter for ${prog} is ready (PDF attached where supported).\n\n` +
+    `Admission date: ${admissionDate}${refLine}\n\n` +
+    `Please visit our admissions office or contact us if you need the original hard copy.\n\n` +
+    `Best regards,\nAdmissions Office`
+  );
+}
+
+function inquiryWhatsAppChannel(inquiry: any) {
+  const pref = String(inquiry.preferredContactMethod || '').toLowerCase();
+  const src = String(inquiry.source || '').toLowerCase();
+  return pref === 'whatsapp' || src === 'whatsapp';
+}
+
+function hasWhatsAppCapablePhone(phone: string) {
+  const d = String(phone || '').replace(/\D/g, '');
+  return d.length >= 9;
+}
+
 export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
+  const router = useRouter();
   const [selectedInquiry, setSelectedInquiry] = useState<any>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -630,7 +656,7 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
                             <div className="px-2 py-1">
                               <a
                                 href={`https://wa.me/${String(inquiry.phone || '').replace(/\D/g,'').replace(/^0/, '254')}?text=${encodeURIComponent(
-                                  `Dear ${inquiry.fullName},\n\nCongratulations! We are pleased to inform you that your admission letter for *${inquiry.programOfInterest || 'your programme'}* is ready.\n\n📅 Admission Date: ${admissionDate}${inquiry.letterReferenceNumber ? `\n🔖 Reference No: ${inquiry.letterReferenceNumber}` : ''}\n\nPlease visit our admissions office or contact us for your original letter.\n\nBest regards,\nAdmissions Office`
+                                  buildAdmissionLetterShareMessage(inquiry, admissionDate)
                                 )}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -659,8 +685,19 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
                                     // Backend streams binary PDF — read blob directly, no base64 decode
                                     const blob = await res.blob();
                                     const file = new File([blob], `admission-letter-${inquiry.fullName?.replace(/\s+/g,'-')}.pdf`, { type: 'application/pdf' });
+                                    const shareText = buildAdmissionLetterShareMessage(inquiry, admissionDate);
                                     if (navigator.canShare({ files: [file] })) {
-                                      await navigator.share({ files: [file], title: 'Admission Letter', text: `Admission Letter for ${inquiry.fullName}` });
+                                      await navigator.share({
+                                        files: [file],
+                                        title: 'Admission Letter',
+                                        text: shareText,
+                                      });
+                                      // Web Share API does not reveal which app the user picked; after a successful
+                                      // share we open the inquiry inbox when the lead has a dialable number (typical WhatsApp flow).
+                                      if (hasWhatsAppCapablePhone(inquiry.phone)) {
+                                        const extra = inquiryWhatsAppChannel(inquiry) ? '&fromAdmissionShare=1' : '';
+                                        router.push(`/inquiries?openInquiry=${encodeURIComponent(String(inquiry.id || inquiry._id))}${extra}`);
+                                      }
                                     } else {
                                       alert('PDF file sharing is not supported on this device. Please use the download option instead.');
                                     }

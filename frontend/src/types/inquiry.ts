@@ -63,6 +63,12 @@ export interface Inquiry {
   sentiment?: 'positive' | 'negative' | 'neutral' | string;
   firstResponseAt?: string | Date | null;
   nextFollowupAt?: string | Date | null;
+  /** Enriched on list API when Other Smart Features are enabled */
+  smartMeta?: {
+    dormant?: boolean;
+    intakeFillPercent?: number;
+    intakeWarning?: boolean;
+  };
 }
 
 export interface InquiryFormData {

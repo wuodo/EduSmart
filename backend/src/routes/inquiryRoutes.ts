@@ -5,6 +5,13 @@ import { analyticsController } from '../controllers/analytics.controller';
 import { auditLogger } from '../utils/auditLogger';
 import { hasApprovedDeletion } from '../controllers/approval.controller';
 import { archiveDeletedRecord, listArchivedRecords } from '../utils/deletionArchive';
+import {
+  fetchSmartConfigMerged,
+  findSmartDuplicate,
+  computeLeadScore,
+  phoneMatchVariants,
+  enrichInquiriesWithSmartMeta,
+} from '../utils/marketingSmartFeatures';
 
 const router = express.Router();
 
@@ -121,7 +128,32 @@ router.get('/', async (req, res) => {
       }),
       prisma.inquiry.count({ where }),
     ]);
-    return safeJson(res, { data: inquiries, total, page, limit, pages: Math.ceil(total / limit) });
+    const smart = await fetchSmartConfigMerged();
+    let programStats: Record<string, { enrolled: number; seats: number | null }> = {};
+    if (smart.intakeCapacity.enabled) {
+      const programs = await prisma.program.findMany({
+        where: { tenantId, isActive: true },
+        select: { name: true, seats: true },
+      });
+      const grouped = await prisma.inquiry.groupBy({
+        by: ['programOfInterest'],
+        where: { tenantId, status: { notIn: ['cold', 'graduate'] } },
+        _count: { _all: true },
+      });
+      const enrolled: Record<string, number> = {};
+      for (const g of grouped) {
+        const k = String(g.programOfInterest || '');
+        if (k) enrolled[k] = g._count._all;
+      }
+      for (const p of programs) {
+        programStats[p.name] = { enrolled: enrolled[p.name] || 0, seats: p.seats ?? null };
+      }
+    }
+    const enriched = enrichInquiriesWithSmartMeta(inquiries, smart, {
+      now: Date.now(),
+      programStats,
+    });
+    return safeJson(res, { data: enriched, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (error) {
     if (res.headersSent) return;
     return safeJson(res, { message: 'Error fetching inquiries', error: error instanceof Error ? error.message : String(error) }, 500);
@@ -292,6 +324,45 @@ router.post('/', async (req, res) => {
     if (detail && (detail.county && detail.town)) {
       data.detail = { create: { county: detail.county, town: detail.town, idOrPassport: detail.idOrPassport || null } };
     }
+
+    const smart = await fetchSmartConfigMerged();
+    const fullName = String(data.fullName || '').trim();
+    const phone = String(data.phone || '').trim();
+    const inquiryEmail = String(data.email || '').trim();
+    const dup = await findSmartDuplicate(prisma, tenantId, { fullName, phone, email: inquiryEmail }, smart.duplicateDetection);
+    if (dup.blocked && dup.record) {
+      return safeJson(
+        res,
+        { message: 'Duplicate inquiry blocked by smart settings', duplicate: dup.record },
+        409,
+      );
+    }
+
+    if (smart.leadScoring.enabled) {
+      const variants = phone ? phoneMatchVariants(phone) : [];
+      const repeatPhoneCount = variants.length
+        ? await prisma.inquiry.count({
+            where: {
+              tenantId,
+              OR: variants.map((v) => ({ phone: { equals: v, mode: 'insensitive' as const } })),
+            },
+          })
+        : 0;
+      data.score = computeLeadScore(
+        {
+          email: inquiryEmail,
+          phone,
+          kcseGrade: data.kcseGrade,
+          preferredContactMethod: data.preferredContactMethod,
+          source: data.source,
+          status: data.status,
+          firstResponseAt: null,
+        },
+        smart.leadScoring.weights,
+        { followupCount: 0, repeatPhoneCount },
+      );
+    }
+
     const inquiry = await prisma.inquiry.create({ data });
     
     // Log inquiry creation
@@ -325,6 +396,7 @@ router.post('/bulk', async (req, res) => {
     let successCount = 0;
     let skippedCount = 0;
     const errors: Array<{ row: number; reason: string }> = [];
+    const smartBulk = await fetchSmartConfigMerged();
 
     for (let idx = 0; idx < rows.length; idx++) {
       const r = rows[idx] || {};
@@ -367,6 +439,43 @@ router.post('/bulk', async (req, res) => {
         const idOrPassport = String(r.idOrPassport || '').trim();
         if (county && town) {
           data.detail = { create: { county, town, idOrPassport: idOrPassport || null } };
+        }
+
+        const dupB = await findSmartDuplicate(
+          prisma,
+          tenantId,
+          { fullName, phone, email: data.email || '' },
+          smartBulk.duplicateDetection,
+        );
+        if (dupB.blocked) {
+          skippedCount++;
+          errors.push({ row: idx + 1, reason: 'Duplicate inquiry blocked by smart settings' });
+          continue;
+        }
+
+        if (smartBulk.leadScoring.enabled) {
+          const variants = phoneMatchVariants(phone);
+          const repeatPhoneCount = variants.length
+            ? await prisma.inquiry.count({
+                where: {
+                  tenantId,
+                  OR: variants.map((v) => ({ phone: { equals: v, mode: 'insensitive' as const } })),
+                },
+              })
+            : 0;
+          data.score = computeLeadScore(
+            {
+              email: data.email,
+              phone: data.phone,
+              kcseGrade: data.kcseGrade,
+              preferredContactMethod: data.preferredContactMethod,
+              source: data.source,
+              status: data.status,
+              firstResponseAt: null,
+            },
+            smartBulk.leadScoring.weights,
+            { followupCount: 0, repeatPhoneCount },
+          );
         }
 
         await prisma.inquiry.create({ data });
@@ -486,12 +595,49 @@ router.put('/:id', async (req, res) => {
       });
       if (!existing) return safeJson(res, { message: 'Forbidden' }, 403);
     }
+
+    const existingFull = await prisma.inquiry.findFirst({
+      where: { id, tenantId },
+      include: { _count: { select: { followups: true } } },
+    });
+    let updatePayload: any = { ...req.body };
+    if (existingFull) {
+      const smart = await fetchSmartConfigMerged();
+      if (smart.leadScoring.enabled) {
+        const merged = { ...existingFull, ...req.body };
+        const phoneStr = String(merged.phone || '').trim();
+        const variants = phoneStr ? phoneMatchVariants(phoneStr) : [];
+        const repeatPhoneCount = variants.length
+          ? await prisma.inquiry.count({
+              where: {
+                tenantId,
+                id: { not: id },
+                OR: variants.map((v) => ({ phone: { equals: v, mode: 'insensitive' as const } })),
+              },
+            })
+          : 0;
+        updatePayload.score = computeLeadScore(
+          {
+            email: merged.email,
+            phone: merged.phone,
+            kcseGrade: merged.kcseGrade,
+            preferredContactMethod: merged.preferredContactMethod,
+            source: merged.source,
+            status: merged.status,
+            firstResponseAt: merged.firstResponseAt,
+          },
+          smart.leadScoring.weights,
+          { followupCount: existingFull._count.followups, repeatPhoneCount },
+        );
+      }
+    }
+
     const inquiry = await prisma.inquiry.update({ 
       where: { 
         id,
         tenantId
       }, 
-      data: req.body 
+      data: updatePayload 
     });
     
     // Log inquiry update

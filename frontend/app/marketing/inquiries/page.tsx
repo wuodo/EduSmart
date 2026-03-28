@@ -4,7 +4,7 @@ import { useMarketingData } from '@/hooks/useMarketingData'
 import InquiryList from '@/components/marketing/InquiryList'
 import InquiryFilters from '@/components/marketing/InquiryFilters'
 import CreateInquiryButton from '@/components/marketing/CreateInquiryButton'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { InquiryFormData, LeadTag } from '@/types/inquiry'
 import { WEB_API } from '@/utils/api';
 import { usePermissions } from '../settings/PermissionsContext'
@@ -72,6 +72,8 @@ export default function InquiriesPage() {
   } | null>(null)
   const [showCompletenessNudge, setShowCompletenessNudge] = useState(false)
   const [chatSourceInfo, setChatSourceInfo] = useState<{ inquiryId: string; inquiryName: string; chatRoomId: string } | null>(null)
+  const [letterShareHighlightId, setLetterShareHighlightId] = useState<string | null>(null)
+  const [admissionShareBanner, setAdmissionShareBanner] = useState(false)
 
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -156,7 +158,32 @@ export default function InquiriesPage() {
         chatRoomId: qs.get('chatRoomId') || '',
       })
     }
+    const openI = (qs.get('openInquiry') || '').trim()
+    if (openI) {
+      setLetterShareHighlightId(openI)
+      if (qs.get('fromAdmissionShare') === '1') setAdmissionShareBanner(true)
+    }
   }, [])
+
+  const stripLetterShareQuery = useCallback(() => {
+    if (typeof window === 'undefined') return
+    const url = new URL(window.location.href)
+    url.searchParams.delete('openInquiry')
+    url.searchParams.delete('fromAdmissionShare')
+    const q = url.searchParams.toString()
+    window.history.replaceState({}, '', url.pathname + (q ? `?${q}` : ''))
+  }, [])
+
+  const afterLetterShareRowReady = useCallback(() => {
+    stripLetterShareQuery()
+    setLetterShareHighlightId(null)
+  }, [stripLetterShareQuery])
+
+  const consumeLetterShareBanner = useCallback(() => {
+    setAdmissionShareBanner(false)
+    stripLetterShareQuery()
+    setLetterShareHighlightId(null)
+  }, [stripLetterShareQuery])
 
   const [apiCourses, setApiCourses] = useState<string[]>([])
   useEffect(() => {
@@ -460,6 +487,18 @@ export default function InquiriesPage() {
           Opened from tagged chat inquiry{chatSourceInfo.inquiryName ? `: ${chatSourceInfo.inquiryName}` : ''}. Reminder/follow-up actions here are logged to your account audit trail.
         </div>
       )}
+      {canView && admissionShareBanner && (
+        <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 text-teal-900 dark:text-teal-200 px-4 py-3 rounded flex flex-wrap items-center justify-between gap-2">
+          <span className="text-sm">You shared an admission letter for a WhatsApp-linked inquiry. The matching row is highlighted below so you can log a follow-up or update status.</span>
+          <button
+            type="button"
+            className="px-3 py-1.5 text-sm rounded border border-teal-300 dark:border-teal-700 bg-white dark:bg-gray-800 hover:bg-teal-100 dark:hover:bg-teal-900/30 font-medium"
+            onClick={consumeLetterShareBanner}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       {/* Only show "no access" once permissions have finished loading */}
       {!canView && (
         <div className="flex items-center justify-center min-h-[40vh] text-center">
@@ -533,6 +572,8 @@ export default function InquiriesPage() {
             canEdit={canEdit}
             canDelete={canDelete}
             showHiddenCols={showHiddenCols}
+            highlightInquiryId={letterShareHighlightId}
+            onHighlightConsumed={afterLetterShareRowReady}
           />
         </div>
       </div>
