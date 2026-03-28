@@ -13,6 +13,7 @@ import {
   CalendarDaysIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
+import { cachedApiFetch } from '@/utils/apiClient'
 
 interface NavigationItem {
   name?: string;
@@ -105,7 +106,7 @@ export default function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
     // Update sidebar title from tenant details
     (async () => {
       try {
-        const res = await fetch('/api/proxy/tenants/me', { cache: 'no-store' })
+        const res = await cachedApiFetch('/tenants/me', 30_000)
         if (res.ok) {
           const data = await res.json()
           const n = data?.tenant?.name || data?.branding?.name

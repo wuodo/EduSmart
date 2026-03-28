@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 // import { UserCircleIcon } from '@heroicons/react/24/outline';
 import { useEffect, useRef, useState } from 'react';
 import { WEB_API } from '@/utils/api';
+import { cachedApiFetch } from '@/utils/apiClient';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import FloatingChat from '@/components/marketing/FloatingChat';
 import FloatingAskAi from '@/components/askAi/FloatingAskAi';
@@ -44,7 +45,7 @@ export default function DashboardLayout({
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/proxy/tenants/me', { cache: 'no-store' })
+        const res = await cachedApiFetch('/tenants/me', 30_000)
         if (res.ok) {
           const data = await res.json().catch(() => ({}))
           const n = data?.tenant?.name || data?.branding?.name || ''
@@ -95,6 +96,11 @@ export default function DashboardLayout({
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0)
   const lastUnreadRef = useRef(0)
+  // In-flight guards — prevent overlapping poll requests when backend is slow
+  const pollDeleteInFlight = useRef(false)
+  const pollUnreadInFlight = useRef(false)
+  const pollBroadcastInFlight = useRef(false)
+  const pollTenantInFlight = useRef(false)
 
   function userHeaders() {
     // Session-based auth; no special headers needed
@@ -173,113 +179,104 @@ export default function DashboardLayout({
       setUserRole(localStorage.getItem('userRole') || '');
     }
     const interval = setInterval(() => setDateTime(new Date()), 1000);
+
+    // Helper: skip poll when tab is hidden to avoid piling up requests
+    const isVisible = () => typeof document !== 'undefined' && document.visibilityState === 'visible';
+
     // poll delete requests for admin/senior_staff
+    // Interval: 6 000 ms (was 5 000). In-flight guard prevents overlapping calls.
+    // N+1 item fetches removed — meta is built from delete-request + users list only.
     const poll = setInterval(async () => {
+      if (!isVisible() || pollDeleteInFlight.current) return;
+      pollDeleteInFlight.current = true;
       try {
         const role = (localStorage.getItem('userRole') || '').toLowerCase();
         if (role === 'admin' || role === 'senior_staff') {
-          const res = await fetch(`${WEB_API}/delete-requests`, { 
+          const res = await fetch(`${WEB_API}/delete-requests`, {
             headers: userHeaders(),
-            cache: 'no-store' 
+            cache: 'no-store'
           });
           if (!res.ok) {
-            // No permission or other error: treat as no pending requests
             setDeleteRequests([]);
             return;
           }
           const data = await res.json().catch(() => ({} as any));
           if (Array.isArray(data?.requests)) {
-            const pending = data.requests.filter((r: any) => r.status === 'pending')
-            setDeleteRequests(pending)
-            // Enrich with names and item details
+            const pending = data.requests.filter((r: any) => r.status === 'pending');
+            setDeleteRequests(pending);
+            // Build meta from users list only — no per-item inquiry/followup fetches
             try {
-              const usersRes = await fetch(`${WEB_API}/users`, { cache: 'no-store' })
-              const users = await usersRes.json()
-              const emailToName: Record<string, string> = {}
+              const usersRes = await fetch(`${WEB_API}/users`, { cache: 'no-store' });
+              const users = await usersRes.json();
+              const emailToName: Record<string, string> = {};
               if (Array.isArray(users)) {
                 for (const u of users) {
-                  const e = (u?.email || '').toLowerCase()
-                  if (e) emailToName[e] = (u?.name && String(u.name).trim()) ? String(u.name) : e
+                  const e = (u?.email || '').toLowerCase();
+                  if (e) emailToName[e] = (u?.name && String(u.name).trim()) ? String(u.name) : e;
                 }
               }
-              const meta: Record<string, any> = {}
+              const meta: Record<string, any> = {};
               for (const r of pending) {
-                const rid = r.id
-                meta[rid] = { moduleLabel: r.module === 'followups' ? 'Follow-up' : 'Inquiry', requesterName: emailToName[(r.requestedBy || '').toLowerCase()] || r.requestedBy }
-                if (r.module === 'inquiries') {
-                  try {
-                    const ir = await fetch(`${WEB_API}/inquiries/${r.itemId}`, { cache: 'no-store' })
-                    const inquiry = await ir.json()
-                    if (ir.ok && inquiry) {
-                      meta[rid].itemName = inquiry.fullName || inquiry.name || ''
-                      meta[rid].itemPhone = inquiry.phone || ''
-                      meta[rid].inquiryId = inquiry.id || inquiry._id
-                    }
-                  } catch {}
-                } else if (r.module === 'followups') {
-                  try {
-                    const fr = await fetch(`${WEB_API}/followups/${r.itemId}`, { cache: 'no-store' })
-                    const follow = await fr.json()
-                    if (fr.ok && follow) {
-                      // fetch related inquiry
-                      const ir = await fetch(`${WEB_API}/inquiries/${follow.inquiryId}`, { cache: 'no-store' })
-                      const inquiry = await ir.json()
-                      if (ir.ok && inquiry) {
-                        meta[rid].itemName = inquiry.fullName || inquiry.name || ''
-                        meta[rid].itemPhone = inquiry.phone || ''
-                        meta[rid].inquiryId = inquiry.id || inquiry._id
-                      }
-                    }
-                  } catch {}
-                }
+                const rid = r.id;
+                meta[rid] = {
+                  moduleLabel: r.module === 'followups' ? 'Follow-up' : 'Inquiry',
+                  requesterName: emailToName[(r.requestedBy || '').toLowerCase()] || r.requestedBy,
+                  inquiryId: r.module === 'inquiries' ? r.itemId : undefined,
+                };
               }
-              setRequestMeta(meta)
+              setRequestMeta(meta);
             } catch {}
           }
         } else {
-          setDeleteRequests([])
+          setDeleteRequests([]);
         }
       } catch {}
-    }, 5000);
-    // poll chat unread count from backend
+      finally { pollDeleteInFlight.current = false; }
+    }, 6000);
+
+    // poll chat unread count — 8 000 ms (was 4 000). In-flight guard + visibility.
     const pollUnread = setInterval(async () => {
+      if (!isVisible() || pollUnreadInFlight.current) return;
+      pollUnreadInFlight.current = true;
       try {
         const email = (localStorage.getItem('userEmail') || '').toLowerCase();
         if (!email) return;
         const res = await fetch(`${WEB_API}/chat/unread-count?user=${encodeURIComponent(email)}`, { cache: 'no-store' });
-        if (!res.ok) {
-          setUnreadChatCount(0);
-          return;
-        }
+        if (!res.ok) { setUnreadChatCount(0); return; }
         const data = await res.json().catch(() => ({ count: 0 }));
         const count = typeof data?.count === 'number' ? data.count : 0;
         if (count > lastUnreadRef.current && lastUnreadRef.current >= 0) {
-          playNewMessageTone()
+          playNewMessageTone();
         }
-        lastUnreadRef.current = count
+        lastUnreadRef.current = count;
         setUnreadChatCount(count);
       } catch {
         setUnreadChatCount(0);
-      }
-    }, 4000);
+      } finally { pollUnreadInFlight.current = false; }
+    }, 8000);
+
+    // poll broadcast unread count — 10 000 ms (was 5 000). In-flight guard + visibility.
     const pollBroadcast = setInterval(async () => {
+      if (!isVisible() || pollBroadcastInFlight.current) return;
+      pollBroadcastInFlight.current = true;
       try {
         const res = await fetch(`${WEB_API}/notifications/unread-count`, { cache: 'no-store', credentials: 'include' });
-        if (!res.ok) {
-          setBroadcastUnreadCount(0);
-          return;
-        }
+        if (!res.ok) { setBroadcastUnreadCount(0); return; }
         const data = await res.json().catch(() => ({ count: 0 }));
         const c = typeof data?.count === 'number' ? data.count : 0;
         setBroadcastUnreadCount(c);
       } catch {
         setBroadcastUnreadCount(0);
-      }
-    }, 5000);
-    // Tenant suspension guard: if tenant becomes inactive, force logout immediately.
+      } finally { pollBroadcastInFlight.current = false; }
+    }, 10000);
+
+    // Tenant suspension guard — 30 000 ms (was 5 000). Tenant status changes are rare.
+    // In-flight guard + visibility. Uses cachedApiFetch (30 s TTL).
     const pollTenant = setInterval(async () => {
+      if (!isVisible() || pollTenantInFlight.current) return;
+      pollTenantInFlight.current = true;
       try {
-        const res = await fetch('/api/proxy/tenants/me', { cache: 'no-store', credentials: 'include' });
+        const res = await cachedApiFetch('/tenants/me', 30_000);
         const data = await res.json().catch(() => null);
         const isActive = data?.tenant?.isActive;
         if (!res.ok || data?.success === false || isActive === false) {
@@ -287,10 +284,10 @@ export default function DashboardLayout({
         }
       } catch {
         // ignore; do not block app if the check fails temporarily
-      }
-    }, 5000);
+      } finally { pollTenantInFlight.current = false; }
+    }, 30000);
 
-    return () => { clearInterval(interval); clearInterval(poll); clearInterval(pollUnread); clearInterval(pollBroadcast); clearInterval(pollTenant) }
+    return () => { clearInterval(interval); clearInterval(poll); clearInterval(pollUnread); clearInterval(pollBroadcast); clearInterval(pollTenant); }
   }, []);
 
   useEffect(() => {

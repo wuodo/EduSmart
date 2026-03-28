@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { apiFetch } from '@/utils/apiClient'
+import { cachedApiFetch } from '@/utils/apiClient'
 
 export interface Branding {
   primaryColor?: string
@@ -24,7 +24,7 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = async () => {
     try {
-      const res = await apiFetch('/tenants/me/branding')
+      const res = await cachedApiFetch('/tenants/me/branding', 60_000)
       if (res.ok) {
         const data = await res.json()
         setBranding(data.branding || null)

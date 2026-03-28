@@ -110,7 +110,54 @@ app.use('/assets', (req, res, next) => {
   return require('express').static(p, { fallthrough: true })(req, res, next);
 });
 
-// Session table is now managed by Prisma schema
+// ---------------------------------------------------------------------------
+// Global API rate limiter — 300 requests per 60 s per IP (safety net only).
+// This is intentionally generous. It catches runaway polling/burst requests
+// without affecting normal multi-tab usage. Login/public paths are exempt.
+// ---------------------------------------------------------------------------
+const _globalRateStore = new Map<string, { count: number; resetAt: number }>();
+const GLOBAL_RATE_LIMIT = 300;
+const GLOBAL_RATE_WINDOW_MS = 60_000;
+const GLOBAL_RATE_EXEMPT = [
+  '/api/users/login',
+  '/api/cpanel/login',
+  '/api/users/forgot-password',
+  '/api/users/reset-password',
+  '/api/users/register',
+  '/api/tenants',
+];
+app.use((req: any, res: any, next: any) => {
+  if (!req.path.startsWith('/api')) return next();
+  if (GLOBAL_RATE_EXEMPT.some((p) => req.path.startsWith(p))) return next();
+  const ip: string =
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+    req.socket?.remoteAddress ||
+    'unknown';
+  const now = Date.now();
+  let entry = _globalRateStore.get(ip);
+  if (!entry || now > entry.resetAt) {
+    _globalRateStore.set(ip, { count: 1, resetAt: now + GLOBAL_RATE_WINDOW_MS });
+    return next();
+  }
+  entry.count++;
+  if (entry.count > GLOBAL_RATE_LIMIT) {
+    res.setHeader('Retry-After', '60');
+    res.setHeader('X-RateLimit-Source', 'global-api-limiter');
+    if (!res.headersSent) {
+      return res.status(429).json({ error: 'Too many requests. Please slow down and try again shortly.' });
+    }
+    return;
+  }
+  return next();
+});
+// Periodic cleanup — prevent unbounded memory growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of _globalRateStore.entries()) {
+    if (now > entry.resetAt) _globalRateStore.delete(ip);
+  }
+}, 5 * 60 * 1000).unref();
+
 
 // Memory monitoring — logs every 5 minutes; visible in Render log stream
 setInterval(() => {
