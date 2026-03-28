@@ -246,7 +246,7 @@ export default function SmartFeatures() {
   }
 
   return (
-    <div className="space-y-8 max-w-3xl">
+    <div className="space-y-8 w-full min-w-0">
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <Target className="h-7 w-7 text-primary" />
@@ -286,7 +286,7 @@ export default function SmartFeatures() {
         onToggle={v => set('leadScoring', { enabled: v })}
       >
         <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-2">Weights (sum caps visually at {totalWeight} points before the 100 ceiling)</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-1">
           {(Object.entries(w) as [keyof typeof w, number][]).map(([key, val]) => (
             <Row key={key} label={{
               hasEmail: 'Has email', hasPhone: 'Has phone', hasKcseGrade: 'Has KCSE grade',
@@ -430,7 +430,7 @@ export default function SmartFeatures() {
         )}
         <Row label="Recipients" hint="Comma-separated email addresses">
           <input type="text" value={cfg.exportSchedule.recipients} placeholder="admin@school.ac.ke"
-            className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded w-52 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded w-full min-w-[12rem] max-w-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             onChange={e => set('exportSchedule', { recipients: e.target.value })} />
         </Row>
       </FeatureSection>
