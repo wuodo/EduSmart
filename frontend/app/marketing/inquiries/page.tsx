@@ -277,6 +277,9 @@ export default function InquiriesPage() {
           town: data.town,
           idOrPassport: data.idOrPassport || undefined,
         },
+        ...(typeof data.consentSms === 'boolean' ? { consentSms: data.consentSms } : {}),
+        ...(typeof data.consentEmail === 'boolean' ? { consentEmail: data.consentEmail } : {}),
+        ...(typeof data.consentWhatsapp === 'boolean' ? { consentWhatsapp: data.consentWhatsapp } : {}),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }

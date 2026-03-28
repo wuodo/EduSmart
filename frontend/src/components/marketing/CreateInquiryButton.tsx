@@ -114,6 +114,9 @@ const initialForm: InquiryFormData = {
   county: '',
   town: '',
   idOrPassport: '',
+  consentSms: undefined,
+  consentEmail: undefined,
+  consentWhatsapp: undefined,
 }
 
 function validate(form: InquiryFormData) {
@@ -269,6 +272,9 @@ export default function CreateInquiryButton({
           town: formData.town,
           idOrPassport: formData.idOrPassport || undefined,
         },
+        ...(typeof formData.consentSms === 'boolean' ? { consentSms: formData.consentSms } : {}),
+        ...(typeof formData.consentEmail === 'boolean' ? { consentEmail: formData.consentEmail } : {}),
+        ...(typeof formData.consentWhatsapp === 'boolean' ? { consentWhatsapp: formData.consentWhatsapp } : {}),
       }
       if (isEdit && onSubmit) {
         await onSubmit(formData)
@@ -562,6 +568,38 @@ export default function CreateInquiryButton({
                       </label>
                     )
                   })}
+                </div>
+              </div>
+
+              {/* Messaging consent */}
+              <div className="bg-gray-50/60 p-2 border border-gray-200">
+                <h4 className="font-semibold text-[#00a396] text-xs uppercase tracking-wide mb-1">Messaging consent</h4>
+                <p className="text-[11px] text-gray-500 mb-1">Record opt-in for regulated channels (policy-dependent).</p>
+                <div className="flex flex-wrap gap-3 text-xs">
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={!!formData.consentSms}
+                      onChange={(e) => setFormData({ ...formData, consentSms: e.target.checked })}
+                    />
+                    SMS
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={!!formData.consentEmail}
+                      onChange={(e) => setFormData({ ...formData, consentEmail: e.target.checked })}
+                    />
+                    Email
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={!!formData.consentWhatsapp}
+                      onChange={(e) => setFormData({ ...formData, consentWhatsapp: e.target.checked })}
+                    />
+                    WhatsApp
+                  </label>
                 </div>
               </div>
 

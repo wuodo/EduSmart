@@ -4,6 +4,7 @@ import fs from 'fs';
 import prisma from '../lib/prisma';
 import { auditLogger } from '../utils/auditLogger';
 import { rbacGuard } from '../middleware/rbac';
+import { mergeTenantCrmSettings } from '../utils/tenantCrmSettings';
 
 const router = express.Router();
 
@@ -211,6 +212,47 @@ router.put('/me/branding', async (req, res) => {
   } catch (error) {
     console.error('Update branding error:', error);
     return safeJson(res, { success: false, message: 'Failed to update branding' }, 500);
+  }
+});
+
+// CRM extensions (webhooks, round-robin, integrations metadata) — admin / senior_staff
+router.get('/me/crm', async (req, res) => {
+  try {
+    const tenant = (await resolveTenantForRequest(req as any)) as any;
+    if (!tenant) return safeJson(res, { success: false, message: 'Tenant not found' }, 404);
+    const full = await prisma.tenant.findUnique({
+      where: { id: tenant.id },
+      select: { crmSettings: true },
+    });
+    return safeJson(res, { success: true, crm: mergeTenantCrmSettings(full?.crmSettings) });
+  } catch {
+    return safeJson(res, { success: false, message: 'Failed to load CRM settings' }, 500);
+  }
+});
+
+router.put('/me/crm', async (req, res) => {
+  try {
+    const role = getRole(req);
+    if (role !== 'admin' && role !== 'senior_staff') {
+      return safeJson(res, { success: false, message: 'Forbidden' }, 403);
+    }
+    const tenant = (await resolveTenantForRequest(req as any)) as any;
+    if (!tenant) return safeJson(res, { success: false, message: 'Tenant not found' }, 404);
+    const existing = await prisma.tenant.findUnique({
+      where: { id: tenant.id },
+      select: { crmSettings: true },
+    });
+    const prev = mergeTenantCrmSettings(existing?.crmSettings);
+    const patch = req.body && typeof req.body === 'object' ? req.body : {};
+    const merged = mergeTenantCrmSettings({ ...prev, ...patch });
+    const updated = await prisma.tenant.update({
+      where: { id: tenant.id },
+      data: { crmSettings: merged as any },
+      select: { crmSettings: true },
+    });
+    return safeJson(res, { success: true, crm: mergeTenantCrmSettings(updated.crmSettings) });
+  } catch {
+    return safeJson(res, { success: false, message: 'Failed to save CRM settings' }, 500);
   }
 });
 

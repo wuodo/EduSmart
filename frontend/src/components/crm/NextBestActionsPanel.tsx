@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import type { Inquiry } from '@/types/inquiry'
-import { computeNextBestActions } from '@/lib/nextBestActions'
+import { computeConversionLikelihood, computeNextBestActions } from '@/lib/nextBestActions'
 import { SparklesIcon } from '@heroicons/react/24/outline'
 
 const SparklesIconAny: any = SparklesIcon
 
 export default function NextBestActionsPanel({ inquiry }: { inquiry: Inquiry }) {
   const actions = computeNextBestActions(inquiry)
-  if (actions.length === 0) return null
+  const likelihood = computeConversionLikelihood(inquiry)
 
   return (
     <div className="rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/30 px-3 py-3 mb-3 text-left">
@@ -17,7 +17,14 @@ export default function NextBestActionsPanel({ inquiry }: { inquiry: Inquiry }) 
         <SparklesIconAny className="h-4 w-4" />
         Suggested next steps
       </div>
+      <p className="text-[11px] text-teal-900/90 dark:text-teal-100/90 mb-3 leading-snug">
+        Estimated conversion signal: <span className="font-semibold">{likelihood.label}</span> ({likelihood.score}/100) — heuristic
+        from status, score, first response, and dormancy flags.
+      </p>
       <ol className="space-y-2">
+        {actions.length === 0 && (
+          <li className="text-xs text-gray-600 dark:text-gray-400">No extra suggestions right now.</li>
+        )}
         {actions.map((a, idx) => (
           <li key={a.id} className="text-sm">
             <div className="flex items-start gap-2">

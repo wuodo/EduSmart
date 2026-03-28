@@ -63,7 +63,10 @@ export interface Inquiry {
   sentiment?: 'positive' | 'negative' | 'neutral' | string;
   firstResponseAt?: string | Date | null;
   nextFollowupAt?: string | Date | null;
-  /** Enriched on list API when Other Smart Features are enabled */
+  consentSms?: boolean | null
+  consentEmail?: boolean | null
+  consentWhatsapp?: boolean | null
+  /** Enriched on list API when Smart Features are enabled */
   smartMeta?: {
     dormant?: boolean;
     intakeFillPercent?: number;
@@ -93,4 +96,7 @@ export interface InquiryFormData {
   county: string; // required
   town: string; // required
   idOrPassport?: string; // optional
+  consentSms?: boolean
+  consentEmail?: boolean
+  consentWhatsapp?: boolean
 } 

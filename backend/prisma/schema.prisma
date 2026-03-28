@@ -30,6 +30,8 @@ model Tenant {
   secondaryColor String? @default("#22c55e") // green-500
   accentColor String? @default("#14b8a6")    // teal-500
   brandingConfig Json?                        // extended branding: headerIconColor, sidebarBg, sidebarTextColor, sidebarActiveColor, darkHeaderBg, darkSidebarBg, tableHeaderBg, tableHeaderTextColor, actionBtnColor, actionBtnTextColor
+  // Webhooks, round-robin, integrations, sequences (tenantCrmSettings util)
+  crmSettings Json?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -152,7 +154,12 @@ model Inquiry {
   engagementSentiment String?
   // New fields
   kcseGrade            String   @default("Unknown")
+  // Messaging consent null = not asked
+  consentSms           Boolean?
+  consentEmail         Boolean?
+  consentWhatsapp      Boolean?
   detail               InquiryDetail?
+  tasks                Task[]
 
   @@map("inquiries")
 }
@@ -198,6 +205,8 @@ model Task {
   reminderAt  DateTime?
   tenantId    Int?
   tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  inquiryId   Int?
+  inquiry     Inquiry? @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

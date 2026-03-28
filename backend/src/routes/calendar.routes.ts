@@ -60,8 +60,17 @@ router.get('/tasks', async (req, res) => {
 
 router.post('/tasks', async (req, res) => {
   try {
-    const { title, description, dueDate, status, createdBy, ownerEmail, visibility, type, outcome, reminderAt } = req.body || {}
+    const { title, description, dueDate, status, createdBy, ownerEmail, visibility, type, outcome, reminderAt, inquiryId } = req.body || {}
     if (!title) return safeJson(res, { error: 'Title is required' }, 400)
+    const tid = (req as any).tenant?.id
+    let inquiryIdNum: number | undefined
+    if (inquiryId !== undefined && inquiryId !== null && String(inquiryId).trim() !== '') {
+      const n = parseInt(String(inquiryId), 10)
+      if (!Number.isNaN(n)) {
+        const exists = await prisma.inquiry.findFirst({ where: { id: n, tenantId: tid } })
+        if (exists) inquiryIdNum = n
+      }
+    }
     const task = await prisma.task.create({ 
       data: { 
         title, 
@@ -74,7 +83,8 @@ router.post('/tasks', async (req, res) => {
         type, 
         outcome, 
         reminderAt: reminderAt ? new Date(reminderAt) : null,
-        tenantId: (req as any).tenant?.id
+        tenantId: tid,
+        inquiryId: inquiryIdNum ?? null,
       } 
     })
     return safeJson(res, { task }, 201)

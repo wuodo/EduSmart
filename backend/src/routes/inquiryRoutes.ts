@@ -12,6 +12,9 @@ import {
   phoneMatchVariants,
   enrichInquiriesWithSmartMeta,
 } from '../utils/marketingSmartFeatures';
+import { mergeTenantCrmSettings, pickNextRoundRobinEmail } from '../utils/tenantCrmSettings';
+import { dispatchTenantWebhooks } from '../utils/webhookDispatcher';
+import { mergeInquiriesIntoTarget } from '../utils/inquiryMerge';
 
 const router = express.Router();
 
@@ -278,6 +281,196 @@ router.get('/deleted-recent', async (req, res) => {
   }
 });
 
+// Global search (inquiries + follow-ups) for command palette / header search
+router.get('/search/global', async (req, res) => {
+  try {
+    const tenantId = await getTenantId(req as any);
+    if (!tenantId) return safeJson(res, { message: 'Tenant not found or inactive' }, 400);
+    const q = String(req.query.q || '').trim();
+    if (q.length < 2) return safeJson(res, { inquiries: [], followups: [] });
+    const role = getRole(req);
+    const email = getEmail(req);
+    const ownerScope =
+      role === 'admissions_officer'
+        ? { OR: [{ createdBy: { equals: email, mode: 'insensitive' } }, { assignedTo: { equals: email, mode: 'insensitive' } }] }
+        : {};
+    const inquiries = await prisma.inquiry.findMany({
+      where: {
+        tenantId,
+        ...ownerScope,
+        OR: [
+          { fullName: { contains: q, mode: 'insensitive' } },
+          { phone: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } },
+          { programOfInterest: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      take: 15,
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        fullName: true,
+        phone: true,
+        email: true,
+        status: true,
+        programOfInterest: true,
+        updatedAt: true,
+      },
+    });
+    const followups = await prisma.followup.findMany({
+      where: {
+        tenantId,
+        ...(role === 'admissions_officer'
+          ? {
+              OR: [
+                { createdBy: { equals: email, mode: 'insensitive' } },
+                { assignedTo: { equals: email, mode: 'insensitive' } },
+                { inquiry: { createdBy: { equals: email, mode: 'insensitive' } } },
+              ],
+            }
+          : {}),
+        OR: [
+          { inquiryName: { contains: q, mode: 'insensitive' } },
+          { notes: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      take: 10,
+      orderBy: { scheduledFor: 'desc' },
+      select: { id: true, inquiryId: true, inquiryName: true, type: true, status: true, scheduledFor: true },
+    });
+    return safeJson(res, { inquiries, followups });
+  } catch (error) {
+    return safeJson(res, { message: 'Search failed', error: error instanceof Error ? error.message : String(error) }, 500);
+  }
+});
+
+// GDPR-style JSON export (admin / senior_staff)
+router.get('/export/data', async (req, res) => {
+  try {
+    const role = getRole(req);
+    if (role !== 'admin' && role !== 'senior_staff') return safeJson(res, { message: 'Forbidden' }, 403);
+    const tenantId = await getTenantId(req as any);
+    if (!tenantId) return safeJson(res, { message: 'Tenant not found or inactive' }, 400);
+    const inquiries = await prisma.inquiry.findMany({
+      where: { tenantId },
+      include: { detail: true, followups: true },
+      take: 10000,
+    });
+    return safeJson(res, {
+      exportedAt: new Date().toISOString(),
+      tenantId,
+      count: inquiries.length,
+      inquiries,
+    });
+  } catch (error) {
+    return safeJson(res, { message: 'Export failed', error: error instanceof Error ? error.message : String(error) }, 500);
+  }
+});
+
+// Activity timeline for one inquiry
+router.get('/:id/timeline', async (req, res) => {
+  try {
+    const tenantId = await getTenantId(req as any);
+    if (!tenantId) return safeJson(res, { message: 'Tenant not found or inactive' }, 400);
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) return safeJson(res, { message: 'Invalid id' }, 400);
+    const role = getRole(req);
+    const email = getEmail(req);
+    const inquiry = await prisma.inquiry.findFirst({ where: { id, tenantId } });
+    if (!inquiry) return safeJson(res, { message: 'Inquiry not found' }, 404);
+    if (role === 'admissions_officer') {
+      const ok =
+        String(inquiry.createdBy || '').toLowerCase() === email.toLowerCase() ||
+        String(inquiry.assignedTo || '').toLowerCase() === email.toLowerCase();
+      if (!ok) return safeJson(res, { message: 'Forbidden' }, 403);
+    }
+    const followups = await prisma.followup.findMany({
+      where: { inquiryId: id, tenantId },
+      orderBy: { createdAt: 'asc' },
+      take: 80,
+    });
+    const tasks = await prisma.task.findMany({
+      where: { inquiryId: id, tenantId },
+      orderBy: { createdAt: 'asc' },
+      take: 40,
+    });
+    const audits = await prisma.auditLog.findMany({
+      where: { module: { in: ['inquiries', 'followups', 'admission_letters'] } },
+      orderBy: { createdAt: 'desc' },
+      take: 250,
+    });
+    const idStr = String(id);
+    const filtered = audits.filter((a) => {
+      const d = a.details as Record<string, unknown> | null;
+      if (!d) return false;
+      const blob = JSON.stringify(d);
+      return (
+        blob.includes(`"inquiryId":"${idStr}"`) ||
+        blob.includes(`"inquiryId":${idStr}`) ||
+        blob.includes(`"inquiryId": "${idStr}"`)
+      );
+    }).slice(0, 60);
+    const events: Array<{ type: string; at: string; label: string; meta?: unknown }> = [
+      { type: 'milestone', at: inquiry.createdAt.toISOString(), label: 'Inquiry created' },
+    ];
+    if (inquiry.updatedAt.getTime() !== inquiry.createdAt.getTime()) {
+      events.push({
+        type: 'milestone',
+        at: inquiry.updatedAt.toISOString(),
+        label: 'Last profile update',
+      });
+    }
+    for (const f of followups) {
+      events.push({
+        type: 'followup',
+        at: f.createdAt.toISOString(),
+        label: `Follow-up ${f.type} — ${f.status}`,
+        meta: { id: f.id, scheduledFor: f.scheduledFor },
+      });
+    }
+    for (const t of tasks) {
+      events.push({
+        type: 'task',
+        at: t.createdAt.toISOString(),
+        label: `Task: ${t.title}`,
+        meta: { id: t.id, status: t.status },
+      });
+    }
+    for (const a of filtered) {
+      events.push({
+        type: 'audit',
+        at: a.createdAt.toISOString(),
+        label: `${a.action} (${a.module})`,
+        meta: { user: a.user },
+      });
+    }
+    events.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+    return safeJson(res, { inquiryId: id, events });
+  } catch (error) {
+    return safeJson(res, { message: 'Timeline failed', error: error instanceof Error ? error.message : String(error) }, 500);
+  }
+});
+
+// Merge duplicate source inquiry into target (admin / senior_staff)
+router.post('/:id/merge', async (req, res) => {
+  try {
+    const role = getRole(req);
+    if (role !== 'admin' && role !== 'senior_staff') return safeJson(res, { message: 'Forbidden' }, 403);
+    const tenantId = await getTenantId(req as any);
+    if (!tenantId) return safeJson(res, { message: 'Tenant not found or inactive' }, 400);
+    const sourceId = parseInt(req.params.id, 10);
+    const targetId = parseInt(String(req.body?.targetId || ''), 10);
+    if (Number.isNaN(sourceId) || Number.isNaN(targetId)) return safeJson(res, { message: 'Invalid ids' }, 400);
+    const result = await mergeInquiriesIntoTarget(sourceId, targetId, tenantId);
+    try {
+      await auditLogger.custom(req, 'inquiry_merged', 'inquiries', { sourceId, targetId, tenantId });
+    } catch {}
+    return safeJson(res, result);
+  } catch (error) {
+    return safeJson(res, { message: error instanceof Error ? error.message : 'Merge failed' }, 400);
+  }
+});
+
 // Get single inquiry (scoped by tenant)
 router.get('/:id', async (req, res) => {
   try {
@@ -307,22 +500,45 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const email = getEmail(req);
-    const { detail, kcseGrade, assignedTo, ...rest } = req.body;
+    const { detail, kcseGrade, assignedTo, consentSms, consentEmail, consentWhatsapp, ...rest } = req.body;
     const tenantId = await getTenantId(req as any);
     if (!tenantId) {
       return safeJson(res, { message: 'Tenant not found or inactive' }, 400);
     }
-    const data: any = { 
-      ...rest, 
+    const data: any = {
+      ...rest,
       createdBy: email || undefined,
-      assignedTo: assignedTo || email || undefined,
-      tenantId
+      tenantId,
     };
     // Prisma schema expects email; allow empty string if not provided
     if (data.email === undefined || data.email === null) data.email = '';
     if (kcseGrade) data.kcseGrade = kcseGrade;
     if (detail && (detail.county && detail.town)) {
       data.detail = { create: { county: detail.county, town: detail.town, idOrPassport: detail.idOrPassport || null } };
+    }
+
+    const tenantRow = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { crmSettings: true } });
+    const crm = mergeTenantCrmSettings(tenantRow?.crmSettings);
+    if (typeof consentSms === 'boolean') data.consentSms = consentSms;
+    if (typeof consentEmail === 'boolean') data.consentEmail = consentEmail;
+    if (typeof consentWhatsapp === 'boolean') data.consentWhatsapp = consentWhatsapp;
+
+    const explicitAssign = assignedTo !== undefined && assignedTo !== null && String(assignedTo).trim() !== '';
+    if (explicitAssign) {
+      data.assignedTo = String(assignedTo).trim();
+    } else if (crm.roundRobinEmails && crm.roundRobinEmails.length > 0) {
+      const { email: rrEmail, nextCursor } = pickNextRoundRobinEmail(crm.roundRobinEmails, crm.roundRobinCursor ?? 0);
+      if (rrEmail) {
+        data.assignedTo = rrEmail;
+        await prisma.tenant.update({
+          where: { id: tenantId },
+          data: { crmSettings: { ...crm, roundRobinCursor: nextCursor } as any },
+        });
+      } else {
+        data.assignedTo = email || undefined;
+      }
+    } else {
+      data.assignedTo = email || undefined;
     }
 
     const smart = await fetchSmartConfigMerged();
@@ -392,6 +608,18 @@ router.post('/', async (req, res) => {
       );
     } catch (e) {
       console.warn('[automation] inquiry_created:', e);
+    }
+
+    try {
+      await dispatchTenantWebhooks(crm.webhooks, 'inquiry.created', {
+        inquiryId: inquiry.id,
+        tenantId,
+        fullName: inquiry.fullName,
+        status: inquiry.status,
+        source: inquiry.source,
+      });
+    } catch (e) {
+      console.warn('[webhook] inquiry.created:', e);
     }
 
     return safeJson(res, inquiry, 201);

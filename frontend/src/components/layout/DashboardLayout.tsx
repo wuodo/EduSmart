@@ -7,6 +7,8 @@ import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 // import { UserCircleIcon } from '@heroicons/react/24/outline';
 import { useEffect, useRef, useState } from 'react';
+
+const CRM_BANNER_DISMISS_KEY = 'edusmart_crm_updates_banner_v1';
 import { WEB_API } from '@/utils/api';
 import { cachedApiFetch } from '@/utils/apiClient';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -21,6 +23,8 @@ const moduleNames: { [key: string]: string } = {
   '/': 'Dashboard',
   '/dashboard': 'Dashboard',
   '/inquiries': 'Inquiries',
+  '/pipeline': 'Pipeline',
+  '/qa-review': 'QA review',
   '/marketing': 'Marketing',
   '/academics': 'Academics',
   '/administration': 'Administration',
@@ -65,6 +69,16 @@ export default function DashboardLayout({
     }
   }, [branding])
 
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return
+      if (localStorage.getItem(CRM_BANNER_DISMISS_KEY)) return
+      setShowCrmBanner(true)
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
   // Get user info from localStorage
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState('');
@@ -76,6 +90,7 @@ export default function DashboardLayout({
   const [profilePassword, setProfilePassword] = useState('');
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState('');
+  const [showCrmBanner, setShowCrmBanner] = useState(false);
   const [deleteRequests, setDeleteRequests] = useState<any[]>([]);
   const [broadcastNotifications, setBroadcastNotifications] = useState<any[]>([]);
   const [sentBroadcastNotifications, setSentBroadcastNotifications] = useState<any[]>([]);
@@ -596,6 +611,28 @@ export default function DashboardLayout({
           </div>
         </div>
         <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pt-5 min-w-0 content-responsive flex flex-col">
+          {showCrmBanner && (
+            <div className="mb-4 rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50/90 dark:bg-teal-950/35 px-3 py-2.5 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+              <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug">
+                <span className="font-semibold">CRM updates:</span> Pipeline view, inquiry timelines, merge duplicates, and CRM
+                integrations (webhooks and round-robin) are available from the sidebar and Settings.
+              </p>
+              <button
+                type="button"
+                className="text-xs font-semibold text-teal-800 dark:text-teal-200 hover:underline shrink-0 self-start"
+                onClick={() => {
+                  try {
+                    localStorage.setItem(CRM_BANNER_DISMISS_KEY, '1')
+                  } catch {
+                    /* ignore */
+                  }
+                  setShowCrmBanner(false)
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
           {children}
         </main>
         {showRequests && (userRole === 'admin' || userRole === 'senior_staff') && (

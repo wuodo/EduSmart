@@ -75,6 +75,20 @@ const NAV: NavItem[] = [
     icon: SparklesIconAny,
     keywords: 'smart features lead scoring duplicate detection dormant sla reminders capacity',
   },
+  {
+    id: 'pipe',
+    label: 'Pipeline',
+    href: '/pipeline',
+    icon: ChartBarIconAny,
+    keywords: 'kanban board stages status',
+  },
+  {
+    id: 'crmset',
+    label: 'CRM integrations',
+    href: '/settings?section=crm',
+    icon: Cog6ToothIconAny,
+    keywords: 'webhooks round robin crm export tenant',
+  },
 ]
 
 type InquiryRow = {
@@ -99,10 +113,27 @@ export default function CommandPalette() {
   const [q, setQ] = useState('')
   const [loading, setLoading] = useState(false)
   const [rows, setRows] = useState<InquiryRow[]>([])
+  const [globalInq, setGlobalInq] = useState<
+    Array<{
+      id: number
+      fullName?: string
+      phone?: string
+      email?: string
+      status?: string
+      programOfInterest?: string
+      updatedAt?: string
+    }>
+  >([])
+  const [globalFu, setGlobalFu] = useState<
+    Array<{ id: number; inquiryId: number; inquiryName?: string; type?: string; status?: string; scheduledFor?: string }>
+  >([])
+  const [searchLoading, setSearchLoading] = useState(false)
   const cacheRef = useRef<{ t: number; data: InquiryRow[] } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
+
+  const ql = q.trim().toLowerCase()
 
   const loadInquiries = useCallback(async () => {
     const now = Date.now()
@@ -158,6 +189,9 @@ export default function CommandPalette() {
     if (!open) {
       setQ('')
       setActive(0)
+      setGlobalInq([])
+      setGlobalFu([])
+      setSearchLoading(false)
       return
     }
     loadInquiries()
@@ -165,7 +199,40 @@ export default function CommandPalette() {
     return () => clearTimeout(t)
   }, [open, loadInquiries])
 
-  const ql = q.trim().toLowerCase()
+  useEffect(() => {
+    if (!open || ql.length < 2) {
+      setGlobalInq([])
+      setGlobalFu([])
+      setSearchLoading(false)
+      return
+    }
+    let cancelled = false
+    const timer = window.setTimeout(async () => {
+      setSearchLoading(true)
+      try {
+        const res = await fetch(`${WEB_API}/inquiries/search/global?q=${encodeURIComponent(ql)}`, {
+          credentials: 'include',
+          cache: 'no-store',
+          headers: userHeaders(),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (cancelled) return
+        setGlobalInq(Array.isArray(data?.inquiries) ? data.inquiries : [])
+        setGlobalFu(Array.isArray(data?.followups) ? data.followups : [])
+      } catch {
+        if (!cancelled) {
+          setGlobalInq([])
+          setGlobalFu([])
+        }
+      } finally {
+        if (!cancelled) setSearchLoading(false)
+      }
+    }, 300)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [open, ql])
 
   const navMatches = useMemo(() => {
     if (!ql) return NAV
@@ -177,7 +244,7 @@ export default function CommandPalette() {
     )
   }, [ql])
 
-  const inquiryMatches = useMemo(() => {
+  const localInquiryMatches = useMemo(() => {
     if (!ql || ql.length < 2) return []
     return rows
       .filter((r) => {
@@ -186,6 +253,38 @@ export default function CommandPalette() {
       })
       .slice(0, 8)
   }, [ql, rows])
+
+  const globalInqRows: InquiryRow[] = useMemo(
+    () =>
+      globalInq.map((g) => ({
+        id: g.id,
+        fullName: g.fullName || '',
+        phone: g.phone || '',
+        email: g.email,
+        programOfInterest: g.programOfInterest,
+        status: g.status,
+        createdAt: g.updatedAt,
+      })),
+    [globalInq],
+  )
+
+  const mergedInquiryRows = useMemo(() => {
+    const seen = new Set<number>()
+    const out: InquiryRow[] = []
+    for (const r of globalInqRows) {
+      if (!seen.has(r.id)) {
+        seen.add(r.id)
+        out.push(r)
+      }
+    }
+    for (const r of localInquiryMatches) {
+      if (!seen.has(r.id)) {
+        seen.add(r.id)
+        out.push(r)
+      }
+    }
+    return out.slice(0, 14)
+  }, [globalInqRows, localInquiryMatches])
 
   /** Simple NL-style answers from cached rows */
   const statAnswer = useMemo(() => {
@@ -206,22 +305,31 @@ export default function CommandPalette() {
   }, [ql, q, rows])
 
   const items = useMemo(() => {
-    const out: Array<{ type: 'nav' | 'inq' | 'stat'; key: string; label: string; sub?: string; href?: string }> = []
+    const out: Array<{ type: 'nav' | 'inq' | 'fu' | 'stat'; key: string; label: string; sub?: string; href?: string }> = []
     if (statAnswer) {
       out.push({ type: 'stat', key: 'stat', label: statAnswer, sub: 'Insight' })
     }
     navMatches.forEach((n) => out.push({ type: 'nav', key: n.id, label: n.label, href: n.href }))
-    inquiryMatches.forEach((r) =>
+    mergedInquiryRows.forEach((r) =>
       out.push({
         type: 'inq',
         key: `inq-${r.id}`,
-        label: r.fullName,
+        label: r.fullName || `Inquiry #${r.id}`,
         sub: `${r.phone} · ${r.programOfInterest || ''} · ${r.status || ''}`.trim(),
         href: `/inquiries?openInquiry=${r.id}${ql ? `&q=${encodeURIComponent(ql)}` : ''}`,
       }),
     )
+    globalFu.forEach((f) =>
+      out.push({
+        type: 'fu',
+        key: `fu-${f.id}`,
+        label: f.inquiryName?.trim() || `Follow-up #${f.id}`,
+        sub: `${f.type || 'follow-up'} · ${f.status || ''} · inquiry #${f.inquiryId}`.trim(),
+        href: `/inquiries?openInquiry=${f.inquiryId}`,
+      }),
+    )
     return out
-  }, [statAnswer, navMatches, inquiryMatches])
+  }, [statAnswer, navMatches, mergedInquiryRows, globalFu, ql])
 
   useEffect(() => {
     setActive(0)
@@ -281,7 +389,9 @@ export default function CommandPalette() {
             placeholder="Search pages, inquiries, or ask a quick question…"
             className="flex-1 min-w-0 bg-transparent text-sm text-gray-900 dark:text-white outline-none py-2"
           />
-          {loading && <span className="text-[10px] text-gray-400">Loading…</span>}
+          {(loading || searchLoading) && (
+            <span className="text-[10px] text-gray-400">{searchLoading ? 'Searching…' : 'Loading…'}</span>
+          )}
           <kbd className="hidden sm:inline text-[10px] px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-600 text-gray-500">Esc</kbd>
         </div>
         <div ref={listRef} className="max-h-[50vh] overflow-y-auto py-1">

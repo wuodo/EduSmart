@@ -11,6 +11,8 @@ import {
   ChartBarIcon,
   BellIcon,
   CalendarDaysIcon,
+  ViewColumnsIcon,
+  ClipboardDocumentCheckIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import { cachedApiFetch } from '@/utils/apiClient'
@@ -38,6 +40,8 @@ const navigation: NavigationItem[] = [
   // Main dashboard
   { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
   { name: 'Inquiries', href: '/inquiries', icon: ChartBarIcon },
+  { name: 'Pipeline', href: '/pipeline', icon: ViewColumnsIcon },
+  { name: 'QA review', href: '/qa-review', icon: ClipboardDocumentCheckIcon },
   { name: 'Follow-ups', href: '/followups', icon: CalendarIcon },
   { name: 'Calendar', href: '/calendar', icon: CalendarDaysIcon },
   { name: 'Admission Letters', href: '/admission-letters', icon: DocumentTextIcon },

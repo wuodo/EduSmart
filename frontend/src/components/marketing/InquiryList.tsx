@@ -32,6 +32,7 @@ import {
   secondaryButtonClass,
 } from '@/styles/modalForm'
 import NextBestActionsPanel from '@/components/crm/NextBestActionsPanel'
+import InquiryTimeline from '@/components/crm/InquiryTimeline'
 
 const PencilIcon: any = PencilSquareIcon;
 const TrashIconAny: any = TrashIcon;
@@ -74,6 +75,7 @@ export default function InquiryList({
   const [deletedItems, setDeletedItems] = useState<any[]>([])
   const [loadingDeleted, setLoadingDeleted] = useState(false)
   const [selectedDeletedArchiveIds, setSelectedDeletedArchiveIds] = useState<string[]>([])
+  const [mergeTargetId, setMergeTargetId] = useState('')
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -247,6 +249,9 @@ export default function InquiryList({
       county: inquiry.detail?.county || '',
       town: inquiry.detail?.town || '',
       idOrPassport: inquiry.detail?.idOrPassport || '',
+      consentSms: (inquiry as any).consentSms ?? undefined,
+      consentEmail: (inquiry as any).consentEmail ?? undefined,
+      consentWhatsapp: (inquiry as any).consentWhatsapp ?? undefined,
     })
     setEditMode(true)
     setSelected(inquiry)
@@ -830,6 +835,54 @@ export default function InquiryList({
               <button onClick={() => setShowModal(false)} className={modalCloseButtonClass} aria-label="Close">✕</button>
             </div>
             <NextBestActionsPanel inquiry={selected} />
+            <div className="mt-3">
+              <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Activity timeline</h3>
+              <InquiryTimeline inquiryId={String(selected.id)} />
+            </div>
+            {isAdminLike && (
+              <div className="mt-3 p-2 rounded border border-amber-200 bg-amber-50/80 dark:bg-amber-950/30 text-xs">
+                <div className="font-semibold text-amber-900 dark:text-amber-200">Merge duplicate into another inquiry</div>
+                <p className="text-gray-600 dark:text-gray-400 mt-0.5 mb-2">
+                  This record will be removed; follow-ups move to the target ID.
+                </p>
+                <div className="flex flex-wrap gap-2 items-center">
+                  <input
+                    type="number"
+                    className="border rounded px-2 py-1 w-32"
+                    placeholder="Target inquiry ID"
+                    value={mergeTargetId}
+                    onChange={(e) => setMergeTargetId(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="px-2 py-1 rounded bg-amber-700 text-white"
+                    onClick={async () => {
+                      const tid = parseInt(mergeTargetId, 10)
+                      if (!tid || !selected) return
+                      if (!window.confirm(`Merge inquiry ${selected.id} into ${tid}? This cannot be undone.`)) return
+                      try {
+                        const res = await fetch(`${WEB_API}/inquiries/${selected.id}/merge`, {
+                          method: 'POST',
+                          credentials: 'include',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ targetId: tid }),
+                        })
+                        const j = await res.json().catch(() => ({}))
+                        if (!res.ok) throw new Error((j as any)?.message || 'Merge failed')
+                        setToast({ type: 'success', message: `Merged into inquiry ${tid}.` })
+                        setShowModal(false)
+                        setMergeTargetId('')
+                        onRefresh()
+                      } catch (e: any) {
+                        setToast({ type: 'error', message: e?.message || 'Merge failed' })
+                      }
+                    }}
+                  >
+                    Merge
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full text-xs sm:text-sm border border-neutral-light">
                 <tbody>

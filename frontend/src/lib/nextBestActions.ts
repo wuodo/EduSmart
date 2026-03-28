@@ -10,6 +10,30 @@ export type NextBestAction = {
 }
 
 /**
+ * Lightweight 0–100 score from status, lead score, SLA, and dormancy (v1).
+ */
+export function computeConversionLikelihood(inquiry: Inquiry): { score: number; label: string } {
+  let score = 0
+  const status = String(inquiry.status || '').toLowerCase()
+  if (status === 'hot') score += 35
+  else if (status === 'warm') score += 25
+  else if (status === 'cold') score += 10
+  else score += 15
+
+  const s = typeof inquiry.score === 'number' && !Number.isNaN(inquiry.score) ? inquiry.score : 0
+  score += Math.min(30, Math.max(0, s))
+
+  if (inquiry.firstResponseAt) score += 15
+  if (inquiry.smartMeta?.dormant) score -= 25
+
+  const clamped = Math.min(100, Math.max(0, Math.round(score)))
+  let label = 'Lower'
+  if (clamped >= 70) label = 'High'
+  else if (clamped >= 45) label = 'Medium'
+  return { score: clamped, label }
+}
+
+/**
  * Rule-based next-best-action ranking (v1). Replace with recommendation API later.
  */
 export function computeNextBestActions(inquiry: Inquiry): NextBestAction[] {
