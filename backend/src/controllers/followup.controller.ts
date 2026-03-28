@@ -256,6 +256,36 @@ export const updateFollowup = async (req: Request, res: Response) => {
       changes: req.body,
       inquiryId: parseInt(inquiryId)
     });
+
+    const finalStatusStr =
+      status !== undefined && status !== null
+        ? String(status)
+        : String(existing.status || '');
+    const prevStatus = String(existing.status || '').toLowerCase();
+    const nextStatus = finalStatusStr.toLowerCase();
+    if (tenantId != null && prevStatus !== 'completed' && nextStatus === 'completed') {
+      try {
+        const fresh = await prisma.inquiry.findFirst({ where: { id: parseInt(inquiryId, 10), tenantId } });
+        if (fresh) {
+          const { runFollowupCompletedAutomations } = await import('../utils/inquiryAutomation');
+          await runFollowupCompletedAutomations(
+            { type: String(followup.type || existing.type || 'call') },
+            {
+              id: fresh.id,
+              fullName: fresh.fullName,
+              status: fresh.status,
+              source: fresh.source,
+              assignedTo: fresh.assignedTo,
+              createdBy: fresh.createdBy,
+              leadTags: fresh.leadTags,
+            },
+            tenantId,
+          );
+        }
+      } catch (e) {
+        console.warn('[automation] followup_completed:', e);
+      }
+    }
     
     return safeJson(res, followup);
   } catch (err) {

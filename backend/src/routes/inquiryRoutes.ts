@@ -386,6 +386,7 @@ router.post('/', async (req, res) => {
           source: inquiry.source,
           assignedTo: inquiry.assignedTo,
           createdBy: inquiry.createdBy,
+          leadTags: inquiry.leadTags,
         },
         tenantId,
       );
@@ -507,6 +508,7 @@ router.post('/bulk', async (req, res) => {
               source: created.source,
               assignedTo: created.assignedTo,
               createdBy: created.createdBy,
+              leadTags: created.leadTags,
             },
             tenantId,
           );
@@ -676,6 +678,33 @@ router.put('/:id', async (req, res) => {
       changes: req.body,
       tenantId: (req as any).tenant?.id
     });
+
+    if (existingFull) {
+      const oldStatus = existingFull.status ?? null;
+      const newStatus = inquiry.status ?? null;
+      if (
+        String(oldStatus || '').toLowerCase() !== String(newStatus || '').toLowerCase()
+      ) {
+        try {
+          const { runInquiryStatusChangeAutomations } = await import('../utils/inquiryAutomation');
+          await runInquiryStatusChangeAutomations(
+            {
+              id: inquiry.id,
+              fullName: inquiry.fullName,
+              status: inquiry.status,
+              source: inquiry.source,
+              assignedTo: inquiry.assignedTo,
+              createdBy: inquiry.createdBy,
+              leadTags: inquiry.leadTags,
+            },
+            oldStatus,
+            tenantId,
+          );
+        } catch (e) {
+          console.warn('[automation] inquiry_status_changed:', e);
+        }
+      }
+    }
     
     return safeJson(res, inquiry);
   } catch (error) {

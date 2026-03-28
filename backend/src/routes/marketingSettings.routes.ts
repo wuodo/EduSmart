@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { loadCpanelFromDb, saveCpanelToDb } from '../utils/cpanelStore';
-import { loadAutomationConfig, DEFAULT_AUTOMATION } from '../utils/inquiryAutomation';
+import { loadAutomationConfig, mergeAutomationConfig } from '../utils/inquiryAutomation';
 
 const router = Router();
 
@@ -89,11 +89,7 @@ router.put('/automation', async (req, res) => {
     if (!automation || typeof automation !== 'object') {
       return res.status(400).json({ error: 'Invalid automation' });
     }
-    const merged = {
-      enabled: !!automation.enabled,
-      rules: Array.isArray(automation.rules) ? automation.rules : DEFAULT_AUTOMATION.rules,
-      log: Array.isArray(automation.log) ? automation.log.slice(0, 100) : [],
-    };
+    const merged = mergeAutomationConfig(automation);
     const cfg = await loadCpanelFromDb();
     await saveCpanelToDb({ ...cfg, automationConfig: merged } as any);
     return res.json({ success: true, automation: merged });
