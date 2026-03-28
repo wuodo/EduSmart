@@ -13,6 +13,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import FloatingChat from '@/components/marketing/FloatingChat';
 import FloatingAskAi from '@/components/askAi/FloatingAskAi';
 import CommandPalette, { CommandPaletteTriggerButton, openCommandPalette } from '@/components/crm/CommandPalette';
+import KeyboardShortcutsModal from '@/components/crm/KeyboardShortcutsModal';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 const MagnifyingGlassIconAny: any = MagnifyingGlassIcon
 
@@ -97,6 +98,7 @@ export default function DashboardLayout({
   const [mentionsOpen, setMentionsOpen] = useState(false)
   const [floatingChat, setFloatingChat] = useState<{ roomId?: number; focus?: string; reopenTick?: number } | null>(null)
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0)
   const lastUnreadRef = useRef(0)
   // In-flight guards — prevent overlapping poll requests when backend is slow
@@ -291,6 +293,18 @@ export default function DashboardLayout({
     }, 30000);
 
     return () => { clearInterval(interval); clearInterval(poll); clearInterval(pollUnread); clearInterval(pollBroadcast); clearInterval(pollTenant); }
+  }, []);
+
+  useEffect(() => {
+    const help = (e: KeyboardEvent) => {
+      if (e.key !== '?' || e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || (t as any).isContentEditable)) return;
+      e.preventDefault();
+      setShowShortcuts((s) => !s);
+    };
+    window.addEventListener('keydown', help);
+    return () => window.removeEventListener('keydown', help);
   }, []);
 
   useEffect(() => {
@@ -508,6 +522,14 @@ export default function DashboardLayout({
             
             {/* Desktop controls - hidden on mobile */}
             <div className="hidden md:flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setShowShortcuts(true)}
+                className="text-white/90 hover:text-white text-[11px] font-semibold px-2 py-1 rounded border border-white/25 hover:bg-white/10"
+                title="Keyboard shortcuts (?)"
+              >
+                ?
+              </button>
               <CommandPaletteTriggerButton />
               <div className="flex flex-col items-end mr-3 sm:mr-6">
                 <span suppressHydrationWarning className="text-white text-compact-xs font-medium">{dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
@@ -962,6 +984,7 @@ export default function DashboardLayout({
         />
         <FloatingAskAi />
         <CommandPalette />
+        <KeyboardShortcutsModal open={showShortcuts} onClose={() => setShowShortcuts(false)} />
       </div>
     </div>
   );

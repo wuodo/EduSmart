@@ -23,6 +23,7 @@ export default function FollowupsPage() {
   const [owners, setOwners] = useState<{ label: string; value: string }[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [chatSourceInfo, setChatSourceInfo] = useState<{ inquiryId: string; inquiryName: string; chatRoomId: string } | null>(null)
+  const [focusInquiryId, setFocusInquiryId] = useState('')
   const inputClass =
     'w-full min-w-0 px-2 py-1.5 text-[13px] border border-neutral-light bg-white/90 dark:bg-gray-700/90 ' +
     'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40'
@@ -67,6 +68,8 @@ export default function FollowupsPage() {
         chatRoomId: qs.get('chatRoomId') || '',
       })
     }
+    const inq = (qs.get('inquiryId') || '').trim()
+    if (inq) setFocusInquiryId(inq)
   }, [])
 
   // This function will be called when scheduling a followup
@@ -94,6 +97,7 @@ export default function FollowupsPage() {
 
   // Filtering logic
   const filteredFollowups = followups.filter(f => {
+    if (focusInquiryId && String(f.inquiryId) !== focusInquiryId) return false
     const matchesStatus = !status || f.status === status;
     const matchesType = !type || f.type === type;
     const searchLower = search.toLowerCase();
@@ -131,6 +135,26 @@ export default function FollowupsPage() {
       {chatSourceInfo && (
         <div className="bg-blue-50 dark:bg-blue-900/25 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 px-3 py-2 rounded text-sm">
           Opened from tagged chat inquiry{chatSourceInfo.inquiryName ? `: ${chatSourceInfo.inquiryName}` : ''}. Actions here are logged to your account audit trail.
+        </div>
+      )}
+      {focusInquiryId && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100 px-3 py-2 rounded text-sm flex flex-wrap items-center justify-between gap-2">
+          <span>Showing follow-ups for inquiry <strong>#{focusInquiryId}</strong>.</span>
+          <button
+            type="button"
+            className="text-[12px] font-semibold px-2 py-1 rounded border border-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+            onClick={() => {
+              setFocusInquiryId('')
+              if (typeof window !== 'undefined') {
+                const url = new URL(window.location.href)
+                url.searchParams.delete('inquiryId')
+                const q = url.searchParams.toString()
+                window.history.replaceState({}, '', url.pathname + (q ? `?${q}` : ''))
+              }
+            }}
+          >
+            Show all follow-ups
+          </button>
         </div>
       )}
 

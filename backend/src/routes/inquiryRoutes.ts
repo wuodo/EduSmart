@@ -375,7 +375,24 @@ router.post('/', async (req, res) => {
     } catch (e) {
       console.warn('Audit log createInquiry failed:', e);
     }
-    
+
+    try {
+      const { runInquiryCreatedAutomations } = await import('../utils/inquiryAutomation');
+      await runInquiryCreatedAutomations(
+        {
+          id: inquiry.id,
+          fullName: inquiry.fullName,
+          status: inquiry.status,
+          source: inquiry.source,
+          assignedTo: inquiry.assignedTo,
+          createdBy: inquiry.createdBy,
+        },
+        tenantId,
+      );
+    } catch (e) {
+      console.warn('[automation] inquiry_created:', e);
+    }
+
     return safeJson(res, inquiry, 201);
   } catch (error) {
     if (res.headersSent) return;
@@ -478,8 +495,22 @@ router.post('/bulk', async (req, res) => {
           );
         }
 
-        await prisma.inquiry.create({ data });
+        const created = await prisma.inquiry.create({ data });
         successCount++;
+        try {
+          const { runInquiryCreatedAutomations } = await import('../utils/inquiryAutomation');
+          await runInquiryCreatedAutomations(
+            {
+              id: created.id,
+              fullName: created.fullName,
+              status: created.status,
+              source: created.source,
+              assignedTo: created.assignedTo,
+              createdBy: created.createdBy,
+            },
+            tenantId,
+          );
+        } catch {}
       } catch (e: any) {
         skippedCount++;
         errors.push({ row: idx + 1, reason: e?.message || 'Create failed' });

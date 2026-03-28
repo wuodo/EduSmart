@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react'
 import { Inquiry } from '@/types/inquiry'
 import { format } from 'date-fns'
-import { PencilSquareIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { PencilSquareIcon, TrashIcon, EyeIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
+import Link from 'next/link'
 import CreateInquiryButton from './CreateInquiryButton'
 import {
   InquiryFormData,
@@ -36,6 +37,7 @@ const PencilIcon: any = PencilSquareIcon;
 const TrashIconAny: any = TrashIcon;
 const EyeIconAny: any = EyeIcon;
 const FaWhatsappAny: any = FaWhatsapp;
+const CalendarDaysIconAny: any = CalendarDaysIcon;
 
 export default function InquiryList({
   inquiries,
@@ -764,6 +766,13 @@ export default function InquiryList({
                       >
                         <EyeIconAny className="h-4 w-4" />
                       </button>
+                      <Link
+                        href={`/followups?inquiryId=${encodeURIComponent(String(inquiry.id))}`}
+                        className="inline-flex text-amber-600 hover:text-amber-800 mr-2"
+                        title="Follow-ups for this inquiry"
+                      >
+                        <CalendarDaysIconAny className="h-4 w-4" />
+                      </Link>
                       {/* WhatsApp template button */}
                       <button
                         onClick={() => {

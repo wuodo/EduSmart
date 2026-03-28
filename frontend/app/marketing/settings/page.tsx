@@ -10,6 +10,7 @@ import Branding from './Branding';
 import AuditLogs from './AuditLogs';
 import Integrations from './Integrations';
 import SmartFeatures from './SmartFeatures';
+import Automations from './Automations';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
 const Bars3IconAny: any = Bars3Icon;
@@ -25,6 +26,7 @@ const SECTIONS = [
   { key: 'audit', label: 'Audit & Logs', module: 'settings' },
   { key: 'integrations', label: 'Integrations', module: 'settings' },
   { key: 'smart', label: 'Other Smart Features', module: 'settings' },
+  { key: 'auto', label: 'Automations', module: 'settings' },
 ];
 
 export default function MarketingSettingsPage() {
@@ -103,6 +105,7 @@ export default function MarketingSettingsPage() {
         {section === 'audit' && <Guard module="settings"><AuditLogs /></Guard>}
         {section === 'integrations' && <Guard module="settings"><Integrations /></Guard>}
         {section === 'smart' && <Guard module="settings"><SmartFeatures /></Guard>}
+        {section === 'auto' && <Guard module="settings"><Automations /></Guard>}
       </main>
     </div>
   );

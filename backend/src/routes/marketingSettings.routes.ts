@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { loadCpanelFromDb, saveCpanelToDb } from '../utils/cpanelStore';
+import { loadAutomationConfig, DEFAULT_AUTOMATION } from '../utils/inquiryAutomation';
 
 const router = Router();
 
@@ -70,6 +71,34 @@ router.put('/smart', async (req, res) => {
     return res.json({ success: true, smartConfig });
   } catch {
     return res.status(500).json({ error: 'Failed to save smart config' });
+  }
+});
+
+router.get('/automation', async (_req, res) => {
+  try {
+    const automation = await loadAutomationConfig();
+    return res.json({ automation });
+  } catch {
+    return res.status(500).json({ error: 'Failed to load automation config' });
+  }
+});
+
+router.put('/automation', async (req, res) => {
+  try {
+    const { automation } = req.body;
+    if (!automation || typeof automation !== 'object') {
+      return res.status(400).json({ error: 'Invalid automation' });
+    }
+    const merged = {
+      enabled: !!automation.enabled,
+      rules: Array.isArray(automation.rules) ? automation.rules : DEFAULT_AUTOMATION.rules,
+      log: Array.isArray(automation.log) ? automation.log.slice(0, 100) : [],
+    };
+    const cfg = await loadCpanelFromDb();
+    await saveCpanelToDb({ ...cfg, automationConfig: merged } as any);
+    return res.json({ success: true, automation: merged });
+  } catch {
+    return res.status(500).json({ error: 'Failed to save automation config' });
   }
 });
 
