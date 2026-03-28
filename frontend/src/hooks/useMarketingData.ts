@@ -40,7 +40,10 @@ export function useMarketingData() {
         return;
       }
       const data = await res.json().catch(() => []);
-      setInquiries(Array.isArray(data) ? data : []);
+      // Backend returns { data: [...], total, page, limit, pages } — handle both
+      // the paginated wrapper and a plain array for backwards compatibility.
+      const rows = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+      setInquiries(rows);
     } catch (err) {
       console.error('Error fetching inquiries:', err);
       // Keep existing data on transient errors
@@ -62,7 +65,8 @@ export function useMarketingData() {
         return;
       }
       const data = await res.json().catch(() => []);
-      setFollowups(Array.isArray(data) ? data : []);
+      const rows = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+      setFollowups(rows);
     } catch (err) {
       console.error('Error fetching followups:', err);
       // Keep existing data on transient errors

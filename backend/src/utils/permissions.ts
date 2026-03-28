@@ -116,13 +116,22 @@ export async function savePermissionsToDb(p: PermissionsModel): Promise<void> {
 	}
 }
 
-// Bootstrap: on startup ensure the DB row contains the current permissions
-// so a freshly-deployed container gets the last-saved state from the DB.
-;(async () => {
+// Bootstrap: on startup load permissions from DB into the in-memory cache so
+// that all synchronous loadPermissions() calls see DB state, not the wiped
+// ephemeral file. On Render free-tier the container FS is wiped on every
+// restart, so file-based fallback would always return hardcoded defaults.
+async function bootstrapPermissionsFromDb(): Promise<void> {
 	try {
 		const row = await (prisma as any).cpanelConfig.findUnique({ where: { id: 1 } });
-		if (!row?.data || !(row.data as any)?.permissions) {
-			// No permissions in DB yet — seed from file
+		const dbPerms = (row?.data as any)?.permissions;
+		if (dbPerms?.roles) {
+			// DB has saved permissions — load them into in-memory cache NOW so
+			// subsequent sync loadPermissions() calls use the real saved state.
+			cached = normalizePermissions(dbPerms as PermissionsModel);
+			mtime = Date.now(); // prevent stale file from overwriting cached
+			console.log('[permissions] Loaded permissions from DB into memory cache.');
+		} else {
+			// No permissions in DB yet — seed from file (or defaults), then persist.
 			const initial = loadPermissions();
 			const current: Record<string, unknown> = (row?.data && typeof row.data === 'object'
 				? row.data
@@ -132,11 +141,29 @@ export async function savePermissionsToDb(p: PermissionsModel): Promise<void> {
 				update: { data: { ...current, permissions: initial } },
 				create: { id: 1, data: { permissions: initial } },
 			});
-			console.log('[permissions] Seeded permissions into DB from file.');
+			cached = initial;
+			mtime = Date.now();
+			console.log('[permissions] Seeded permissions into DB from file/defaults.');
 		}
 	} catch (e) {
-		console.error('[permissions] Bootstrap DB seed failed:', e);
+		console.error('[permissions] Bootstrap DB load failed, using file/defaults:', e);
 	}
+}
+
+;(async () => {
+	await bootstrapPermissionsFromDb();
+	// Refresh in-memory cache from DB every 5 minutes so long-running processes
+	// stay in sync if another instance saved changes.
+	setInterval(async () => {
+		try {
+			const row = await (prisma as any).cpanelConfig.findUnique({ where: { id: 1 } });
+			const dbPerms = (row?.data as any)?.permissions;
+			if (dbPerms?.roles) {
+				cached = normalizePermissions(dbPerms as PermissionsModel);
+				mtime = Date.now();
+			}
+		} catch { /* silent — do not crash the process on a periodic refresh failure */ }
+	}, 5 * 60 * 1000).unref();
 })();
 
 export function allowedMethodsFor(role: string): Set<string> {

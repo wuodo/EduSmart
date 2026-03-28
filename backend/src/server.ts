@@ -121,6 +121,27 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref();
 
+// In-process session cache — 60 second TTL.
+// Eliminates a DB roundtrip on EVERY /api request; critical on Render free-tier
+// cold starts where 5+ concurrent requests each hit the DB for session auth.
+const SESSION_CACHE_TTL_MS = 60_000;
+const _sessionCache = new Map<string, { user: any; session: any; expiresAt: number }>();
+function getCachedSession(token: string) {
+  const e = _sessionCache.get(token);
+  if (!e) return null;
+  if (Date.now() > e.expiresAt) { _sessionCache.delete(token); return null; }
+  return e;
+}
+function setCachedSession(token: string, user: any, session: any) {
+  if (_sessionCache.size > 2000) {
+    // Evict oldest 500 to cap memory when many concurrent users are active
+    const oldest = Array.from(_sessionCache.keys()).slice(0, 500);
+    oldest.forEach(k => _sessionCache.delete(k));
+  }
+  _sessionCache.set(token, { user, session, expiresAt: Date.now() + SESSION_CACHE_TTL_MS });
+}
+export function invalidateSessionCache(token: string) { _sessionCache.delete(token); }
+
 // Session middleware: attach req.user if session cookie is valid (API routes only)
 app.use('/api', async (req, _res, next) => {
   try {
@@ -128,16 +149,25 @@ app.use('/api', async (req, _res, next) => {
     const match = /(?:^|; )session=([^;]+)/.exec(cookie);
     const token = match ? decodeURIComponent(match[1]) : '';
     if (token) {
-      const rows: any[] = await prisma.$queryRaw`
-        SELECT s.*, u.id as u_id, u.email as u_email, u.role as u_role, u.name as u_name, u."tenantId" as u_tenant_id
-        FROM sessions s
-        JOIN users u ON u.id = s."userId"
-        WHERE s.token = ${token} AND s."expiresAt" > NOW()
-      `;
-      if (rows && rows.length > 0) {
-        const r = rows[0];
-        (req as any).session = { id: r.id, token: r.token, userId: r.userId, tenantId: r.tenantId };
-        (req as any).user = { id: r.u_id, email: r.u_email, role: r.u_role, name: r.u_name, tenantId: r.u_tenant_id };
+      const cached = getCachedSession(token);
+      if (cached) {
+        (req as any).session = cached.session;
+        (req as any).user = cached.user;
+      } else {
+        const rows: any[] = await prisma.$queryRaw`
+          SELECT s.*, u.id as u_id, u.email as u_email, u.role as u_role, u.name as u_name, u."tenantId" as u_tenant_id
+          FROM sessions s
+          JOIN users u ON u.id = s."userId"
+          WHERE s.token = ${token} AND s."expiresAt" > NOW()
+        `;
+        if (rows && rows.length > 0) {
+          const r = rows[0];
+          const sessionObj = { id: r.id, token: r.token, userId: r.userId, tenantId: r.tenantId };
+          const userObj = { id: r.u_id, email: r.u_email, role: r.u_role, name: r.u_name, tenantId: r.u_tenant_id };
+          (req as any).session = sessionObj;
+          (req as any).user = userObj;
+          setCachedSession(token, userObj, sessionObj);
+        }
       }
     }
   } catch (_e) {

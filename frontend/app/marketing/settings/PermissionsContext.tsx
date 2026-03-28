@@ -27,31 +27,40 @@ function normalizeAppRoleToDbRole(role: string): string {
   return String(role || '')
 }
 
+function readRoleFromStorage(): string {
+  try {
+    // Prefer localStorage keys set by the login flow
+    const ls = localStorage.getItem('dbRole') || localStorage.getItem('userRole') || ''
+    if (ls) return ls
+  } catch { /* SSR or private-browsing */ }
+  return readRoleFromCookie()
+}
+
 export function PermissionsProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<PermissionsState>({ roles: [], modules: {} });
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<string>('');
 
   useEffect(() => {
-    const r = readRoleFromCookie();
-    if (r) setRole(normalizeAppRoleToDbRole(r));
-    (async () => {
-      try {
-        const res = await fetch('/api/proxy/users/me', { credentials: 'include', cache: 'no-store' })
-        if (res.ok) {
-          const me = await res.json().catch(() => ({}))
-          if (me?.role) setRole(String(me.role))
-        }
-      } catch {}
-    })()
+    // Pre-seed role synchronously from storage so canView() is never evaluated
+    // with role='' during the async fetch window.
+    const stored = readRoleFromStorage();
+    if (stored) setRole(normalizeAppRoleToDbRole(stored));
 
-    fetch('/api/marketing/settings/permissions')
+    // Run both fetches in parallel and only clear loading when both are done.
+    // Previously permissions resolved first → loading=false with role still ''
+    // → canView()=false → "no access" flash for ~1-5 seconds.
+    const mePromise = fetch('/api/proxy/users/me', { credentials: 'include', cache: 'no-store' })
+      .then(res => res.ok ? res.json().catch(() => ({})) : {})
+      .then((me: any) => { if (me?.role) setRole(normalizeAppRoleToDbRole(String(me.role))) })
+      .catch(() => {});
+
+    const permsPromise = fetch('/api/marketing/settings/permissions')
       .then(res => res.json())
-      .then(data => {
-        if (data) setState({ roles: data.roles || [], modules: data.modules || {} });
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      .then((data: any) => { if (data) setState({ roles: data.roles || [], modules: data.modules || {} }) })
+      .catch(() => {});
+
+    Promise.all([mePromise, permsPromise]).finally(() => setLoading(false));
   }, []);
 
   const rolePerms = useMemo(() => (state.roles.find(r => r.name === role)?.permissions || []).map((p: string) => p.toLowerCase()), [state.roles, role]);

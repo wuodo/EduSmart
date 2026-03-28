@@ -51,17 +51,31 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const data = await req.json();
-  // Update in-memory cache with what the admin just saved
-  cachedBackendPermissions = data;
 
-  // Forward to backend to persist permissions so RBAC uses them
+  // Forward to backend FIRST — if it fails, do not pretend success.
+  // Previously errors were swallowed and the admin saw "saved" while the DB
+  // was never updated; on next server restart permissions reverted to defaults.
   try {
-    await fetch(`${BACKEND}/api/import/permissions`, {
+    const backendRes = await fetch(`${BACKEND}/api/import/permissions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...fwdHeaders(req) },
       body: JSON.stringify(data)
     });
-  } catch {}
+    if (!backendRes.ok) {
+      const body = await backendRes.json().catch(() => ({}));
+      return NextResponse.json(
+        { error: body?.error || 'Backend failed to save permissions', detail: body },
+        { status: backendRes.status }
+      );
+    }
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: 'Could not reach backend to save permissions', detail: e?.message },
+      { status: 503 }
+    );
+  }
 
+  // Only update in-memory cache after confirmed backend write
+  cachedBackendPermissions = data;
   return NextResponse.json({ success: true, permissions: data });
 } 
