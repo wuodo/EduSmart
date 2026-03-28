@@ -51,6 +51,9 @@ function forwardHeaders(req: NextRequest) {
 		}
 	}
 
+	const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || req.ip
+	if (clientIp) h['x-forwarded-for'] = clientIp
+
 	if (cookie) h['cookie'] = cookie
 	return h
 }

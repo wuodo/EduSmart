@@ -10,7 +10,7 @@ function fwdHeaders(req: NextRequest) {
   const cookie = req.headers.get('cookie');
   if (cookie) headers.set('cookie', cookie);
 
-  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip');
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || req.ip;
   if (clientIp) headers.set('x-forwarded-for', clientIp);
 
   // Backend resolves tenant using `x-tenant` when host-based subdomain detection fails.

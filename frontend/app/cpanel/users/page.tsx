@@ -70,23 +70,28 @@ export default function UsersPage() {
         return { usersRes, tenantsRes, usersJson, tenantsJson };
       };
 
-      let { usersRes, tenantsRes, usersJson, tenantsJson } = await fetchBoth();
-
-      if (usersRes.status === 429 || tenantsRes.status === 429) {
-        // Single retry after 2 s — Render free tier can throttle briefly on cold start.
-        await new Promise(r => setTimeout(r, 2000));
+      // Exponential back-off: retry up to 3 times on 429 (2s, 4s, 8s)
+      const MAX_RETRIES = 3;
+      let attempt = 0;
+      let usersRes: Response, tenantsRes: Response, usersJson: any, tenantsJson: any;
+      while (true) {
         ({ usersRes, tenantsRes, usersJson, tenantsJson } = await fetchBoth());
+        const throttled = usersRes.status === 429 || tenantsRes.status === 429;
+        if (!throttled || attempt >= MAX_RETRIES) break;
+        attempt++;
+        const delayMs = Math.min(2000 * Math.pow(2, attempt - 1), 8000);
+        await new Promise(r => setTimeout(r, delayMs));
       }
 
-      if (usersRes.status === 429 || tenantsRes.status === 429) {
-        throw new Error('Temporarily throttled. Please refresh the page in a moment.');
+      if (usersRes!.status === 429 || tenantsRes!.status === 429) {
+        throw new Error('Server is busy. Please wait a moment and refresh the page.');
       }
 
-      if (!usersRes.ok) {
-        throw new Error(usersJson?.error || usersJson?.message || `Failed to load users (${usersRes.status})`);
+      if (!usersRes!.ok) {
+        throw new Error(usersJson?.error || usersJson?.message || `Failed to load users (${usersRes!.status})`);
       }
-      if (!tenantsRes.ok) {
-        throw new Error(tenantsJson?.error || tenantsJson?.message || `Failed to load tenants (${tenantsRes.status})`);
+      if (!tenantsRes!.ok) {
+        throw new Error(tenantsJson?.error || tenantsJson?.message || `Failed to load tenants (${tenantsRes!.status})`);
       }
 
       setUsers(usersJson.users || []);
