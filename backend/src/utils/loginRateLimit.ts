@@ -27,7 +27,11 @@ export function isLocked(prefix: string, ip: string, identifier: string): boolea
   const key = getKey(prefix, ip, identifier)
   const entry = store.get(key)
   if (!entry) return false
-  if (Date.now() < entry.lockedUntil) return true
+  if (Date.now() < entry.lockedUntil) {
+    const remainingMin = Math.ceil((entry.lockedUntil - Date.now()) / 60000)
+    console.warn(`[rate-limit] 429 fired — key="${key}" locked for ~${remainingMin}m more (source: in-process loginRateLimit, NOT Supabase/Render)`)
+    return true
+  }
   store.delete(key)
   return false
 }

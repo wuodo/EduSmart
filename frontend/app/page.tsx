@@ -117,18 +117,45 @@ export default function Home() {
       const normalizedPassword = String(password || '')
         .trim()
         .replace(/[\u200B-\u200D\uFEFF]/g, '')
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          tenant_code: institutionId.trim(),
-          email: email.trim(),
-          password: normalizedPassword,
-        }),
-      })
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(data?.error || 'Invalid login credentials')
+
+      // Exponential backoff with jitter for cold-start 503s (Render free tier spins down).
+      // Only retries on server_starting / 503 — never retries on 401/429/400/5xx logic errors.
+      const MAX_RETRIES = 3
+      let attempt = 0
+      let response!: Response
+      let data: any = {}
+
+      while (attempt <= MAX_RETRIES) {
+        if (attempt > 0) {
+          // Base delay: 2s, 4s, 8s — add up to 1s random jitter to spread concurrent users
+          const baseDelay = Math.pow(2, attempt) * 1000
+          const jitter = Math.random() * 1000
+          setMessage(`Server is starting up… retrying in ${Math.round((baseDelay + jitter) / 1000)}s`)
+          await new Promise(r => setTimeout(r, baseDelay + jitter))
+          setMessage('Signing in…')
+        }
+        response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            tenant_code: institutionId.trim(),
+            email: email.trim(),
+            password: normalizedPassword,
+          }),
+        })
+        data = await response.json().catch(() => ({}))
+        // Only retry on cold-start timeout (503 + error === 'server_starting')
+        if (response.status === 503 && data?.error === 'server_starting' && attempt < MAX_RETRIES) {
+          attempt++
+          continue
+        }
+        break
+      }
+
+      if (!response.ok) throw new Error(data?.error === 'server_starting'
+        ? 'The server is still starting up. Please wait 30 seconds and try again.'
+        : data?.error || 'Invalid login credentials')
       if (data?.requiresOtp) {
         setAwaitingOtp(true)
         setChallengeId(String(data.challengeId || ''))

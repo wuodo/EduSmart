@@ -28,7 +28,7 @@ import crypto from 'crypto';
 import { rbacGuard } from './middleware/rbac';
 import { requireAuth } from './middleware/requireAuth';
 import { auditLogger } from './utils/auditLogger';
-import { recordFailedAttempt, clearAttempts, isLocked } from './utils/loginRateLimit';
+import { recordFailedAttempt, clearAttempts, isLocked, getRemainingLockoutMs } from './utils/loginRateLimit';
 import { createOtpChallenge, verifyOtpChallenge } from './utils/otpChallenge';
 import { sendOtpCodeEmail, hasSmtpConfig } from './utils/email';
 import {
@@ -174,6 +174,9 @@ app.post('/api/users/login', async (req, res) => {
 
     if (isLocked('tenant', ip, identifier)) {
       if (res.headersSent) return;
+      const lockRemainingSec = Math.ceil(getRemainingLockoutMs('tenant', ip, identifier) / 1000)
+      res.set('Retry-After', String(lockRemainingSec))
+      res.set('X-RateLimit-Source', 'in-process-login-limiter')
       return res.status(429).json({ error: 'Too many failed attempts. Please wait 15 minutes before trying again.' });
     }
 

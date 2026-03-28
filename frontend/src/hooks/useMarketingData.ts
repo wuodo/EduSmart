@@ -77,12 +77,15 @@ export function useMarketingData() {
   }, []);
 
   // Safety net: if the first load returns no inquiries (often due to
-  // cookies/tenant/session not being ready yet), automatically retry once
-  // instead of forcing the user to leave and come back.
+  // cookies/tenant/session not being ready yet on a cold start), retry once
+  // after a short delay. The delay is intentional — without it, the retry fires
+  // immediately alongside an in-flight first request, creating a 2× connection
+  // storm on Supabase during Render free-tier wake-up.
   useEffect(() => {
     if (!loading && inquiries.length === 0 && !hasRetriedInquiries) {
       setHasRetriedInquiries(true);
-      refreshInquiries();
+      const t = setTimeout(() => refreshInquiries(), 3000);
+      return () => clearTimeout(t);
     }
   }, [loading, inquiries.length, hasRetriedInquiries]);
 
