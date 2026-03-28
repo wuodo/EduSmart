@@ -380,21 +380,33 @@ export default function DashboardLayout({
       <Sidebar isMobileOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} />
       <div className="flex-1 flex flex-col h-full min-w-0">
         {/* Top teal bar, no top padding */}
-        <div className="w-full h-12 sm:h-11 flex items-center px-2 xs:px-3 sm:px-6 shadow-sm justify-between overflow-hidden mt-1 sm:mt-0" style={{ backgroundColor: 'var(--brand-primary)' }}>
-          {/* Left side - Module name (desktop) and hamburger menu (mobile) */}
-          <div className="flex items-center">
+        <div className="w-full h-14 flex items-center px-2 xs:px-3 sm:px-6 shadow-sm justify-between overflow-hidden" style={{ backgroundColor: 'var(--brand-primary)' }}>
+          {/* Left side - Tenant name (desktop) and hamburger menu (mobile) */}
+          <div className="flex items-center gap-3 min-w-0">
             {/* Mobile hamburger menu */}
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="lg:hidden text-white hover:text-yellow-200 mr-3 mobile-touch-friendly"
+              className="lg:hidden text-white hover:text-yellow-200 flex-shrink-0 mobile-touch-friendly"
               title="Menu"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            {/* Module name - hidden on mobile, visible on desktop */}
-            <span className="hidden lg:block text-compact font-semibold truncate pr-2 text-white">{instName || moduleName}</span>
+            {/* Tenant name — always visible, uppercase bold, high-contrast */}
+            {instName ? (
+              <div className="flex flex-col justify-center min-w-0">
+                <span
+                  className="text-white font-extrabold uppercase tracking-widest truncate leading-tight"
+                  style={{ fontSize: '0.8rem', textShadow: '0 1px 3px rgba(0,0,0,0.35)', letterSpacing: '0.12em' }}
+                >
+                  {instName}
+                </span>
+                <span className="hidden lg:block text-white/70 text-[10px] truncate leading-tight uppercase tracking-wide">{moduleName}</span>
+              </div>
+            ) : (
+              <span className="text-white font-semibold truncate text-sm">{moduleName}</span>
+            )}
           </div>
 
           {/* Right side - Mobile controls and desktop controls */}
@@ -549,7 +561,7 @@ export default function DashboardLayout({
             </button>
           </div>
         </div>
-        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pt-5 min-w-0 content-responsive">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pt-5 min-w-0 content-responsive flex flex-col">
           {children}
         </main>
         {showRequests && (userRole === 'admin' || userRole === 'senior_staff') && (

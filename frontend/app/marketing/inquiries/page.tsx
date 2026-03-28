@@ -44,10 +44,12 @@ function parseCsvLine(line: string): string[] {
 export default function InquiriesPage() {
   const { inquiries, loading, refreshInquiries, refreshFollowups } = useMarketingData()
   const perms = usePermissions()
-  const canView = perms?.canView?.('inquiries') ?? true
-  const canEdit = perms?.canEdit?.('inquiries') ?? true
-  const canDelete = perms?.canDelete?.('inquiries') ?? true
-  const canExport = perms?.canExport?.('inquiries') ?? true
+  const permsLoading = perms?.loading ?? true
+  // Default to true while loading so we never flash "no access" during async fetch
+  const canView = permsLoading ? true : (perms?.canView?.('inquiries') ?? true)
+  const canEdit = permsLoading ? true : (perms?.canEdit?.('inquiries') ?? true)
+  const canDelete = permsLoading ? true : (perms?.canDelete?.('inquiries') ?? true)
+  const canExport = permsLoading ? true : (perms?.canExport?.('inquiries') ?? true)
 
   const [status, setStatus] = useState('')
   const [source, setSource] = useState('')
@@ -376,8 +378,41 @@ export default function InquiriesPage() {
     URL.revokeObjectURL(url)
   }
 
+  // Loading skeleton while permissions are being resolved: never show blank or "no access"
+  if (permsLoading) {
+    return (
+      <div className="flex flex-col h-full space-y-4">
+        {/* Header skeleton */}
+        <div className="flex justify-between items-center">
+          <div className="h-8 w-40 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
+          <div className="flex gap-2">
+            {[...Array(3)].map((_, i) => <div key={i} className="h-8 w-28 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />)}
+          </div>
+        </div>
+        {/* Filter bar skeleton */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <div className="flex flex-wrap gap-2">
+            {[...Array(6)].map((_, i) => <div key={i} className="h-8 w-28 bg-gray-100 dark:bg-gray-700 animate-pulse rounded" />)}
+          </div>
+        </div>
+        {/* Table skeleton */}
+        <div className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+              <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
+              <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
+              <div className="h-4 w-20 bg-gray-100 dark:bg-gray-600 animate-pulse rounded" />
+              <div className="h-4 flex-1 bg-gray-100 dark:bg-gray-600 animate-pulse rounded" />
+              <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full gap-y-3">
       <div className="flex justify-between items-center">
         <h1 className="text-xl sm:text-2xl font-bold">Inquiries</h1>
         {/* Top-right create / bulk import */}
@@ -425,6 +460,7 @@ export default function InquiriesPage() {
           Opened from tagged chat inquiry{chatSourceInfo.inquiryName ? `: ${chatSourceInfo.inquiryName}` : ''}. Reminder/follow-up actions here are logged to your account audit trail.
         </div>
       )}
+      {/* Only show "no access" once permissions have finished loading */}
       {!canView && (
         <div className="flex items-center justify-center min-h-[40vh] text-center">
           <div>
@@ -459,9 +495,9 @@ export default function InquiriesPage() {
       )}
 
       {canView && (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        {/* Sticky filters bar (always visible) */}
-        <div className="p-4 border-b border-neutral-light dark:border-gray-700 sticky top-0 z-30 bg-white/95 dark:bg-gray-800/95 backdrop-blur">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow flex flex-col flex-1 min-h-0 overflow-hidden">
+        {/* Sticky filters bar */}
+        <div className="p-4 border-b border-neutral-light dark:border-gray-700 flex-shrink-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-t-lg">
           <InquiryFilters
             status={status}
             setStatus={setStatus}
@@ -489,7 +525,8 @@ export default function InquiriesPage() {
             onClear={clearFilters}
           />
         </div>
-        <div className="p-3 sm:p-4">
+        {/* Table area — fills remaining height, only this area scrolls */}
+        <div className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-4">
           <InquiryList
             inquiries={filteredInquiries}
             onRefresh={refreshInquiries}

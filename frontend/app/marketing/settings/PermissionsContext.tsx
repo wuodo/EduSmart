@@ -48,8 +48,6 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
     if (stored) setRole(normalizeAppRoleToDbRole(stored));
 
     // Run both fetches in parallel and only clear loading when both are done.
-    // Previously permissions resolved first → loading=false with role still ''
-    // → canView()=false → "no access" flash for ~1-5 seconds.
     const mePromise = fetch('/api/proxy/users/me', { credentials: 'include', cache: 'no-store' })
       .then(res => res.ok ? res.json().catch(() => ({})) : {})
       .then((me: any) => { if (me?.role) setRole(normalizeAppRoleToDbRole(String(me.role))) })
@@ -60,21 +58,38 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
       .then((data: any) => { if (data) setState({ roles: data.roles || [], modules: data.modules || {} }) })
       .catch(() => {});
 
-    Promise.all([mePromise, permsPromise]).finally(() => setLoading(false));
+    // Safety: 6-second max loading timeout so a failed fetch never locks the UI
+    const timeoutId = setTimeout(() => setLoading(false), 6000);
+
+    Promise.all([mePromise, permsPromise]).finally(() => {
+      clearTimeout(timeoutId);
+      // If role is still empty after both fetches (e.g., /users/me failed or returned no role),
+      // fall back to the stored role so canView never returns false for a logged-in user.
+      setRole(prev => {
+        if (prev) return prev;
+        const fallback = readRoleFromStorage();
+        return fallback ? normalizeAppRoleToDbRole(fallback) : 'admissions_officer';
+      });
+      setLoading(false);
+    });
   }, []);
 
   const rolePerms = useMemo(() => (state.roles.find(r => r.name === role)?.permissions || []).map((p: string) => p.toLowerCase()), [state.roles, role]);
   const isSuper = rolePerms.includes('all');
 
+  // While permissions are still loading, always return true so pages never
+  // flash "no access". Only enforce restrictions once both /users/me and
+  // /api/permissions have resolved.
   const canView = (module: string) => {
+    if (loading) return true;
     if (isSuper) return true;
     const mlist = state.modules[module] || [];
     const hasModule = mlist.includes(role) || role.toLowerCase() === 'admin';
     return hasModule && (rolePerms.includes('view') || rolePerms.includes('all'));
   };
-  const canEdit = (module: string) => (isSuper ? true : (canView(module) && (rolePerms.includes('edit') || rolePerms.includes('all'))));
-  const canDelete = (module: string) => (isSuper ? true : (canView(module) && (rolePerms.includes('delete') || rolePerms.includes('all'))));
-  const canExport = (module: string) => (isSuper ? true : (canView(module) && (rolePerms.includes('export') || rolePerms.includes('all'))));
+  const canEdit = (module: string) => (loading ? true : (isSuper ? true : (canView(module) && (rolePerms.includes('edit') || rolePerms.includes('all')))));
+  const canDelete = (module: string) => (loading ? true : (isSuper ? true : (canView(module) && (rolePerms.includes('delete') || rolePerms.includes('all')))));
+  const canExport = (module: string) => (loading ? true : (isSuper ? true : (canView(module) && (rolePerms.includes('export') || rolePerms.includes('all')))));
 
   return (
     <PermissionsContext.Provider value={{ loading, role, canView, canEdit, canDelete, canExport }}>
