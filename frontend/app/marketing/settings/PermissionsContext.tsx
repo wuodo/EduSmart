@@ -104,8 +104,8 @@ export function usePermissions() {
 
 export function Guard({ module, children }: { module: string; children: React.ReactNode }) {
   const { loading, canView } = usePermissions();
-  if (loading) return null;
-  if (!canView(module)) {
+  // While loading, canView() returns true — render immediately, no blank screen.
+  if (!loading && !canView(module)) {
     return (
       <div className="flex items-center justify-center min-h-[40vh] text-center">
         <div>

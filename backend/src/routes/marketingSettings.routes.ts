@@ -50,4 +50,27 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.get('/smart', async (_req, res) => {
+  try {
+    const cfg = await loadCpanelFromDb();
+    return res.json({ smartConfig: (cfg as any).smartConfig || null });
+  } catch {
+    return res.status(500).json({ error: 'Failed to load smart config' });
+  }
+});
+
+router.put('/smart', async (req, res) => {
+  try {
+    const { smartConfig } = req.body;
+    if (!smartConfig || typeof smartConfig !== 'object') {
+      return res.status(400).json({ error: 'Invalid smartConfig' });
+    }
+    const cfg = await loadCpanelFromDb();
+    await saveCpanelToDb({ ...cfg, smartConfig } as any);
+    return res.json({ success: true, smartConfig });
+  } catch {
+    return res.status(500).json({ error: 'Failed to save smart config' });
+  }
+});
+
 export default router;

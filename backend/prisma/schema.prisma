@@ -39,6 +39,7 @@ model Tenant {
   inquiries   Inquiry[]
   followups   Followup[]
   tasks       Task[]
+  programs    Program[]
 
   @@map("tenants")
 }
@@ -278,6 +279,25 @@ model CpanelConfig {
   updatedAt DateTime @updatedAt
 
   @@map("cpanel_config")
+}
+
+model Program {
+  id          Int      @id @default(autoincrement())
+  name        String
+  code        String?
+  level       String   // Diploma | Certificate | Artisan | Short Course
+  category    String?
+  duration    String?
+  description String?
+  intake      String?  // e.g. Jan/Sep/Annual
+  seats       Int?     // max enrolment per intake
+  isActive    Boolean  @default(true)
+  tenantId    Int?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("programs")
 }
 
 // Session model for authentication
