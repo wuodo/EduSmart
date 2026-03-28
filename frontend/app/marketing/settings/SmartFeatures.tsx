@@ -135,13 +135,13 @@ function FeatureSection({
   children?: React.ReactNode
 }) {
   return (
-    <section className={`rounded-xl border overflow-hidden mb-4 transition-all ${enabled ? 'border-teal-200 bg-teal-50/20 dark:border-teal-900 dark:bg-teal-950/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'}`}>
+    <section className={`rounded-lg border overflow-hidden mb-4 transition-all ${enabled ? 'border-teal-300 dark:border-teal-800 bg-teal-50/40 dark:bg-teal-950/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900'}`}>
       <div className="flex items-start gap-3 px-4 py-3">
-        <Icon className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+        <Icon className="h-5 w-5 text-teal-700 dark:text-teal-400 flex-shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{title}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
             </div>
             <Toggle checked={enabled} onChange={onToggle} />
@@ -149,7 +149,7 @@ function FeatureSection({
         </div>
       </div>
       {enabled && children && (
-        <div className="px-4 pb-4 pt-1 border-t border-gray-100 dark:border-gray-700 bg-white/60 dark:bg-gray-900/40">
+        <div className="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/50">
           {children}
         </div>
       )}
@@ -169,7 +169,7 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
   )
 }
 
-const inputCls = 'px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500 w-20 text-right bg-white dark:bg-gray-800 text-gray-900 dark:text-white'
+const inputCls = 'px-2 py-1 text-[13px] border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500 w-20 text-right bg-white dark:bg-gray-900 text-gray-900 dark:text-white'
 
 export default function SmartFeatures() {
   const [cfg, setCfg] = useState<SmartConfig>(() => mergeConfig(null))
@@ -235,42 +235,42 @@ export default function SmartFeatures() {
   const totalWeight = Object.values(w).reduce((a, b) => a + b, 0)
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[320px]">
-        <div className="text-center text-gray-600 dark:text-gray-400">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-3" />
-          Loading smart features…
-        </div>
-      </div>
-    )
+    return <div className="text-gray-600 dark:text-gray-400">Loading...</div>
   }
 
   return (
-    <div className="space-y-8 w-full min-w-0">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <Target className="h-7 w-7 text-primary" />
-          Other Smart Features
-        </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Tenant rules stored in the central configuration database (same store as marketing settings). Lead scoring and duplicate checks run on the inquiry API; dormant and capacity hints appear on the inquiry list.
-        </p>
+    <div className="space-y-6 w-full min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 px-1">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Smart Features</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            Tenant rules in the central configuration (same store as marketing settings). Lead scoring and duplicate checks run on the inquiry API; dormant and capacity hints show on the inquiry list.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving}
+          className="shrink-0 bg-primary text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
       </div>
 
-       {error && (
-        <div className="text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 text-sm">
+      {error && (
+        <div className="p-3 rounded border border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-200 text-sm">
           {error}. Changes were kept in this browser as a fallback.
         </div>
       )}
       {saved && !error && (
-        <div className="text-green-800 dark:text-green-200 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3 text-sm">
+        <div className="p-3 rounded border border-green-300 bg-green-50 text-green-800 dark:bg-green-950/30 dark:border-green-800 dark:text-green-200 text-sm">
           Saved to server.
         </div>
       )}
 
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/80 p-4 text-sm text-gray-600 dark:text-gray-300 space-y-2">
-        <p className="font-medium text-gray-800 dark:text-gray-200">How this module works</p>
-        <ul className="list-disc pl-5 space-y-1 text-xs leading-relaxed">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 text-sm text-gray-600 dark:text-gray-300 space-y-2">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">How this module works</h3>
+        <ul className="list-disc pl-5 space-y-1 text-[13px] leading-relaxed text-gray-600 dark:text-gray-400">
           <li><strong className="font-medium text-gray-700 dark:text-gray-200">Lead scoring</strong> recalculates the numeric score when inquiries are created or updated, using the weights you enable here (capped at 100).</li>
           <li><strong className="font-medium text-gray-700 dark:text-gray-200">Duplicate detection</strong> runs on create and bulk import; blocking rejects the row with HTTP 409 when enabled.</li>
           <li><strong className="font-medium text-gray-700 dark:text-gray-200">Dormant leads</strong> and <strong className="font-medium text-gray-700 dark:text-gray-200">intake capacity</strong> add badges on the inquiry list when those sections are enabled.</li>
@@ -413,7 +413,7 @@ export default function SmartFeatures() {
         <Row label="Frequency">
           <select value={cfg.exportSchedule.frequency}
             onChange={e => set('exportSchedule', { frequency: e.target.value as 'daily' | 'weekly' | 'monthly' })}
-            className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+            className="px-2 py-1 text-[13px] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
@@ -423,14 +423,14 @@ export default function SmartFeatures() {
           <Row label="Day of week">
             <select value={cfg.exportSchedule.dayOfWeek}
               onChange={e => set('exportSchedule', { dayOfWeek: Number(e.target.value) })}
-              className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
+              className="px-2 py-1 text-[13px] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => <option key={d} value={i}>{d}</option>)}
             </select>
           </Row>
         )}
         <Row label="Recipients" hint="Comma-separated email addresses">
           <input type="text" value={cfg.exportSchedule.recipients} placeholder="admin@school.ac.ke"
-            className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded w-full min-w-[12rem] max-w-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            className="px-2 py-1 text-[13px] border border-gray-300 dark:border-gray-600 rounded w-full min-w-[12rem] max-w-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
             onChange={e => set('exportSchedule', { recipients: e.target.value })} />
         </Row>
       </FeatureSection>
@@ -461,16 +461,6 @@ export default function SmartFeatures() {
         </Row>
       </FeatureSection>
 
-      <div className="flex items-center gap-3 pt-2">
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving}
-          className="px-5 py-2 text-sm font-semibold rounded-lg text-white disabled:opacity-50 transition bg-primary hover:opacity-95"
-        >
-          {saving ? 'Saving…' : 'Save smart features'}
-        </button>
-      </div>
     </div>
   )
 }

@@ -27,7 +27,7 @@ const SECTIONS = [
   { key: 'audit', label: 'Audit & Logs', module: 'settings' },
   { key: 'integrations', label: 'Integrations', module: 'settings' },
   { key: 'auto', label: 'Automations', module: 'settings' },
-  { key: 'smart', label: 'Other Smart Features', module: 'settings' },
+  { key: 'smart', label: 'Smart Features', module: 'settings' },
 ];
 
 export default function MarketingSettingsPage() {
@@ -115,7 +115,8 @@ export default function MarketingSettingsPage() {
         <h1 className="text-xl font-semibold mb-1 pl-6 pr-2 pt-4 text-gray-900 dark:text-white">Marketing Settings</h1>
         <p className="text-xs text-gray-500 dark:text-gray-400 pl-6 pr-2 mb-3">
           Choose a section below (scroll on small screens).{' '}
-          <span className="text-gray-600 dark:text-gray-300">Automations</span> is under Integrations.
+          <span className="text-gray-600 dark:text-gray-300">Automations</span> and{' '}
+          <span className="text-gray-600 dark:text-gray-300">Smart Features</span> are listed after Integrations.
         </p>
         <NavContent />
       </aside>
