@@ -3,6 +3,8 @@
 import { useMarketingData } from '@/hooks/useMarketingData'
 import InquiryList from '@/components/marketing/InquiryList'
 import InquiryFilters from '@/components/marketing/InquiryFilters'
+import InquirySavedViewsBar from '@/components/marketing/InquirySavedViewsBar'
+import type { InquiryFilterSnapshot } from '@/lib/inquirySavedViews'
 import CreateInquiryButton from '@/components/marketing/CreateInquiryButton'
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { InquiryFormData, LeadTag } from '@/types/inquiry'
@@ -84,6 +86,40 @@ export default function InquiriesPage() {
     setStatus(''); setSource(''); setSearch(''); setCounty(''); setProgram(''); setKcseGrade(''); setIntake(''); setGender(''); setPaymentStatus(''); setTags([])
     setOwner('')
   }
+
+  const filterSnapshot = useMemo<InquiryFilterSnapshot>(
+    () => ({
+      status,
+      source,
+      search,
+      county,
+      program,
+      kcseGrade,
+      intake,
+      gender,
+      paymentStatus,
+      tags,
+      owner,
+    }),
+    [status, source, search, county, program, kcseGrade, intake, gender, paymentStatus, tags, owner],
+  )
+
+  const applySavedView = useCallback(
+    (f: InquiryFilterSnapshot) => {
+      setStatus(f.status)
+      setSource(f.source)
+      setSearch(f.search)
+      setCounty(f.county)
+      setProgram(f.program)
+      setKcseGrade(f.kcseGrade)
+      setIntake(f.intake)
+      setGender(f.gender)
+      setPaymentStatus(f.paymentStatus)
+      setTags(f.tags)
+      if (isAdmin) setOwner(f.owner)
+    },
+    [isAdmin],
+  )
 
   // Detect role and load owners for admin/senior
   useEffect(() => {
@@ -542,6 +578,7 @@ export default function InquiriesPage() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow flex flex-col flex-1 min-h-0 overflow-hidden">
         {/* Sticky filters bar */}
         <div className="p-4 border-b border-neutral-light dark:border-gray-700 flex-shrink-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-t-lg">
+          <InquirySavedViewsBar snapshot={filterSnapshot} onApply={applySavedView} isAdmin={isAdmin} />
           <InquiryFilters
             status={status}
             setStatus={setStatus}
