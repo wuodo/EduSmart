@@ -258,7 +258,7 @@ export default function UserManagement() {
           {loading && <span className="text-sm text-gray-500">Loading…</span>}
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full text-[13px]">
+          <table className="min-w-[980px] w-full text-[13px]">
             <thead className="bg-gray-50/80">
               <tr className="text-left">
                 <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-teal-800">Name</th>
@@ -281,7 +281,7 @@ export default function UserManagement() {
                       <div className="font-medium">{u.name?.trim() ? u.name : u.email}</div>
                     </td>
                     <td className="px-3 py-2 text-[13px] align-top">
-                      <div className="text-gray-700">{u.email}</div>
+                      <div className="text-gray-700 break-all">{u.email}</div>
                     </td>
                     <td className="px-3 py-2 text-[13px] align-top">
                       <span className="px-2 py-0.5 rounded bg-gray-100 border text-gray-700">{u.role}</span>
@@ -297,11 +297,11 @@ export default function UserManagement() {
                     </td>
                     <td className="px-3 py-2 text-[13px] align-top text-gray-600">{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}</td>
                     <td className="px-3 py-2 text-[13px] align-top">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-col sm:flex-row justify-end gap-2">
                         <>
-                          <button disabled={!isAdmin} onClick={() => startEdit(u)} className={`px-3 py-1.5 rounded border ${isAdmin ? 'bg-white hover:bg-gray-50' : 'bg-gray-100 cursor-not-allowed'}`}>Edit</button>
-                          <button disabled={!isAdmin} onClick={() => openPasswordModal(u.id)} className={`px-3 py-1.5 rounded border ${isAdmin ? 'bg-white hover:bg-gray-50' : 'bg-gray-100 cursor-not-allowed'}`}>Change Password</button>
-                          <button disabled={!isAdmin} onClick={() => deleteUser(u.id)} className={`px-3 py-1.5 rounded border ${isAdmin ? 'border-rose-300 text-rose-500 hover:bg-rose-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>Delete</button>
+                          <button disabled={!isAdmin} onClick={() => startEdit(u)} className={`px-3 py-1.5 rounded border whitespace-nowrap ${isAdmin ? 'bg-white hover:bg-gray-50' : 'bg-gray-100 cursor-not-allowed'}`}>Edit</button>
+                          <button disabled={!isAdmin} onClick={() => openPasswordModal(u.id)} className={`px-3 py-1.5 rounded border whitespace-nowrap ${isAdmin ? 'bg-white hover:bg-gray-50' : 'bg-gray-100 cursor-not-allowed'}`}>Change Password</button>
+                          <button disabled={!isAdmin} onClick={() => deleteUser(u.id)} className={`px-3 py-1.5 rounded border whitespace-nowrap ${isAdmin ? 'border-rose-300 text-rose-500 hover:bg-rose-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>Delete</button>
                         </>
                       </div>
                     </td>

@@ -13,23 +13,54 @@ import Integrations from './Integrations';
 import SmartFeatures from './SmartFeatures';
 import Automations from './Automations';
 import CrmIntegrations from './CrmIntegrations';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import {
+  Bars3Icon,
+  XMarkIcon,
+  UsersIcon,
+  WrenchScrewdriverIcon,
+  KeyIcon,
+  ChatBubbleLeftRightIcon,
+  CircleStackIcon,
+  PaintBrushIcon,
+  ClipboardDocumentListIcon,
+  PuzzlePieceIcon,
+  BoltIcon,
+  SparklesIcon,
+  ArrowPathRoundedSquareIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from '@heroicons/react/24/outline';
 
 const Bars3IconAny: any = Bars3Icon;
 const XMarkIconAny: any = XMarkIcon;
+const UsersIconAny: any = UsersIcon;
+const WrenchScrewdriverIconAny: any = WrenchScrewdriverIcon;
+const KeyIconAny: any = KeyIcon;
+const ChatBubbleLeftRightIconAny: any = ChatBubbleLeftRightIcon;
+const CircleStackIconAny: any = CircleStackIcon;
+const PaintBrushIconAny: any = PaintBrushIcon;
+const ClipboardDocumentListIconAny: any = ClipboardDocumentListIcon;
+const PuzzlePieceIconAny: any = PuzzlePieceIcon;
+const BoltIconAny: any = BoltIcon;
+const SparklesIconAny: any = SparklesIcon;
+const ArrowPathRoundedSquareIconAny: any = ArrowPathRoundedSquareIcon;
+const ChevronLeftIconAny: any = ChevronLeftIcon;
+const ChevronRightIconAny: any = ChevronRightIcon;
+
+const SETTINGS_SIDEBAR_COLLAPSE_KEY = 'edusmart.settings.sidebarCollapsed.v1';
 
 const SECTIONS = [
-  { key: 'user', label: 'User Management', module: 'settings' },
-  { key: 'system', label: 'System Configuration', module: 'settings' },
-  { key: 'permissions', label: 'Permissions & Access', module: 'settings' },
-  { key: 'communication', label: 'Communication Settings', module: 'settings' },
-  { key: 'data', label: 'Data & Backup', module: 'settings' },
-  { key: 'branding', label: 'Branding & Appearance', module: 'settings' },
-  { key: 'audit', label: 'Audit & Logs', module: 'settings' },
-  { key: 'integrations', label: 'Integrations', module: 'settings' },
-  { key: 'auto', label: 'Automations', module: 'settings' },
-  { key: 'smart', label: 'Smart Features', module: 'settings' },
-  { key: 'crm', label: 'CRM integrations', module: 'settings' },
+  { key: 'user', label: 'User Management', module: 'settings', icon: UsersIconAny },
+  { key: 'system', label: 'System Configuration', module: 'settings', icon: WrenchScrewdriverIconAny },
+  { key: 'permissions', label: 'Permissions & Access', module: 'settings', icon: KeyIconAny },
+  { key: 'communication', label: 'Communication Settings', module: 'settings', icon: ChatBubbleLeftRightIconAny },
+  { key: 'data', label: 'Data & Backup', module: 'settings', icon: CircleStackIconAny },
+  { key: 'branding', label: 'Branding & Appearance', module: 'settings', icon: PaintBrushIconAny },
+  { key: 'audit', label: 'Audit & Logs', module: 'settings', icon: ClipboardDocumentListIconAny },
+  { key: 'integrations', label: 'Integrations', module: 'settings', icon: PuzzlePieceIconAny },
+  { key: 'auto', label: 'Automations', module: 'settings', icon: BoltIconAny },
+  { key: 'smart', label: 'Smart Features', module: 'settings', icon: SparklesIconAny },
+  { key: 'crm', label: 'CRM integrations', module: 'settings', icon: ArrowPathRoundedSquareIconAny },
 ];
 
 export default function MarketingSettingsPage() {
@@ -38,6 +69,7 @@ export default function MarketingSettingsPage() {
   const searchParams = useSearchParams();
   const [section, setSection] = useState('system');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const { canView } = usePermissions();
 
   useEffect(() => {
@@ -45,6 +77,25 @@ export default function MarketingSettingsPage() {
     if (!s || !SECTIONS.some((x) => x.key === s)) return;
     setSection(s);
   }, [searchParams]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let manual: boolean | null = null;
+    try {
+      const raw = localStorage.getItem(SETTINGS_SIDEBAR_COLLAPSE_KEY);
+      if (raw === '1') manual = true;
+      if (raw === '0') manual = false;
+    } catch {}
+
+    const recompute = () => {
+      // Collapse on smaller desktops to maximize space; expand on xl+
+      const autoCollapsed = window.innerWidth < 1280;
+      setCollapsed(manual ?? autoCollapsed);
+    };
+    recompute();
+    window.addEventListener('resize', recompute);
+    return () => window.removeEventListener('resize', recompute);
+  }, []);
 
   const goSection = useCallback(
     (key: string) => {
@@ -63,18 +114,21 @@ export default function MarketingSettingsPage() {
     <nav className="flex flex-col gap-1">
       {SECTIONS.map(s => {
         const allowed = canView ? canView(s.module) : true;
+        const Icon = (s as any).icon as any;
         return (
           <button
             key={s.key}
-            className={`w-full -mx-2 pr-2 pl-6 py-1.5 text-left text-sm font-medium transition ${
+            title={collapsed ? s.label : undefined}
+            className={`w-full -mx-2 py-1.5 text-left text-sm font-medium transition flex items-center gap-2 ${
               section === s.key
                 ? 'bg-primary text-white shadow-sm'
                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-700/60'
-            } ${!allowed ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
+            } ${!allowed ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''} ${collapsed ? 'px-2 justify-center' : 'pl-6 pr-2'}`}
             onClick={() => allowed && goSection(s.key)}
             disabled={!allowed}
           >
-            {s.label}
+            {Icon ? <Icon className={`h-5 w-5 flex-shrink-0 ${section === s.key ? 'text-white' : ''}`} /> : null}
+            {!collapsed && <span className="min-w-0 truncate">{s.label}</span>}
           </button>
         );
       })}
@@ -106,25 +160,50 @@ export default function MarketingSettingsPage() {
 
       {/* Sidebar — fixed on mobile, static on desktop */}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-40 w-64 flex-shrink-0 
-        ml-0 lg:ml-3 xl:ml-4 pr-6 border-r border-gray-200 dark:border-gray-700
+        fixed lg:static inset-y-0 left-0 z-40 flex-shrink-0 
+        ${collapsed ? 'w-16' : 'w-64'}
+        ml-0 lg:ml-3 xl:ml-4 ${collapsed ? 'pr-2' : 'pr-6'} border-r border-gray-200 dark:border-gray-700
         bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm
         lg:sticky lg:top-20 lg:self-start lg:h-[calc(100vh-5rem)] overflow-auto
         transform transition-transform duration-200
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         pt-14 lg:pt-0
       `}>
-        <h1 className="text-xl font-semibold mb-1 pl-6 pr-2 pt-4 text-gray-900 dark:text-white">Marketing Settings</h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400 pl-6 pr-2 mb-3">
-          Choose a section below (scroll on small screens).{' '}
-          <span className="text-gray-600 dark:text-gray-300">Automations</span>,{' '}
-          <span className="text-gray-600 dark:text-gray-300">Smart Features</span>, and{' '}
-          <span className="text-gray-600 dark:text-gray-300">CRM integrations</span> follow Integrations.
-        </p>
+        <div className={`pt-4 ${collapsed ? 'px-2' : 'pl-6 pr-2'} flex items-start justify-between gap-2`}>
+          {!collapsed ? (
+            <div className="min-w-0">
+              <h1 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white truncate">Marketing Settings</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Choose a section below (scroll on small screens).{' '}
+                <span className="text-gray-600 dark:text-gray-300">Automations</span>,{' '}
+                <span className="text-gray-600 dark:text-gray-300">Smart Features</span>, and{' '}
+                <span className="text-gray-600 dark:text-gray-300">CRM integrations</span> follow Integrations.
+              </p>
+            </div>
+          ) : (
+            <span className="sr-only">Marketing Settings</span>
+          )}
+          <button
+            type="button"
+            className="hidden lg:inline-flex p-1.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            onClick={() => {
+              setCollapsed((c) => {
+                const next = !c;
+                try {
+                  localStorage.setItem(SETTINGS_SIDEBAR_COLLAPSE_KEY, next ? '1' : '0');
+                } catch {}
+                return next;
+              });
+            }}
+          >
+            {collapsed ? <ChevronRightIconAny className="h-4 w-4" /> : <ChevronLeftIconAny className="h-4 w-4" />}
+          </button>
+        </div>
         <NavContent />
       </aside>
 
-      <main className="flex-1 pl-4 lg:pl-8 pt-12 lg:pt-0 min-w-0">
+      <main className="flex-1 pl-4 lg:pl-6 xl:pl-8 pt-12 lg:pt-0 min-w-0">
         {section === 'user' && <Guard module="settings"><UserManagementPage /></Guard>}
         {section === 'system' && <Guard module="settings"><SystemConfig /></Guard>}
         {section === 'permissions' && <Guard module="settings"><Permissions /></Guard>}
