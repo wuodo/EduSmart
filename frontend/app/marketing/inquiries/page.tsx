@@ -63,6 +63,7 @@ export default function InquiriesPage() {
   const [gender, setGender] = useState('')
   const [paymentStatus, setPaymentStatus] = useState('')
   const [tags, setTags] = useState<LeadTag[]>([])
+  const [focusMode, setFocusMode] = useState<'first-contact' | ''>('')
   const [owner, setOwner] = useState('')
   const [owners, setOwners] = useState<{ label: string; value: string }[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
@@ -201,6 +202,9 @@ export default function InquiriesPage() {
     }
     const qSearch = (qs.get('q') || qs.get('search') || '').trim()
     if (qSearch) setSearch(qSearch)
+
+    const focus = (qs.get('focus') || '').trim()
+    if (focus === 'first-contact') setFocusMode('first-contact')
   }, [])
 
   const stripLetterShareQuery = useCallback(() => {
@@ -282,9 +286,13 @@ export default function InquiriesPage() {
         i.detail?.town || ''
       ].some(v => String(v).toLowerCase().includes(q))
 
-      return matchesStatus && matchesSource && matchesCounty && matchesProgram && matchesGrade && matchesIntake && matchesGender && matchesPayment && matchesTags && matchesText
+      const matchesFocus =
+        focusMode !== 'first-contact' ||
+        (!i.firstResponseAt && (new Date(i.createdAt as any).getTime() < Date.now() - 24 * 60 * 60 * 1000))
+
+      return matchesStatus && matchesSource && matchesCounty && matchesProgram && matchesGrade && matchesIntake && matchesGender && matchesPayment && matchesTags && matchesText && matchesFocus
     })
-  }, [inquiries, status, source, search, county, program, kcseGrade, intake, gender, paymentStatus, tags])
+  }, [inquiries, status, source, search, county, program, kcseGrade, intake, gender, paymentStatus, tags, focusMode])
 
   const handleAddInquiry = async (data: InquiryFormData) => {
     try {

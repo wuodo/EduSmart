@@ -19,6 +19,7 @@ export default function FollowupsPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [type, setType] = useState('');
+  const [overdueOnly, setOverdueOnly] = useState(false)
   const [owner, setOwner] = useState('');
   const [owners, setOwners] = useState<{ label: string; value: string }[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -70,6 +71,18 @@ export default function FollowupsPage() {
     }
     const inq = (qs.get('inquiryId') || '').trim()
     if (inq) setFocusInquiryId(inq)
+
+    const st = (qs.get('status') || '').trim()
+    if (st) setStatus(st)
+    const ty = (qs.get('type') || '').trim()
+    if (ty) setType(ty)
+    const q = (qs.get('q') || qs.get('search') || '').trim()
+    if (q) setSearch(q)
+    const focus = (qs.get('focus') || '').trim()
+    if (focus === 'overdue') {
+      setOverdueOnly(true)
+      if (!st) setStatus('pending')
+    }
   }, [])
 
   // This function will be called when scheduling a followup
@@ -100,6 +113,9 @@ export default function FollowupsPage() {
     if (focusInquiryId && String(f.inquiryId) !== focusInquiryId) return false
     const matchesStatus = !status || f.status === status;
     const matchesType = !type || f.type === type;
+    const matchesOverdue =
+      !overdueOnly ||
+      (String(f.status || '').toLowerCase() === 'pending' && new Date(f.scheduledFor).getTime() < Date.now())
     const searchLower = search.toLowerCase();
     const inquiry = inquiries.find(i => i.id === f.inquiryId);
     const phone = inquiry ? inquiry.phone : '';
@@ -107,7 +123,7 @@ export default function FollowupsPage() {
       (f.inquiryName && f.inquiryName.toLowerCase().includes(searchLower)) ||
       (phone && phone.toLowerCase().includes(searchLower)) ||
       (f.notes && f.notes.toLowerCase().includes(searchLower));
-    return matchesStatus && matchesType && matchesSearch;
+    return matchesStatus && matchesType && matchesOverdue && matchesSearch;
   });
 
   if (!canView) {

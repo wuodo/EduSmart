@@ -170,20 +170,7 @@ export default function MarketingSettingsClient() {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         pt-14 lg:pt-0
       `}>
-        <div className={`pt-4 ${collapsed ? 'px-2' : 'pl-6 pr-2'} flex items-start justify-between gap-2`}>
-          {!collapsed ? (
-            <div className="min-w-0">
-              <h1 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white truncate">Marketing Settings</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Choose a section below (scroll on small screens).{' '}
-                <span className="text-gray-600 dark:text-gray-300">Automations</span>,{' '}
-                <span className="text-gray-600 dark:text-gray-300">Smart Features</span>, and{' '}
-                <span className="text-gray-600 dark:text-gray-300">CRM integrations</span> follow Integrations.
-              </p>
-            </div>
-          ) : (
-            <span className="sr-only">Marketing Settings</span>
-          )}
+        <div className={`pt-4 ${collapsed ? 'px-2' : 'pl-3 pr-2'} flex items-start justify-end gap-2`}>
           <button
             type="button"
             className="hidden lg:inline-flex p-1.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
