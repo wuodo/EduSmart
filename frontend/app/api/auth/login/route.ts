@@ -43,7 +43,16 @@ export async function POST(request: NextRequest) {
     }
     clearTimeout(timer)
 
-    const data = await res.json().catch(() => ({}))
+    // Read the body once. Some upstream 429s return HTML/text, not JSON.
+    const rawText = await res.text().catch(() => '')
+    let data: any = {}
+    if (rawText) {
+      try {
+        data = JSON.parse(rawText)
+      } catch {
+        data = {}
+      }
+    }
     if (!res.ok) {
       // Forward throttle metadata so the client can display accurate wait times
       // and we can diagnose whether the 429 comes from our code, Supabase, or Render.
@@ -52,17 +61,29 @@ export async function POST(request: NextRequest) {
       const rateLimitLimit = res.headers.get('x-ratelimit-limit')
       const rateLimitRemaining = res.headers.get('x-ratelimit-remaining')
       const rateLimitReset = res.headers.get('x-ratelimit-reset')
+      const rateLimitSource = res.headers.get('x-ratelimit-source')
       if (retryAfter) responseHeaders['retry-after'] = retryAfter
       if (rateLimitLimit) responseHeaders['x-ratelimit-limit'] = rateLimitLimit
       if (rateLimitRemaining) responseHeaders['x-ratelimit-remaining'] = rateLimitRemaining
       if (rateLimitReset) responseHeaders['x-ratelimit-reset'] = rateLimitReset
+      if (rateLimitSource) responseHeaders['x-ratelimit-source'] = rateLimitSource
       if (res.status === 429) {
+        const server = res.headers.get('server')
+        const via = res.headers.get('via')
+        const cfRay = res.headers.get('cf-ray')
+        const contentType = res.headers.get('content-type')
         console.warn('[login-proxy] 429 received from backend — source headers:', {
           'retry-after': retryAfter,
           'x-ratelimit-limit': rateLimitLimit,
           'x-ratelimit-remaining': rateLimitRemaining,
           'x-ratelimit-reset': rateLimitReset,
+          'x-ratelimit-source': rateLimitSource,
+          server,
+          via,
+          'cf-ray': cfRay,
+          'content-type': contentType,
           error: data?.error,
+          body_snippet: rawText ? rawText.slice(0, 280) : null,
         })
       }
       return NextResponse.json(
