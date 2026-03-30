@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { InquiryFilterSnapshot } from '@/lib/inquirySavedViews'
 import { deleteSavedView, loadSavedViews, saveNamedView, type SavedInquiryView } from '@/lib/inquirySavedViews'
-import { BookmarkIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { BookmarkIcon, TrashIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
 
 const BookmarkIconAny: any = BookmarkIcon
 const TrashIconAny: any = TrashIcon
+const InfoIconAny: any = InformationCircleIcon
 
 export default function InquirySavedViewsBar({
   snapshot,
@@ -60,6 +61,12 @@ export default function InquirySavedViewsBar({
       <div className="flex flex-wrap items-center gap-2">
         <BookmarkIconAny className="h-4 w-4 text-teal-600 dark:text-teal-400 shrink-0" aria-hidden />
         <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">Saved views</span>
+        <span
+          className="inline-flex items-center"
+          title="Saved views are named shortcuts for your current inquiry filters (status, source, search, etc.). They’re saved in this browser for your account/tenant."
+        >
+          <InfoIconAny className="h-4 w-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" />
+        </span>
         <select
           value={selectedId}
           onChange={(e) => {
@@ -88,7 +95,7 @@ export default function InquirySavedViewsBar({
           type="button"
           onClick={remove}
           disabled={!selectedId}
-          className="inline-flex items-center gap-1 rounded-md border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-[12px] font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:pointer-events-none"
+          className="inline-flex items-center gap-1 rounded-md border border-rose-300 dark:border-rose-800 px-2 py-1.5 text-[12px] font-semibold text-rose-700 dark:text-rose-200 hover:bg-rose-50 dark:hover:bg-rose-900/30 disabled:opacity-40 disabled:pointer-events-none"
           title="Delete selected saved view"
         >
           <TrashIconAny className="h-3.5 w-3.5" />

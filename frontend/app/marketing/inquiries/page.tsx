@@ -294,6 +294,13 @@ export default function InquiriesPage() {
     })
   }, [inquiries, status, source, search, county, program, kcseGrade, intake, gender, paymentStatus, tags, focusMode])
 
+  const firstContactQueue = useMemo(() => {
+    if (focusMode !== 'first-contact') return []
+    return [...filteredInquiries]
+      .sort((a: any, b: any) => new Date(a.createdAt as any).getTime() - new Date(b.createdAt as any).getTime())
+      .slice(0, 80)
+  }, [focusMode, filteredInquiries])
+
   const handleAddInquiry = async (data: InquiryFormData) => {
     try {
       setError(null)
@@ -546,6 +553,46 @@ export default function InquiriesPage() {
           >
             Dismiss
           </button>
+        </div>
+      )}
+      {canView && focusMode === 'first-contact' && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100 px-4 py-3 rounded flex flex-wrap items-center justify-between gap-2">
+          <div className="text-sm">
+            Leads needing first contact (no first response logged, older than 24h):{' '}
+            <strong>{filteredInquiries.length}</strong>. Oldest are shown first.
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {firstContactQueue[0] && (
+              <button
+                type="button"
+                className="px-3 py-1.5 rounded bg-amber-600 text-white hover:bg-amber-700 text-[13px] font-semibold"
+                onClick={() => {
+                  if (typeof window === 'undefined') return
+                  const url = new URL(window.location.href)
+                  url.searchParams.set('openInquiry', String((firstContactQueue[0] as any).id))
+                  window.location.href = url.pathname + `?${url.searchParams.toString()}`
+                }}
+                title="Open the oldest lead in this queue"
+              >
+                Open next lead
+              </button>
+            )}
+            <button
+              type="button"
+              className="px-3 py-1.5 rounded border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-[13px] font-semibold"
+              onClick={() => {
+                setFocusMode('')
+                if (typeof window !== 'undefined') {
+                  const url = new URL(window.location.href)
+                  url.searchParams.delete('focus')
+                  const q = url.searchParams.toString()
+                  window.history.replaceState({}, '', url.pathname + (q ? `?${q}` : ''))
+                }
+              }}
+            >
+              Clear focus
+            </button>
+          </div>
         </div>
       )}
       {/* Only show "no access" once permissions have finished loading */}

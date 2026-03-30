@@ -148,9 +148,109 @@ export default function FollowupsPage() {
           />
         )}
       </div>
+      {/* Action-oriented quick nav */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          className={`px-3 py-2 rounded-md border text-[13px] font-semibold ${
+            overdueOnly ? 'bg-amber-600 border-amber-700 text-white' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+          }`}
+          title="Show overdue pending follow-ups"
+          onClick={() => {
+            setOverdueOnly(true)
+            setStatus((s) => (s ? s : 'pending'))
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href)
+              url.searchParams.set('focus', 'overdue')
+              url.searchParams.set('status', 'pending')
+              window.history.replaceState({}, '', url.pathname + `?${url.searchParams.toString()}`)
+            }
+          }}
+        >
+          Overdue
+        </button>
+        <button
+          type="button"
+          className={`px-3 py-2 rounded-md border text-[13px] font-semibold ${
+            !overdueOnly && status === 'pending' ? 'bg-teal-600 border-teal-700 text-white' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+          }`}
+          title="Show all pending follow-ups"
+          onClick={() => {
+            setOverdueOnly(false)
+            setStatus('pending')
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href)
+              url.searchParams.delete('focus')
+              url.searchParams.set('status', 'pending')
+              window.history.replaceState({}, '', url.pathname + `?${url.searchParams.toString()}`)
+            }
+          }}
+        >
+          Pending
+        </button>
+        <button
+          type="button"
+          className={`px-3 py-2 rounded-md border text-[13px] font-semibold ${
+            status === 'completed' ? 'bg-emerald-600 border-emerald-700 text-white' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+          }`}
+          title="Show completed follow-ups"
+          onClick={() => {
+            setOverdueOnly(false)
+            setStatus('completed')
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href)
+              url.searchParams.delete('focus')
+              url.searchParams.set('status', 'completed')
+              window.history.replaceState({}, '', url.pathname + `?${url.searchParams.toString()}`)
+            }
+          }}
+        >
+          Completed
+        </button>
+        <button
+          type="button"
+          className="px-3 py-2 rounded-md border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-[13px] font-semibold"
+          title="Clear focus and filters"
+          onClick={() => {
+            setOverdueOnly(false)
+            setStatus('')
+            setType('')
+            setSearch('')
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href)
+              url.search = ''
+              window.history.replaceState({}, '', url.pathname)
+            }
+          }}
+        >
+          Clear
+        </button>
+      </div>
       {chatSourceInfo && (
         <div className="bg-blue-50 dark:bg-blue-900/25 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 px-3 py-2 rounded text-sm">
           Opened from tagged chat inquiry{chatSourceInfo.inquiryName ? `: ${chatSourceInfo.inquiryName}` : ''}. Actions here are logged to your account audit trail.
+        </div>
+      )}
+      {overdueOnly && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100 px-3 py-2 rounded text-sm flex flex-wrap items-center justify-between gap-2">
+          <span>
+            Showing <strong>overdue</strong> follow-ups (pending and scheduled before now): <strong>{filteredFollowups.length}</strong>
+          </span>
+          <button
+            type="button"
+            className="text-[12px] font-semibold px-2 py-1 rounded border border-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+            onClick={() => {
+              setOverdueOnly(false)
+              if (typeof window !== 'undefined') {
+                const url = new URL(window.location.href)
+                url.searchParams.delete('focus')
+                const q = url.searchParams.toString()
+                window.history.replaceState({}, '', url.pathname + (q ? `?${q}` : ''))
+              }
+            }}
+          >
+            Show all
+          </button>
         </div>
       )}
       {focusInquiryId && (
