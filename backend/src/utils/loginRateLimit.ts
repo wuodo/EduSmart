@@ -6,7 +6,7 @@
 
 const DISABLE_LOGIN_RATE_LIMIT = false
 
-const MAX_ATTEMPTS = 5
+const MAX_ATTEMPTS = 10
 const LOCKOUT_MS = 15 * 60 * 1000 // 15 minutes
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
 
