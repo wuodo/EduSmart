@@ -183,7 +183,7 @@ export default function ChatWindow({ chatRoom, onMessageSent, focusMessageId }: 
       if (isNearBottom()) {
         fetchMessages()
       }
-    }, 3000)
+    }, 5000)  // Increased from 3000 ms to reduce request volume on Render free-tier
     return () => clearInterval(interval)
   }, [chatRoom.id])
 

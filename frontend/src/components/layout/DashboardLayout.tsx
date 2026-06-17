@@ -204,7 +204,8 @@ export default function DashboardLayout({
     const isVisible = () => typeof document !== 'undefined' && document.visibilityState === 'visible';
 
     // poll delete requests for admin/senior_staff
-    // Interval: 6 000 ms (was 5 000). In-flight guard prevents overlapping calls.
+    // Interval: 15 000 ms (was 6 000). In-flight guard prevents overlapping calls.
+    // Reduced frequency to lower request volume on Render free-tier + shared IP.
     // N+1 item fetches removed — meta is built from delete-request + users list only.
     const poll = setInterval(async () => {
       if (!isVisible() || pollDeleteInFlight.current) return;
@@ -252,9 +253,10 @@ export default function DashboardLayout({
         }
       } catch {}
       finally { pollDeleteInFlight.current = false; }
-    }, 6000);
+    }, 15000);
 
-    // poll chat unread count — 8 000 ms (was 4 000). In-flight guard + visibility.
+    // poll chat unread count — 15 000 ms (was 8 000). In-flight guard + visibility.
+    // Reduced frequency to lower request volume on Render free-tier.
     const pollUnread = setInterval(async () => {
       if (!isVisible() || pollUnreadInFlight.current) return;
       pollUnreadInFlight.current = true;
@@ -273,9 +275,10 @@ export default function DashboardLayout({
       } catch {
         setUnreadChatCount(0);
       } finally { pollUnreadInFlight.current = false; }
-    }, 8000);
+    }, 15000);
 
-    // poll broadcast unread count — 10 000 ms (was 5 000). In-flight guard + visibility.
+    // poll broadcast unread count — 20 000 ms (was 10 000). In-flight guard + visibility.
+    // Reduced frequency to lower request volume on Render free-tier.
     const pollBroadcast = setInterval(async () => {
       if (!isVisible() || pollBroadcastInFlight.current) return;
       pollBroadcastInFlight.current = true;
@@ -288,9 +291,9 @@ export default function DashboardLayout({
       } catch {
         setBroadcastUnreadCount(0);
       } finally { pollBroadcastInFlight.current = false; }
-    }, 10000);
+    }, 20000);
 
-    // Tenant suspension guard — 30 000 ms (was 5 000). Tenant status changes are rare.
+    // Tenant suspension guard — 30 000 ms. Tenant status changes are rare.
     // In-flight guard + visibility. Uses cachedApiFetch (30 s TTL).
     const pollTenant = setInterval(async () => {
       if (!isVisible() || pollTenantInFlight.current) return;
@@ -1075,7 +1078,7 @@ function OfficerApprovalsBell() {
         const me = (localStorage.getItem('userEmail') || '').toLowerCase()
         setCount(arr.filter((a: any) => !a.readBy || !a.readBy[me]).length)
       } catch {}
-    }, 5000)
+    }, 10000)  // Reduced from 5000 ms to lower request volume on Render free-tier
     return () => clearInterval(t)
   }, [])
   return (

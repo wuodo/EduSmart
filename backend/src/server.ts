@@ -111,11 +111,12 @@ app.use('/assets', (req, res, next) => {
 });
 
 // ---------------------------------------------------------------------------
-// Global API rate limiter — 600 requests per 60 s per IP (safety net only).
-// This is intentionally generous. It catches runaway polling/burst requests
-// without affecting normal multi-tab usage. Login/public/cpanel paths are exempt.
-// NOTE: On Render free-tier, all users may share the same egress IP, so we
-// keep this limit high enough to avoid false positives for normal usage.
+// Global API rate limiter — 2000 requests per 60 s per IP (safety net only).
+// Increased from 600 to accommodate Render free-tier cold starts and multi-user
+// scenarios where all traffic shares the same proxy IP. Login/public/cpanel paths
+// are already exempt. Frontend polling intervals have been increased to reduce
+// overall request volume. This is still a reasonable safeguard against runaway requests.
+// NOTE: On Render free-tier, all users may share the same egress IP.
 // ---------------------------------------------------------------------------
 const _globalRateStore = new Map<string, { count: number; resetAt: number }>();
 const GLOBAL_RATE_LIMIT = 2000;
