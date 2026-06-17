@@ -118,7 +118,7 @@ app.use('/assets', (req, res, next) => {
 // keep this limit high enough to avoid false positives for normal usage.
 // ---------------------------------------------------------------------------
 const _globalRateStore = new Map<string, { count: number; resetAt: number }>();
-const GLOBAL_RATE_LIMIT = 600;
+const GLOBAL_RATE_LIMIT = 2000;
 const GLOBAL_RATE_WINDOW_MS = 60_000;
 const GLOBAL_RATE_EXEMPT = [
   '/api/users/login',
