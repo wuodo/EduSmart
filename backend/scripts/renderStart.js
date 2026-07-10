@@ -80,7 +80,7 @@ run('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
 
 // Auto-seed: create default tenant and super admin if no users exist
 (async () => {
-  const { PrismaClient } = require('@prisma/client');
+  const { PrismaClient } = require('../generated/prisma');
   const bcrypt = require('bcryptjs');
   const p = new PrismaClient();
   try {
