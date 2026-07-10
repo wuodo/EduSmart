@@ -75,6 +75,9 @@ if (migrateResult.status === 0) {
   }
 }
 
+console.log('[render-start] Syncing any remaining schema-only fields via prisma db push...');
+run('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
+
 console.log('[render-start] Starting server...');
 const server = run('node dist/server.js');
 process.exit(server.status ?? 0);
