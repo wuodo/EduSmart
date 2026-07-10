@@ -72,13 +72,16 @@
   }
 }
 
-/* Global UX rule: no rounded corners on form fields/buttons */
+/* Global UX rule: no rounded corners — consistent square design */
 @layer base {
-  button,
-  input,
-  select,
-  textarea {
+  * {
     border-radius: 0 !important;
+  }
+}
+@layer utilities {
+  .animate-spin,
+  .rounded-full {
+    border-radius: 9999px !important;
   }
 }
 
