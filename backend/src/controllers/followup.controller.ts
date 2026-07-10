@@ -528,6 +528,33 @@ export const getPerformanceAnalytics = async (req: Request, res: Response) => {
       avgResponseTimeHrs = rows[0]?.avg_hrs != null ? Number(rows[0].avg_hrs) : null;
     } catch { avgResponseTimeHrs = null; }
 
+    // Response-time conversion rates
+    let conversionRate24h: number | null = null;
+    let conversionRateAfter24h: number | null = null;
+    try {
+      const convRows: any[] = await prisma.$queryRaw`
+        WITH first_response AS (
+          SELECT f."inquiryId", MIN(f."scheduledFor") AS first_resp, MIN(i."createdAt") AS created
+          FROM followups f JOIN inquiries i ON i.id = f."inquiryId"
+          WHERE f."tenantId" = ${tenantId} AND i."paymentStatus" = 'Paid'
+          GROUP BY f."inquiryId"
+        )
+        SELECT
+          COUNT(*) FILTER (WHERE EXTRACT(EPOCH FROM (first_resp - created)) / 3600 <= 24) AS within24,
+          COUNT(*) FILTER (WHERE EXTRACT(EPOCH FROM (first_resp - created)) / 3600 > 24) AS after24,
+          COUNT(*) AS total
+        FROM first_response
+      `;
+      const row = convRows[0];
+      if (row) {
+        const total = Number(row.total) || 0;
+        if (total > 0) {
+          conversionRate24h = total > 0 ? Number(row.within24) / total : null;
+          conversionRateAfter24h = total > 0 ? Number(row.after24) / total : null;
+        }
+      }
+    } catch { /* analytics are best-effort */ }
+
     const channelEffectiveness: Record<string, number> = {};
     for (const row of channelGroupBy) {
       if (row.type) channelEffectiveness[row.type] = row._count._all;
@@ -538,8 +565,8 @@ export const getPerformanceAnalytics = async (req: Request, res: Response) => {
       conversions,
       conversionRate: totalLeads ? conversions / totalLeads : null,
       avgResponseTimeHrs,
-      conversionRate24h: null,
-      conversionRateAfter24h: null,
+      conversionRate24h,
+      conversionRateAfter24h,
       overdueFollowups,
       channelEffectiveness,
       staff: staff || null,

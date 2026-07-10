@@ -12,7 +12,7 @@ import {
   phoneMatchVariants,
   enrichInquiriesWithSmartMeta,
 } from '../utils/marketingSmartFeatures';
-import { mergeTenantCrmSettings, pickNextRoundRobinEmail } from '../utils/tenantCrmSettings';
+import { mergeTenantCrmSettings } from '../utils/tenantCrmSettings';
 import { dispatchTenantWebhooks } from '../utils/webhookDispatcher';
 import { mergeInquiriesIntoTarget } from '../utils/inquiryMerge';
 
@@ -534,16 +534,13 @@ router.post('/', async (req, res) => {
     if (explicitAssign) {
       data.assignedTo = String(clean.assignedTo).trim();
     } else if (crm.roundRobinEmails && crm.roundRobinEmails.length > 0) {
-      const { email: rrEmail, nextCursor } = pickNextRoundRobinEmail(crm.roundRobinEmails, crm.roundRobinCursor ?? 0);
-      if (rrEmail) {
-        data.assignedTo = rrEmail;
-        await prisma.tenant.update({
-          where: { id: tenantId },
-          data: { crmSettings: { ...crm, roundRobinCursor: nextCursor } as any },
-        });
-      } else {
-        data.assignedTo = email || undefined;
-      }
+      const nextCursor = await prisma.$queryRawUnsafe<Array<{ cursor: number }>>(
+        `UPDATE tenants SET "crmSettings" = jsonb_set(COALESCE("crmSettings", '{}'), '{roundRobinCursor}', to_jsonb(COALESCE(("crmSettings"->>'roundRobinCursor')::int, 0) + 1)) WHERE id = $1 RETURNING COALESCE(("crmSettings"->>'roundRobinCursor')::int, 0) AS cursor`,
+        tenantId
+      );
+      const cursor = nextCursor[0]?.cursor ?? 0;
+      const idx = (cursor - 1) % crm.roundRobinEmails.length;
+      data.assignedTo = crm.roundRobinEmails[idx] || email || undefined;
     } else {
       data.assignedTo = email || undefined;
     }
