@@ -37,6 +37,7 @@ export async function sendTenantEmail(
   text: string,
   html?: string,
   tenantId?: number | null,
+  attachments?: { filename: string; content: Buffer; contentType: string }[],
 ): Promise<boolean> {
   const transport = await getTransportForTenant(tenantId)
   if (!transport) return false
@@ -50,6 +51,11 @@ export async function sendTenantEmail(
     return smtp?.from || smtp?.user || process.env.SMTP_FROM || 'no-reply@edusmart.local'
   })()
 
-  await transport.sendMail({ from: resolvedFrom, to, subject, text, html: html || text })
+  const mailOptions: any = { from: resolvedFrom, to, subject, text, html: html || text }
+  if (attachments && attachments.length > 0) {
+    mailOptions.attachments = attachments.map(a => ({ filename: a.filename, content: a.content, contentType: a.contentType }))
+  }
+
+  await transport.sendMail(mailOptions)
   return true
 }

@@ -857,6 +857,7 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
           inquiryId={emailTarget.id}
           admissionDate={admissionDate}
           reference={emailTarget.letterReferenceNumber || emailTarget.referenceNumber}
+          course={emailTarget.programOfInterest || emailTarget.course || ''}
         />
       )}
     </div>
