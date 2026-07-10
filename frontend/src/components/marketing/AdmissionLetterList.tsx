@@ -8,6 +8,7 @@ import Papa from 'papaparse'
 import { ArrowDownTrayIcon, DocumentIcon, TrashIcon, EyeIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline'
 import { API_BASE_URL, WEB_API } from '@/utils/api';
 import { FaWhatsapp } from 'react-icons/fa'
+import EmailComposeModal from '../email/EmailComposeModal'
 import { HiOutlineMail } from 'react-icons/hi'
 import * as Popover from '@radix-ui/react-popover'
 
@@ -87,6 +88,8 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
   const [deleteReason, setDeleteReason] = useState('')
   const [approvals, setApprovals] = useState<Record<string, boolean>>({})
   const [userRole, setUserRole] = useState<string>('')
+  const [showEmailModal, setShowEmailModal] = useState(false)
+  const [emailTarget, setEmailTarget] = useState<any>(null)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -710,14 +713,12 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
                               </button>
                             </div>
                             <div className="px-2 py-1">
-                              <a
-                                href={`mailto:${inquiry.email}?subject=Your Admission Letter&body=${encodeURIComponent(
-                                  `Hello ${inquiry.fullName},\n\nCongratulations! Your admission letter is ready. Your admission date is ${admissionDate}.\n\nPlease contact us for more details.\n\nBest regards,\nAdmissions Office`
-                                )}`}
-                                className="w-full inline-flex items-center gap-2 px-2 py-1.5 text-[12px] border border-sky-200 text-sky-800 hover:bg-sky-50"
+                              <button
+                                onClick={() => { setEmailTarget(inquiry); setShowEmailModal(true); }}
+                                className="w-full inline-flex items-center gap-2 px-2 py-1.5 text-[12px] border border-sky-200 text-sky-800 hover:bg-sky-50 rounded"
                               >
                                 <MailIconAny className="h-4 w-4" /> Send via Email
-                              </a>
+                              </button>
                             </div>
                             <div className="px-2 py-1">
                               <button
@@ -845,6 +846,18 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
             </div>
           </div>
         </div>
+      )}
+
+      {emailTarget && (
+        <EmailComposeModal
+          open={showEmailModal}
+          onClose={() => { setShowEmailModal(false); setEmailTarget(null); }}
+          to={emailTarget.email || ''}
+          inquiryName={emailTarget.fullName || emailTarget.name || ''}
+          inquiryId={emailTarget.id}
+          admissionDate={admissionDate}
+          reference={emailTarget.letterReferenceNumber || emailTarget.referenceNumber}
+        />
       )}
     </div>
   )

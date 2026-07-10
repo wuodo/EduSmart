@@ -23,6 +23,7 @@ import cpanelRoutes from './routes/cpanel.routes';
 import marketingSettingsRoutes from './routes/marketingSettings.routes';
 import askAiRoutes from './routes/askAi.routes';
 import accountabilityRoutes from './routes/accountability.routes';
+import emailMessagingRoutes from './routes/emailMessaging.routes';
 import { startScheduler } from './services/schedulerService';
 import { getInAppNotifications, clearInAppNotifications } from './services/notificationService';
 import coursesRoutes from './routes/courses.routes';
@@ -820,6 +821,7 @@ app.use('/api/calendar', calendarRoutes);
 app.use('/api/ask-ai', askAiRoutes);
 app.use('/api/courses', coursesRoutes);
 app.use('/api/tenants', tenantAdminRoutes);
+app.use('/api/email', emailMessagingRoutes);
 app.use('/api', permissionsRoutes);
 
 // Mount cpanel router BEFORE shims so it takes precedence.
