@@ -1,5 +1,5 @@
 import express from 'express';
-import { addMessage, getMessages, markAsRead, getUnreadCount } from '../utils/emailMessageStore';
+import { addMessage, getMessages, getMessageById, markAsRead, markAsArchived, markAsDeleted, getUnreadCount } from '../utils/emailMessageStore';
 import { sendTenantEmail } from '../utils/tenantEmailService';
 import prisma from '../lib/prisma';
 
@@ -88,7 +88,8 @@ router.post('/send', async (req, res) => {
 router.get('/list', (req, res) => {
   const tenantId = (req as any).tenantId as number | undefined;
   const inquiryId = req.query.inquiryId ? Number(req.query.inquiryId) : undefined;
-  res.json({ success: true, messages: getMessages(tenantId, inquiryId) });
+  const includeArchived = req.query.archived === 'true';
+  res.json({ success: true, messages: getMessages(tenantId, inquiryId, includeArchived) });
 });
 
 router.get('/unread', (req, res) => {
@@ -101,12 +102,49 @@ router.put('/:id/read', (req, res) => {
   res.json({ success: true });
 });
 
+router.put('/:id/archive', (req, res) => {
+  const archived = req.body?.archived !== false;
+  markAsArchived(req.params.id, archived);
+  res.json({ success: true });
+});
+
+router.delete('/:id', (req, res) => {
+  markAsDeleted(req.params.id);
+  res.json({ success: true });
+});
+
+router.get('/:id', (req, res) => {
+  const msg = getMessageById(req.params.id);
+  if (!msg) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json({ success: true, message: msg });
+});
+
 router.post('/inbound', async (req, res) => {
   try {
-    const { from, to, subject, text, html } = req.body || {};
+    const { from, to, subject, text, html, parentId, reference } = req.body || {};
+    let inquiryId: number | undefined;
+    let tenantId: number | null = null;
+
     const tenant = await prisma.tenant.findFirst({ where: { isActive: true }, orderBy: { id: 'asc' } });
+    if (tenant) tenantId = tenant.id;
+
+    if (reference) {
+      const refNum = reference.replace(/^REF-/i, '');
+      const inquiry = await prisma.inquiry.findFirst({
+        where: { OR: [{ letterReferenceNumber: refNum }, { letterSerialNumber: refNum }] },
+        select: { id: true, tenantId: true },
+      });
+      if (inquiry) { inquiryId = inquiry.id; tenantId = inquiry.tenantId ?? tenantId; }
+    }
+
+    if (parentId) {
+      const parent = getMessageById(parentId);
+      if (parent && parent.inquiryId) inquiryId = parent.inquiryId;
+    }
+
     addMessage({
-      tenantId: tenant?.id ?? null,
+      tenantId,
+      inquiryId,
       direction: 'incoming',
       from: from || req.body.sender || req.body.from_address || 'unknown',
       to: to || req.body.recipient || '',
@@ -114,6 +152,8 @@ router.post('/inbound', async (req, res) => {
       body: text || req.body.plain || req.body.stripped_text || '',
       html: html || req.body.stripped_html || '',
       status: 'received',
+      reference,
+      parentId,
     });
     res.json({ success: true });
   } catch (e: any) {

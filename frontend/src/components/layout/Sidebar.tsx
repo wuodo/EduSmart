@@ -13,6 +13,7 @@ import {
   CalendarDaysIcon,
   ViewColumnsIcon,
   ClipboardDocumentCheckIcon,
+  EnvelopeIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import { cachedApiFetch } from '@/utils/apiClient'
@@ -44,6 +45,7 @@ const navigation: NavigationItem[] = [
   { name: 'QA review', href: '/qa-review', icon: ClipboardDocumentCheckIcon },
   { name: 'Follow-ups', href: '/followups', icon: CalendarIcon },
   { name: 'Calendar', href: '/calendar', icon: CalendarDaysIcon },
+  { name: 'Email', href: '/email/inbox', icon: EnvelopeIcon },
   { name: 'Admission Letters', href: '/admission-letters', icon: DocumentTextIcon },
   { name: 'Registrations', href: '/registrations', icon: DocumentTextIcon },
   { name: 'Courses', href: '/courses', icon: DocumentTextIcon },

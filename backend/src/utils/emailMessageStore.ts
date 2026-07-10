@@ -16,6 +16,9 @@ export type EmailMessage = {
   attachmentUrl?: string;
   createdAt: string;
   readAt?: string;
+  archived?: boolean;
+  deleted?: boolean;
+  parentId?: string;
 };
 
 type EmailStore = {
@@ -48,12 +51,17 @@ export function addMessage(msg: Omit<EmailMessage, 'id' | 'createdAt'>): EmailMe
   return entry;
 }
 
-export function getMessages(tenantId?: number | null, inquiryId?: number, limit = 100): EmailMessage[] {
+export function getMessages(tenantId?: number | null, inquiryId?: number, includeArchived = false, limit = 200): EmailMessage[] {
   const store = loadStore();
   let msgs = store.messages;
   if (tenantId) msgs = msgs.filter(m => m.tenantId === tenantId);
   if (inquiryId) msgs = msgs.filter(m => m.inquiryId === inquiryId);
+  if (!includeArchived) msgs = msgs.filter(m => !m.archived && !m.deleted);
   return msgs.slice(-limit).reverse();
+}
+
+export function getMessageById(id: string): EmailMessage | undefined {
+  return loadStore().messages.find(m => m.id === id);
 }
 
 export function markAsRead(messageId: string) {
@@ -62,7 +70,19 @@ export function markAsRead(messageId: string) {
   if (msg && !msg.readAt) { msg.readAt = new Date().toISOString(); saveStore(store); }
 }
 
+export function markAsArchived(messageId: string, archived: boolean) {
+  const store = loadStore();
+  const msg = store.messages.find(m => m.id === messageId);
+  if (msg) { msg.archived = archived; saveStore(store); }
+}
+
+export function markAsDeleted(messageId: string) {
+  const store = loadStore();
+  const msg = store.messages.find(m => m.id === messageId);
+  if (msg) { msg.deleted = true; saveStore(store); }
+}
+
 export function getUnreadCount(tenantId?: number | null): number {
   const store = loadStore();
-  return store.messages.filter(m => m.direction === 'incoming' && !m.readAt && (!tenantId || m.tenantId === tenantId)).length;
+  return store.messages.filter(m => m.direction === 'incoming' && !m.readAt && !m.deleted && !m.archived && (!tenantId || m.tenantId === tenantId)).length;
 }
