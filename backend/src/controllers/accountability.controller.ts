@@ -17,7 +17,6 @@ export async function getStaffPerformance(req: Request, res: Response) {
       const overdueFollowups = await prisma.followup.count({ where: { assignedTo: user.email, tenantId, status: 'pending', scheduledFor: { lte: now } } });
       const completedFollowups = await prisma.followup.count({ where: { assignedTo: user.email, tenantId, status: 'completed' } });
       const conversions = await prisma.inquiry.count({ where: { createdBy: user.email, tenantId, status: 'Paid' } });
-      const totalFollowups = pendingFollowups + overdueFollowups + completedFollowups;
       const conversionRate = totalInquiries > 0 ? Math.round((conversions / totalInquiries) * 100) : 0;
       const followupRate = totalInquiries > 0 ? Math.round((completedFollowups / totalInquiries) * 100) : 0;
 

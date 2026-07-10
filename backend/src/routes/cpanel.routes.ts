@@ -485,8 +485,8 @@ router.get('/tenants/:id/smtp', async (req, res) => {
     const id = Number(req.params.id);
     const tenant = await prisma.tenant.findUnique({ where: { id }, select: { crmSettings: true } });
     if (!tenant) return safeJson(res, { error: 'Tenant not found' }, 404);
-    const { mergeTenantCrmSettings, validateSmtpConfig } = require('./../utils/tenantCrmSettings');
-    const settings = mergeTenantCrmSettings(tenant.crmSettings);
+    const { mergeTenantCrmSettings: m1 } = require('./../utils/tenantCrmSettings');
+    const settings = m1(tenant.crmSettings);
     return safeJson(res, { success: true, smtp: settings.smtpConfig || {} });
   } catch (e: any) {
     return safeJson(res, { error: e.message }, 500);
@@ -496,18 +496,18 @@ router.get('/tenants/:id/smtp', async (req, res) => {
 router.put('/tenants/:id/smtp', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const { mergeTenantCrmSettings, validateSmtpConfig } = require('./../utils/tenantCrmSettings');
+    const m = require('./../utils/tenantCrmSettings');
     const existing = await prisma.tenant.findUnique({ where: { id }, select: { crmSettings: true } });
     if (!existing) return safeJson(res, { error: 'Tenant not found' }, 404);
-    const prev = mergeTenantCrmSettings(existing.crmSettings);
+    const prev = m.mergeTenantCrmSettings(existing.crmSettings);
     const smtpInput = req.body && typeof req.body === 'object' ? req.body : {};
-    const merged = mergeTenantCrmSettings({ ...prev, smtpConfig: smtpInput });
+    const merged = m.mergeTenantCrmSettings({ ...prev, smtpConfig: smtpInput });
     const updated = await prisma.tenant.update({
       where: { id },
       data: { crmSettings: merged as any },
       select: { crmSettings: true },
     });
-    const result = mergeTenantCrmSettings(updated.crmSettings);
+    const result = m.mergeTenantCrmSettings(updated.crmSettings);
     await auditLogger.custom(req, 'update_tenant_smtp', 'cpanel', { tenantId: id });
     return safeJson(res, { success: true, smtp: result.smtpConfig || {} });
   } catch (e: any) {

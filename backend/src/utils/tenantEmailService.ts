@@ -40,14 +40,6 @@ export async function sendTenantEmail(
 ): Promise<boolean> {
   const transport = await getTransportForTenant(tenantId)
   if (!transport) return false
-  const from = tenantId
-    ? (() => {
-        try {
-          const t = prisma.tenant.findUnique({ where: { id: tenantId } })
-          return ''
-        } catch { return process.env.SMTP_FROM || 'no-reply@edusmart.local' }
-      })()
-    : (process.env.SMTP_FROM || 'no-reply@edusmart.local')
 
   const resolvedFrom = await (async () => {
     if (!tenantId) return process.env.SMTP_FROM || process.env.SMTP_USER || 'no-reply@edusmart.local'

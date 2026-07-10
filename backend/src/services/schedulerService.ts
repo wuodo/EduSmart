@@ -39,9 +39,6 @@ export function startScheduler() {
   const msUntil8am = (
     new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0, 0).getTime() - now.getTime()
   );
-  const msUntil17 = (
-    new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0, 0).getTime() - now.getTime()
-  );
 
   setTimeout(() => sendDailyDigests(), msUntil8am > 0 ? msUntil8am : msUntil8am + 86400000);
   addJob('daily-digest', 86400000, sendDailyDigests);
