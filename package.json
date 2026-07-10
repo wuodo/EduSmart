@@ -40,7 +40,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "eslint": "^9.26.0",
-    "eslint-config-next": "^15.3.2",
+    "eslint-config-next": "^15.3.8",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "html2canvas": "^1.4.1",
