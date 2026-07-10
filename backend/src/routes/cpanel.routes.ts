@@ -501,6 +501,7 @@ router.put('/tenants/:id/smtp', async (req, res) => {
     if (!existing) return safeJson(res, { error: 'Tenant not found' }, 404);
     const prev = m.mergeTenantCrmSettings(existing.crmSettings);
     const smtpInput = req.body && typeof req.body === 'object' ? req.body : {};
+    if (prev.smtpConfig && !smtpInput.pass) smtpInput.pass = prev.smtpConfig.pass;
     const merged = m.mergeTenantCrmSettings({ ...prev, smtpConfig: smtpInput });
     const updated = await prisma.tenant.update({
       where: { id },
