@@ -414,205 +414,81 @@ export default function DashboardLayout({
     <div className="flex h-screen bg-neutral-light overflow-hidden">
       <Sidebar isMobileOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} />
       <div className="flex-1 flex flex-col h-full min-w-0">
-        {/* Top teal bar, no top padding */}
-        <div className="w-full h-14 flex items-center px-2 xs:px-3 sm:px-6 shadow-sm justify-between overflow-hidden" style={{ backgroundColor: 'var(--brand-primary)', color: 'var(--brand-header-icon, #ffffff)' }}>
-          {/* Left side - Tenant name (desktop) and hamburger menu (mobile) */}
+        {/* Top header bar */}
+        <header className="w-full h-14 flex items-center px-3 sm:px-6 shadow-sm justify-between" style={{ backgroundColor: 'var(--brand-primary)' }}>
+          {/* Left: logo + module */}
           <div className="flex items-center gap-3 min-w-0">
-            {/* Mobile hamburger menu */}
-            <button
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="lg:hidden text-white hover:text-yellow-200 flex-shrink-0 mobile-touch-friendly"
-              title="Menu"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+            <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="lg:hidden text-white hover:opacity-80 p-1" title="Menu">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
-            {/* Tenant name — always visible, uppercase bold, high-contrast */}
             {instName ? (
-              <div className="flex flex-col justify-center min-w-0">
-                <span
-                  className="text-white font-extrabold uppercase tracking-widest truncate leading-tight"
-                  style={{ fontSize: '0.8rem', textShadow: '0 1px 3px rgba(0,0,0,0.35)', letterSpacing: '0.12em' }}
-                >
-                  {instName}
-                </span>
-                <span className="hidden lg:block text-white/70 text-[10px] truncate leading-tight uppercase tracking-wide">{moduleName}</span>
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="text-white font-bold text-sm tracking-wide truncate">{instName}</span>
+                <span className="hidden lg:block text-white/50 text-xs font-medium">/ {moduleName}</span>
               </div>
             ) : (
-              <span className="text-white font-semibold truncate text-sm">{moduleName}</span>
+              <span className="text-white font-semibold text-sm truncate">{moduleName}</span>
             )}
           </div>
 
-          {/* Right side - Mobile controls and desktop controls */}
-          <div className="flex items-center gap-1 xs:gap-2 sm:gap-3 md:gap-4 lg:gap-6 flex-shrink-0 min-w-0">
-                         {/* Mobile controls - Profile, notifications, mentions, time */}
-            <div className="flex lg:hidden items-center gap-2">
-               <button
-                 type="button"
-                 onClick={() => openCommandPalette()}
-                 className="text-white hover:text-yellow-200 mobile-touch-friendly"
-                 title="Search (Ctrl+K)"
-               >
-                 <MagnifyingGlassIconAny className="h-5 w-5" />
-               </button>
-               {/* Theme toggle - mobile */}
-               <ThemeToggle />
-               {/* Profile icon */}
-               <button
-                 onClick={openProfile}
-                 className="text-white hover:text-yellow-200 mobile-touch-friendly"
-                 title="Profile"
-               >
-                 <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 19.125a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21c-2.676 0-5.216-.584-7.499-1.875z"></path>
-                 </svg>
-               </button>
+          {/* Right: tool groups */}
+          <div className="flex items-center gap-1 sm:gap-3">
+            {/* Search */}
+            <button onClick={() => openCommandPalette()} className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-white/80 bg-white/10 hover:bg-white/20 transition-colors" title="Search (Ctrl+K)">
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <span>Search</span>
+              <kbd className="text-[10px] text-white/40 border border-white/20 rounded px-1">⌘K</kbd>
+            </button>
+            <button onClick={() => openCommandPalette()} className="sm:hidden text-white hover:opacity-80 p-1" title="Search">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </button>
 
+            {/* Time */}
+            <div className="hidden md:flex flex-col items-end mr-1">
+              <span className="text-white text-[11px] font-medium leading-tight">{dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <span className="text-white/60 text-[9px] leading-tight">{dateTime.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+            </div>
+
+            {/* Theme */}
+            <ThemeToggle />
+
+            {/* Notifications consolidated */}
+            <div className="flex items-center gap-1">
               {(userRole === 'admin' || userRole === 'senior_staff') ? (
-                <button
-                  onClick={() => setShowRequests(s => !s)}
-                  className="relative text-white hover:text-yellow-200 mobile-touch-friendly"
-                  title="Delete Requests"
-                >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M12 22c1.104 0 2-.896 2-2h-4c0 1.104.896 2 2 2Zm7-6v-5a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Z"/>
-                  </svg>
-                  {deleteRequests.length > 0 && (
-                    <span className="absolute -top-1 right-0 bg-red-500 text-white text-[10px] leading-none rounded-full px-1 py-0.5">{deleteRequests.length}</span>
-                  )}
+                <button onClick={() => setShowRequests(s => !s)} className="relative text-white hover:opacity-80 p-1.5" title="Delete Requests">
+                  <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.104 0 2-.896 2-2h-4c0 1.104.896 2 2 2Zm7-6v-5a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Z"/></svg>
+                  {deleteRequests.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{deleteRequests.length}</span>}
                 </button>
               ) : (
-                <div className="mobile-touch-friendly">
-                  <OfficerApprovalsBell />
-                </div>
-              )}
-
-              {/* Broadcast notifications (separate from chats/approvals) */}
-              <button
-                onClick={() => setShowBroadcasts((s) => !s)}
-                className="relative text-white hover:text-yellow-200 mobile-touch-friendly"
-                title="Broadcast Notifications"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M3 10.5V13a1.5 1.5 0 001.5 1.5H6l1.5 4.5h2l-1.2-4.5H12a6 6 0 006-6V6a1 1 0 00-1.447-.894L12 7.5H4.5A1.5 1.5 0 003 9v1.5Z"/>
-                </svg>
-                {broadcastUnreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] leading-none rounded-full px-1 py-0.5">
-                    {broadcastUnreadCount > 99 ? '99+' : broadcastUnreadCount}
-                  </span>
-                )}
-              </button>
-
-              {/* Chat (mobile) with unread badge */}
-              <button 
-                onClick={async () => { setFloatingChat({ reopenTick: Date.now() }); setMentions([]); setUnreadChatCount(0); try { const email=(localStorage.getItem('userEmail')||'').toLowerCase(); await fetch(`${WEB_API}/chat/mark-read`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user: email }) }); } catch {} }} 
-                className="relative text-white hover:text-yellow-200 mobile-touch-friendly" 
-                title="Chat"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="8" cy="12" r=".9" fill="currentColor"/>
-                  <circle cx="12" cy="12" r=".9" fill="currentColor"/>
-                  <circle cx="16" cy="12" r=".9" fill="currentColor"/>
-                </svg>
-                {unreadChatCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full px-1 py-0.5">{unreadChatCount}</span>
-                )}
-              </button>
-
-              {/* Time - mobile only */}
-              <div className="flex flex-col items-end">
-                <span suppressHydrationWarning className="text-white text-compact-xs font-medium">{dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                <span suppressHydrationWarning className="text-white text-compact-xs">{dateTime.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-              </div>
-              {/* Mobile logout */}
-              <button
-                onClick={handleLogout}
-                className="text-teal-100 hover:text-white ml-1 mobile-touch-friendly"
-                title="Logout"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-              </button>
-            </div>
-            
-            {/* Desktop controls - hidden on mobile */}
-            <div className="hidden md:flex items-center gap-4">
-              <button
-                type="button"
-                onClick={() => setShowShortcuts(true)}
-                className="text-white/90 hover:text-white text-[11px] font-semibold px-2 py-1 rounded border border-white/25 hover:bg-white/10"
-                title="Keyboard shortcuts (?)"
-              >
-                ?
-              </button>
-              <CommandPaletteTriggerButton />
-              <div className="flex flex-col items-end mr-3 sm:mr-6">
-                <span suppressHydrationWarning className="text-white text-compact-xs font-medium">{dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                <span suppressHydrationWarning className="text-white text-compact-xs">{dateTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}</span>
-              </div>
-              <ThemeToggle />
-              {/* Chat bubble - desktop quick open */}
-              <button 
-                onClick={async () => { setFloatingChat({ reopenTick: Date.now() }); setMentions([]); setUnreadChatCount(0); try { const email=(localStorage.getItem('userEmail')||'').toLowerCase(); await fetch(`${WEB_API}/chat/mark-read`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user: email }) }); } catch {} }} 
-                className="text-white hover:text-yellow-200" 
-                title="Open Chat"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="8" cy="12" r=".9" fill="currentColor"/>
-                  <circle cx="12" cy="12" r=".9" fill="currentColor"/>
-                  <circle cx="16" cy="12" r=".9" fill="currentColor"/>
-                </svg>
-                {unreadChatCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1">{unreadChatCount}</span>
-                )}
-              </button>
-            </div>
-            
-            {/* Mentions panel removed; counts are shown on chat icons instead */}
-            
-            {(userRole === 'admin' || userRole === 'senior_staff') ? (
-              <button onClick={() => setShowRequests(s => !s)} className="hidden sm:block relative text-white hover:text-yellow-200" title="Delete Requests">
-                <svg className="h-5 w-5 inline-block align-middle" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M12 22c1.104 0 2-.896 2-2h-4c0 1.104.896 2 2 2Zm7-6v-5a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Z"/>
-                </svg>
-                {deleteRequests.length > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1">{deleteRequests.length}</span>
-                )}
-              </button>
-            ) : (
-              <div className="hidden sm:block">
                 <OfficerApprovalsBell />
-              </div>
-            )}
-            <button onClick={() => setShowBroadcasts((s) => !s)} className="hidden sm:block relative text-white hover:text-yellow-200" title="Broadcast Notifications">
-              <svg className="h-5 w-5 inline-block align-middle" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M3 10.5V13a1.5 1.5 0 001.5 1.5H6l1.5 4.5h2l-1.2-4.5H12a6 6 0 006-6V6a1 1 0 00-1.447-.894L12 7.5H4.5A1.5 1.5 0 003 9v1.5Z"/>
-              </svg>
-              {broadcastUnreadCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-xs rounded-full px-1">
-                  {broadcastUnreadCount > 99 ? '99+' : broadcastUnreadCount}
-                </span>
               )}
+              <button onClick={() => setShowBroadcasts(s => !s)} className="relative text-white hover:opacity-80 p-1.5" title="Broadcasts">
+                <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5V13a1.5 1.5 0 001.5 1.5H6l1.5 4.5h2l-1.2-4.5H12a6 6 0 006-6V6a1 1 0 00-1.447-.894L12 7.5H4.5A1.5 1.5 0 003 9v1.5Z"/></svg>
+                {broadcastUnreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{broadcastUnreadCount > 99 ? '99+' : broadcastUnreadCount}</span>}
+              </button>
+              <button onClick={async () => { setFloatingChat({ reopenTick: Date.now() }); setMentions([]); setUnreadChatCount(0); try { const e=(localStorage.getItem('userEmail')||'').toLowerCase(); await fetch(`${WEB_API}/chat/mark-read`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:e}) }); } catch {} }} className="relative text-white hover:opacity-80 p-1.5" title="Chat">
+                <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/></svg>
+                {unreadChatCount > 0 && <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{unreadChatCount}</span>}
+              </button>
+            </div>
+
+            {/* Profile */}
+            <button onClick={openProfile} className="hidden sm:flex items-center gap-2 pl-2 pr-1 py-1 rounded-lg hover:bg-white/10 transition-colors group">
+              <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
+                <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 19.125a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21c-2.676 0-5.216-.584-7.499-1.875z"/></svg>
+              </div>
+              <span className="text-white text-xs font-medium truncate max-w-[100px]">{userName || 'Profile'}</span>
             </button>
-            <button type="button" onClick={openProfile} className="hidden sm:flex items-center gap-2 group min-w-0">
-              <svg className="h-6 w-6 text-white group-hover:text-yellow-200" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 19.125a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21c-2.676 0-5.216-.584-7.499-1.875z"></path></svg>
-              <span className="text-white text-compact-sm font-semibold group-hover:text-yellow-200 truncate max-w-[22vw] sm:max-w-[18vw] md:max-w-[12vw]">{userName || 'My Profile'}</span>
+            <button onClick={openProfile} className="sm:hidden text-white hover:opacity-80 p-1" title="Profile">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 19.125a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21c-2.676 0-5.216-.584-7.499-1.875z"/></svg>
             </button>
-            <button
-              onClick={handleLogout}
-              className="text-white/80 hover:text-white px-1 xs:px-2 sm:px-3 md:px-4 py-1 rounded hover:bg-white/10 text-compact-xs sm:text-compact-sm font-semibold ml-1 xs:ml-2 sm:ml-4 whitespace-nowrap mobile-touch-friendly transition-colors"
-              title="Logout"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
+
+            {/* Logout */}
+            <button onClick={handleLogout} className="text-white/60 hover:text-white p-1.5 transition-colors" title="Logout">
+              <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             </button>
           </div>
-        </div>
+        </header>
         <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pt-5 min-w-0 content-responsive flex flex-col">
           {showCrmBanner && (
             <div className="mb-4 rounded-xl border border-amber-300/70 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/35 px-4 py-3 flex flex-col gap-2 shadow-sm">

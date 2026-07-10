@@ -44,7 +44,7 @@ async function callGroq(prompt: string): Promise<string> {
   return data.choices?.[0]?.message?.content || '';
 }
 
-async function callLLM(prompt: string): Promise<string> {
+export async function callLLM(prompt: string): Promise<string> {
   if (!API_KEY) return '';
   try {
     if (PROVIDER === 'groq') return callGroq(prompt);

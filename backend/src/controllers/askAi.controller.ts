@@ -1543,7 +1543,18 @@ export const ask = async (req: Request, res: Response): Promise<void> => {
     }
   }
 
-  const answer = answerParts.join('\n\n');
+  let answer = answerParts.join('\n\n');
+
+  const isGeneric = answer.includes("I'm not sure about that yet") || answer.includes("I can help you navigate");
+  const isGreeting = /^(hi|hello|hey|good\s+(morning|afternoon|evening)|what'?s\s+up|yo|sup)\b/i.test(question.trim());
+  if ((isGeneric || isGreeting) && process.env.AI_API_KEY) {
+    try {
+      const { callLLM: llm } = await import('../utils/llmClient');
+      const llmAnswer = await llm(`The user is using an EduSmart CRM system for educational institutions. They said: "${question}". Respond helpfully and concisely as an AI assistant for this CRM. Keep it under 3 sentences.`);
+      if (llmAnswer) answer = llmAnswer;
+    } catch {}
+  }
+
   res.json({ answer, sources });
 };
 
