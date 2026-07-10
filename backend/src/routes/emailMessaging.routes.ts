@@ -53,7 +53,8 @@ async function generateAdmissionLetterPdf(name: string, course: string, admissio
 router.post('/send', async (req, res) => {
   try {
     const { to, subject, body, html, inquiryId, reference, admissionDate, course } = req.body || {};
-    const tenantId = (req as any).tenantId as number | undefined;
+    const tenant = (req as any).tenant as { id: number } | undefined;
+    const tenantId = tenant?.id;
     if (!to || !subject || !body) { res.status(400).json({ error: 'to, subject, body required' }); return; }
 
     let attachments: { filename: string; content: Buffer; contentType: string }[] = [];
@@ -86,15 +87,15 @@ router.post('/send', async (req, res) => {
 });
 
 router.get('/list', (req, res) => {
-  const tenantId = (req as any).tenantId as number | undefined;
+  const tenant = (req as any).tenant as { id: number } | undefined;
   const inquiryId = req.query.inquiryId ? Number(req.query.inquiryId) : undefined;
   const includeArchived = req.query.archived === 'true';
-  res.json({ success: true, messages: getMessages(tenantId, inquiryId, includeArchived) });
+  res.json({ success: true, messages: getMessages(tenant?.id, inquiryId, includeArchived) });
 });
 
 router.get('/unread', (req, res) => {
-  const tenantId = (req as any).tenantId as number | undefined;
-  res.json({ success: true, count: getUnreadCount(tenantId) });
+  const tenant = (req as any).tenant as { id: number } | undefined;
+  res.json({ success: true, count: getUnreadCount(tenant?.id) });
 });
 
 router.put('/:id/read', (req, res) => {

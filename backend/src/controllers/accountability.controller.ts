@@ -3,7 +3,7 @@ import prisma from '../lib/prisma';
 
 export async function getStaffPerformance(req: Request, res: Response) {
   try {
-    const tenantId = (req as any).tenantId as number | undefined;
+    const tenantId = ((req as any).tenant as { id: number } | undefined)?.id;
     if (!tenantId) { res.status(400).json({ success: false, message: 'Tenant required' }); return; }
 
     const staff = await prisma.user.findMany({ where: { tenantId } });
@@ -46,7 +46,7 @@ export async function getStaffPerformance(req: Request, res: Response) {
 
 export async function getSlaSummary(req: Request, res: Response) {
   try {
-    const tenantId = (req as any).tenantId as number | undefined;
+    const tenantId = ((req as any).tenant as { id: number } | undefined)?.id;
     if (!tenantId) { res.status(400).json({ success: false, message: 'Tenant required' }); return; }
 
     const now = new Date();
@@ -95,7 +95,7 @@ export async function getSlaSummary(req: Request, res: Response) {
 
 export async function getEscalationSummary(req: Request, res: Response) {
   try {
-    const tenantId = (req as any).tenantId as number | undefined;
+    const tenantId = ((req as any).tenant as { id: number } | undefined)?.id;
     if (!tenantId) { res.status(400).json({ success: false, message: 'Tenant required' }); return; }
 
     const now = new Date();
