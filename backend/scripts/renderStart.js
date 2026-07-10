@@ -78,6 +78,50 @@ if (migrateResult.status === 0) {
 console.log('[render-start] Syncing any remaining schema-only fields via prisma db push...');
 run('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
 
-console.log('[render-start] Starting server...');
-const server = run('node dist/server.js');
-process.exit(server.status ?? 0);
+// Auto-seed: create default tenant and super admin if no users exist
+(async () => {
+  const { PrismaClient } = require('@prisma/client');
+  const bcrypt = require('bcryptjs');
+  const p = new PrismaClient();
+  try {
+    const userCount = await p.user.count();
+    if (userCount === 0) {
+      console.log('[render-start] Empty DB detected — seeding default data...');
+      const tenant = await p.tenant.create({
+        data: { name: 'Default College', subdomain: 'default', isActive: true },
+      });
+      const superEmail = process.env.SUPERADMIN_EMAIL || 'admin@edusmart.app';
+      const superPass = process.env.SUPERADMIN_PASSWORD || 'Admin@123456';
+      await p.user.create({
+        data: {
+          email: superEmail,
+          password: bcrypt.hashSync(superPass, 10),
+          role: 'admin',
+          approved: true,
+          tenantId: null,
+        },
+      });
+      const tenantEmail = process.env.TENANT_ADMIN_EMAIL || 'tenant@edusmart.app';
+      const tenantPass = process.env.TENANT_ADMIN_PASSWORD || 'Tenant@123456';
+      await p.user.create({
+        data: {
+          email: tenantEmail,
+          password: bcrypt.hashSync(tenantPass, 10),
+          role: 'admin',
+          approved: true,
+          name: 'Tenant Admin',
+          tenantId: tenant.id,
+        },
+      });
+      console.log(`[render-start] Seeded: super admin (${superEmail}) / tenant admin (${tenantEmail})`);
+    }
+  } catch (e) {
+    console.warn('[render-start] Seed skipped:', e.message);
+  } finally {
+    await p.$disconnect();
+  }
+})().then(() => {
+  console.log('[render-start] Starting server...');
+  const server = run('node dist/server.js');
+  process.exit(server.status ?? 0);
+});
