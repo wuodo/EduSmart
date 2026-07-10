@@ -18,6 +18,7 @@ const nav = [
   { href: '/cpanel/incidents', label: 'Incidents', icon: Siren },
   { href: '/cpanel/release', label: 'Release', icon: ListChecks },
   { href: '/cpanel/settings', label: 'Settings', icon: Cog },
+  { href: '/cpanel/accountability', label: 'Accountability', icon: BarChart3 },
   { href: '/cpanel/backups', label: 'Backups', icon: HardDrive },
   { href: '/cpanel/restore-requests', label: 'Restore Requests', icon: RotateCcw },
   { href: '/cpanel/analytics', label: 'Analytics', icon: BarChart3 },

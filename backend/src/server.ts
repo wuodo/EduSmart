@@ -22,6 +22,9 @@ import permissionsRoutes from './routes/permissions.routes';
 import cpanelRoutes from './routes/cpanel.routes';
 import marketingSettingsRoutes from './routes/marketingSettings.routes';
 import askAiRoutes from './routes/askAi.routes';
+import accountabilityRoutes from './routes/accountability.routes';
+import { startScheduler } from './services/schedulerService';
+import { getInAppNotifications, clearInAppNotifications } from './services/notificationService';
 import coursesRoutes from './routes/courses.routes';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
@@ -811,6 +814,7 @@ app.get('/api/audit-logs', listAuditLogs);
 app.post('/api/audit-logs', createAuditLog);
 app.delete('/api/audit-logs', clearAuditLogs);
 app.use('/api/audit-logs', auditLogsRoutes);
+app.use('/api/accountability', accountabilityRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/ask-ai', askAiRoutes);
@@ -1365,6 +1369,18 @@ app.get('/api/tenants/me', async (req, res): Promise<void> => {
   }
 });
 
+// In-app notification feed (no auth for simplicity — reads per email via query)
+app.get('/api/notifications/feed', async (req, res) => {
+  const all = getInAppNotifications();
+  const email = (req.query.email as string || '').toLowerCase();
+  const filtered = email ? all.filter(n => n.email.toLowerCase() === email) : all;
+  res.json({ success: true, notifications: filtered });
+});
+app.delete('/api/notifications/feed', (_req, res) => {
+  clearInAppNotifications();
+  res.json({ success: true });
+});
+
 // Start the server
 const PORT = process.env.PORT || 5000;
 app.listen(Number(PORT), '0.0.0.0', () => {
@@ -1372,4 +1388,5 @@ app.listen(Number(PORT), '0.0.0.0', () => {
   if (process.env.NODE_ENV === 'development') {
     console.log(`CORS enabled for: ${corsOrigins.join(', ')}`);
   }
+  startScheduler();
 });
