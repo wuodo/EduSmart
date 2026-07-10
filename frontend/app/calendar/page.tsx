@@ -1,288 +1,302 @@
-'use client'
+"use client";
+import { useEffect, useState, useCallback } from 'react';
+import { format, addDays, subDays, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday, parseISO, getHours, getMinutes, setHours, setMinutes } from 'date-fns';
+import { ChevronLeft, ChevronRight, Plus, X, Search, Clock, CalendarDays, List, Check, Trash2, Sun, Moon, Filter } from 'lucide-react';
 
-import { useEffect, useMemo, useState } from 'react'
-import { apiFetch } from '@/utils/apiClient'
+type CalendarEvent = {
+  id: string; dbId: number; title: string; date: string; type: 'followup' | 'task';
+  subType: string; status: string; notes?: string; assignedTo?: string;
+  ownerEmail?: string; inquiryId?: number; color: string;
+};
 
-type EventItem = { id: string; title: string; date: string; type: 'followup' | 'task'; status?: string }
-type Task = { id: number; title: string; description?: string; dueDate?: string; status: string; ownerEmail?: string; visibility?: string; type?: string; outcome?: string; reminderAt?: string }
+type ViewMode = 'month' | 'week' | 'day';
 
-async function fetchJSON<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await apiFetch(path, init)
-  const text = await res.text()
-  let data: any
-  try { data = text ? JSON.parse(text) : {} } catch { throw new Error(text || 'Non-JSON response') }
-  if (!res.ok) throw new Error(data.error || text || 'Request failed')
-  return data
-}
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 7);
+const COLOR_LABELS: Record<string, string> = { call: '#0d9488', sms: '#6366f1', whatsapp: '#22c55e', email: '#3b82f6', meeting: '#f59e0b', demo: '#8b5cf6', followup: '#0d9488', task: '#6b7280' };
 
 export default function CalendarPage() {
-  const [events, setEvents] = useState<EventItem[]>([])
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [title, setTitle] = useState('')
-  const [dueDate, setDueDate] = useState('')
-  const [taskType, setTaskType] = useState<'call'|'email'|'meeting'|'demo'|'other'>('call')
-  const [reminderAt, setReminderAt] = useState('')
-  const [ownerFilter, setOwnerFilter] = useState('')
-  const [error, setError] = useState('')
-  const [view, setView] = useState<'month' | 'week' | 'list'>('month')
-  const [cursor, setCursor] = useState<Date>(new Date())
-  const [quickDate, setQuickDate] = useState<string>('')
-  const [showQuickAdd, setShowQuickAdd] = useState(false)
-  const [dueReminders, setDueReminders] = useState<Task[]>([])
-  const [dragItem, setDragItem] = useState<{ kind: 'task'|'followup'; id: number; time?: string }|null>(null)
+  const [view, setView] = useState<ViewMode>('month');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createDate, setCreateDate] = useState('');
+  const [createInquiryId, setCreateInquiryId] = useState('');
+  const [createType, setCreateType] = useState('call');
+  const [createNotes, setCreateNotes] = useState('');
+  const [inquiries, setInquiries] = useState<{ id: number; fullName: string }[]>([]);
+  const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
 
-  const load = async () => {
-    setError('')
+  const fetchEvents = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (view === 'month') { params.set('month', String(currentDate.getMonth())); params.set('year', String(currentDate.getFullYear())); }
+    if (search) params.set('search', search);
+    if (filterType !== 'all') params.set('type', filterType);
     try {
-      const { events } = await fetchJSON<{ events: EventItem[] }>(`/calendar/events`)
-      const qs = ownerFilter ? `?owner=${encodeURIComponent(ownerFilter)}` : ''
-      const { tasks } = await fetchJSON<{ tasks: Task[] }>(`/calendar/tasks${qs}`)
-      setEvents(events)
-      setTasks(tasks)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load calendar')
-    }
-  }
+      const r = await fetch(`/api/proxy/calendar/events?${params}`);
+      const d = await r.json();
+      if (d.events) setEvents(d.events);
+    } catch {}
+    setLoading(false);
+  }, [currentDate, view, search, filterType]);
 
-  useEffect(() => { load() }, [ownerFilter])
-  // Prefer list view on very small screens
+  useEffect(() => { fetchEvents(); }, [fetchEvents]);
+
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 640) {
-      setView('list')
+    if (showCreateModal && inquiries.length === 0) {
+      fetch('/api/proxy/inquiries?limit=100').then(r => r.json()).then(d => {
+        const list = d.inquiries || d.data || d;
+        if (Array.isArray(list)) setInquiries(list.map((i: any) => ({ id: i.id, fullName: i.fullName })));
+      }).catch(() => {});
     }
-  }, [])
+  }, [showCreateModal, inquiries.length]);
 
-  // Poll for due reminders every 60s
-  useEffect(() => {
-    let mounted = true
-    const poll = async () => {
-      try {
-        const currentUser = typeof window !== 'undefined' ? (localStorage.getItem('userEmail') || '') : ''
-        const owner = ownerFilter || currentUser
-        const qs = `?owner=${encodeURIComponent(owner)}&withinMinutes=5`
-        const data = await fetchJSON<{ tasks: Task[] }>(`/calendar/reminders/due${qs}`)
-        if (mounted) setDueReminders(data.tasks || [])
-      } catch { /* ignore */ }
-    }
-    poll()
-    const id = setInterval(poll, 60000)
-    return () => { mounted = false; clearInterval(id) }
-  }, [ownerFilter])
+  const days = eachDayOfInterval({
+    start: startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 }),
+    end: endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 }),
+  });
 
-  const groupedByDate = useMemo(() => {
-    const map: Record<string, { events: EventItem[]; tasks: Task[] }> = {}
-    for (const e of events) {
-      const d = e.date?.slice(0,10)
-      if (!d) continue
-      map[d] ||= { events: [], tasks: [] }
-      map[d].events.push(e)
-    }
-    for (const t of tasks) {
-      const d = t.dueDate?.slice(0,10) || 'No Due'
-      map[d] ||= { events: [], tasks: [] }
-      map[d].tasks.push(t)
-    }
-    return Object.entries(map).sort(([a],[b]) => a.localeCompare(b))
-  }, [events, tasks])
+  const weekDays = eachDayOfInterval({ start: startOfWeek(currentDate, { weekStartsOn: 1 }), end: endOfWeek(currentDate, { weekStartsOn: 1 }) });
 
-  const addTask = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      const currentUser = typeof window !== 'undefined' ? (localStorage.getItem('userEmail') || '') : ''
-      const res: any = await fetchJSON(`/calendar/tasks`, {
-        method: 'POST',
-        body: JSON.stringify({ title, dueDate: dueDate || null, type: taskType, ownerEmail: currentUser, reminderAt: reminderAt || null })
-      })
-      if (res && (res as any).error) throw new Error((res as any).error)
-      setTitle(''); setDueDate(''); setReminderAt('')
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to add task')
-    }
-  }
+  const eventsForDay = (date: Date) => events.filter(e => {
+    const d = parseISO(e.date);
+    return isSameDay(d, date);
+  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const toggleTask = async (task: Task) => {
-    try {
-      if (task.status === 'completed') {
-        await fetchJSON(`/calendar/tasks/${task.id}`, {
-          method: 'PUT',
-          body: JSON.stringify({ status: 'pending' })
-        })
-      } else {
-        const outcome = typeof window !== 'undefined' ? (window.prompt('Outcome (e.g., connected, no answer, rescheduled, converted)', 'connected') || 'connected') : 'connected'
-        await fetchJSON(`/calendar/tasks/${task.id}/complete`, {
-          method: 'POST',
-          body: JSON.stringify({ outcome })
-        })
-      }
-      await load()
-    } catch (e) { setError(e instanceof Error ? e.message : 'Failed to update task') }
-  }
+  const eventsForHour = (date: Date, hour: number) => eventsForDay(date).filter(e => getHours(parseISO(e.date)) === hour);
+
+  const handleDayClick = (date: Date) => {
+    setCreateDate(date.toISOString().slice(0, 16));
+    setShowCreateModal(true);
+  };
+
+  const handleEventClick = (e: CalendarEvent) => {
+    setSelectedEvent(e);
+    setShowEditModal(true);
+  };
+
+  const createFollowup = async () => {
+    if (!createInquiryId || !createDate) return;
+    const r = await fetch('/api/proxy/calendar/followups', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inquiryId: Number(createInquiryId), type: createType, scheduledFor: createDate, notes: createNotes }),
+    });
+    if (r.ok) { setShowCreateModal(false); fetchEvents(); }
+  };
+
+  const completeEvent = async (ev: CalendarEvent) => {
+    if (ev.type === 'followup') await fetch(`/api/proxy/calendar/followups/${ev.dbId}/complete`, { method: 'POST' });
+    else await fetch(`/api/proxy/calendar/tasks/${ev.dbId}/complete`, { method: 'POST' });
+    setShowEditModal(false); fetchEvents();
+  };
+
+  const deleteEvent = async (ev: CalendarEvent) => {
+    if (ev.type === 'followup') await fetch(`/api/proxy/inquiries/${ev.dbId}`).catch(() => {});
+    else await fetch(`/api/proxy/calendar/tasks/${ev.dbId}`, { method: 'DELETE' });
+    setShowEditModal(false); fetchEvents();
+  };
+
+  const rescheduleEvent = async (ev: CalendarEvent, newDate: string) => {
+    const endpoint = ev.type === 'followup' ? `/api/proxy/calendar/followups/${ev.dbId}/reschedule` : `/api/proxy/calendar/tasks/${ev.dbId}/reschedule`;
+    await fetch(endpoint, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scheduledFor: newDate, dueDate: newDate }) });
+    fetchEvents();
+  };
+
+  const handleDrop = async (e: React.DragEvent, date: Date) => {
+    e.preventDefault();
+    if (!draggedEvent) return;
+    const newDate = setHours(setMinutes(date, 0), getHours(parseISO(draggedEvent.date)) || 9);
+    await rescheduleEvent(draggedEvent, newDate.toISOString());
+    setDraggedEvent(null);
+  };
+
+  const navigate = (dir: number) => {
+    if (view === 'month') setCurrentDate(dir < 0 ? subMonths(currentDate, 1) : addMonths(currentDate, 1));
+    else if (view === 'week') setCurrentDate(dir < 0 ? subDays(currentDate, 7) : addDays(currentDate, 7));
+    else setCurrentDate(dir < 0 ? subDays(currentDate, 1) : addDays(currentDate, 1));
+  };
+
+  const viewLabel = view === 'month' ? format(currentDate, 'MMMM yyyy') : view === 'week' ? `${format(weekDays[0], 'MMM d')} - ${format(weekDays[6], 'MMM d, yyyy')}` : format(currentDate, 'EEEE, MMMM d, yyyy');
+
+  const filteredEvents = events.filter(e => {
+    if (search) { const q = search.toLowerCase(); if (!e.title.toLowerCase().includes(q) && !(e.notes || '').toLowerCase().includes(q)) return false; }
+    if (filterType !== 'all' && e.subType !== filterType && e.type !== filterType) return false;
+    return true;
+  });
 
   return (
-    <div className="p-3 sm:p-4 max-w-6xl mx-auto">
+    <div className="flex flex-col h-[calc(100vh-8rem)]">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <h1 className="text-lg sm:text-xl font-bold text-teal-700 dark:text-teal-300">Calendar</h1>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button className="px-2 py-1 border rounded text-teal-700 border-teal-300 hover:bg-teal-50 text-sm" onClick={()=>setCursor(new Date(cursor.getFullYear(), cursor.getMonth()-1, 1))}>Prev</button>
-          <div className="text-xs sm:text-sm w-32 sm:w-40 text-center">{cursor.toLocaleString(undefined,{month:'long', year:'numeric'})}</div>
-          <button className="px-2 py-1 border rounded text-teal-700 border-teal-300 hover:bg-teal-50 text-sm" onClick={()=>setCursor(new Date(cursor.getFullYear(), cursor.getMonth()+1, 1))}>Next</button>
-          <select value={view} onChange={e=>setView(e.target.value as any)} className="ml-0 sm:ml-2 px-2 py-1 border rounded border-teal-300 text-sm">
-            <option value="month">Month</option>
-            <option value="week">Week</option>
-            <option value="list">List</option>
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-gray-100 rounded"><ChevronLeft size={18} /></button>
+          <button onClick={() => setCurrentDate(new Date())} className="px-2 py-1 text-xs font-medium hover:bg-gray-100 rounded">Today</button>
+          <button onClick={() => navigate(1)} className="p-1.5 hover:bg-gray-100 rounded"><ChevronRight size={18} /></button>
+          <h2 className="text-lg font-semibold ml-2">{viewLabel}</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search events..." className="pl-8 pr-3 py-1.5 text-xs border rounded w-44 focus:outline-none focus:ring-1 focus:ring-teal-500" />
+          </div>
+          <select value={filterType} onChange={e => setFilterType(e.target.value)} className="text-xs border rounded px-2 py-1.5">
+            <option value="all">All types</option><option value="call">Call</option><option value="sms">SMS</option><option value="whatsapp">WhatsApp</option><option value="email">Email</option><option value="meeting">Meeting</option><option value="followup">Follow-ups</option><option value="task">Tasks</option>
           </select>
-          <input placeholder="Filter by owner email" value={ownerFilter} onChange={e=>setOwnerFilter(e.target.value)} className="w-full sm:w-64 ml-0 sm:ml-2 px-2 py-1 border rounded border-teal-300 text-sm" />
-        </div>
-      </div>
-      {error && <div className="text-rose-600 mb-2 text-sm">{error}</div>}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded shadow p-2 md:p-4 overflow-x-auto sm:overflow-visible">
-          {view==='list' && (
-            <div className="space-y-3 max-h-[60vh] overflow-auto">
-              {groupedByDate.map(([date, data]) => (
-                <div key={date}>
-                  <div className="text-xs text-gray-500 mb-1">{date}</div>
-                  <div className="space-y-1">
-                    {data.events.map(ev => (
-                      <div key={ev.id} className="text-sm px-3 py-2 rounded border flex items-center justify-between">
-                        <span>{ev.title}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded ${ev.type==='followup' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>{ev.type}</span>
-                      </div>
-                    ))}
-                    {data.tasks.map(tsk => (
-                      <div key={`tsk-${tsk.id}`} className="text-sm px-3 py-2 rounded border flex items-center justify-between">
-                        <span className={tsk.status==='completed' ? 'line-through text-gray-500' : ''}>{tsk.title}</span>
-                        <button onClick={()=>toggleTask(tsk)} className={`text-xs px-2 py-0.5 rounded ${tsk.status==='completed' ? 'bg-gray-200' : 'bg-green-600 text-white'}`}>{tsk.status==='completed' ? 'Undo' : 'Done'}</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          {view!=='list' && (
-            <MonthWeekGrid
-              mode={view}
-              date={cursor}
-              events={[...events, ...tasks.filter(t=>t.dueDate).map(t=>({ id:`task-${t.id}`, title:t.title, date:t.dueDate as string, type:'task' as const }))]}
-              onDayClick={(iso)=>{ setQuickDate(iso); setShowQuickAdd(true) }}
-              onDragStart={(payload)=> setDragItem(payload)}
-              onDrop={async (iso)=>{
-                try {
-                  if (!dragItem) return
-                  if (dragItem.kind === 'task') {
-                    const t = tasks.find(x=>x.id===dragItem.id)
-                    const base = iso
-                    const time = (t?.dueDate && t.dueDate.includes('T')) ? t.dueDate.split('T')[1] : '09:00:00.000Z'
-                    const newDate = `${base}T${time}`
-                    await fetchJSON(`/calendar/tasks/${dragItem.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ dueDate: newDate }) })
-                    await load()
-                  }
-                } finally { setDragItem(null) }
-              }}
-            />
-          )}
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded shadow p-3 sm:p-4">
-          <h2 className="font-semibold mb-2">Add Task</h2>
-          <form onSubmit={addTask} className="space-y-2">
-            <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Task title" className="w-full border rounded px-2 py-1 text-sm" required />
-            <input value={dueDate} onChange={e=>setDueDate(e.target.value)} type="datetime-local" className="w-full border rounded px-2 py-1 text-sm" />
-            <div className="flex gap-2 flex-col sm:flex-row">
-              <select value={taskType} onChange={e=>setTaskType(e.target.value as any)} className="w-full sm:w-1/2 border rounded px-2 py-1 text-sm">
-                <option value="call">Call</option>
-                <option value="email">Email</option>
-                <option value="meeting">Meeting</option>
-                <option value="demo">Demo</option>
-                <option value="other">Other</option>
-              </select>
-              <input value={reminderAt} onChange={e=>setReminderAt(e.target.value)} type="datetime-local" className="w-full sm:w-1/2 border rounded px-2 py-1 text-sm" placeholder="Reminder" />
-            </div>
-            <button type="submit" className="w-full bg-teal-600 hover:bg-teal-700 text-white py-1.5 rounded text-sm">Add</button>
-          </form>
-          <div className="mt-4 text-xs text-gray-500">Click a date in the calendar to quick-add for that day.</div>
+          <div className="flex bg-gray-100 rounded p-0.5">
+            {(['month', 'week', 'day'] as ViewMode[]).map(v => (
+              <button key={v} onClick={() => setView(v)} className={`px-3 py-1 text-xs rounded font-medium capitalize ${view === v ? 'bg-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{v}</button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {showQuickAdd && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={()=>setShowQuickAdd(false)}>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded shadow w-full max-w-sm" onClick={e=>e.stopPropagation()}>
-            <h3 className="font-semibold mb-2">Add Task</h3>
-            <form onSubmit={async (e)=>{ e.preventDefault(); try { const currentUser = typeof window !== 'undefined' ? (localStorage.getItem('userEmail') || '') : ''; await fetchJSON(`/calendar/tasks`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ title, dueDate: quickDate+'T09:00', type: taskType, ownerEmail: currentUser }) }); setTitle(''); setShowQuickAdd(false); await load(); } catch(err){ setError(err instanceof Error ? err.message : 'Failed') } }} className="space-y-2">
-              <input value={title} onChange={e=>setTitle(e.target.value)} placeholder={`Task for ${quickDate}`} className="w-full border rounded px-2 py-1" required />
-              <div className="flex gap-2 justify-end">
-                <button type="button" className="px-3 py-1 border rounded" onClick={()=>setShowQuickAdd(false)}>Cancel</button>
-                <button type="submit" className="px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded">Add</button>
-              </div>
-            </form>
+      {view === 'month' && (
+        <div className="flex-1 bg-white border rounded-xl flex flex-col min-h-0">
+          <div className="grid grid-cols-7 border-b">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <div key={d} className="text-center text-xs font-semibold text-gray-500 py-2">{d}</div>)}
+          </div>
+          <div className="flex-1 grid grid-cols-7 auto-rows-fr" onDragOver={e => e.preventDefault()}>
+            {days.map((day, i) => {
+              const dayEvents = eventsForDay(day);
+              return (
+                <div key={i} className={`border-b border-r p-1 min-h-[80px] relative group ${!isSameMonth(day, currentDate) ? 'bg-gray-50/50' : ''}`} onDrop={e => handleDrop(e, day)} onDragOver={e => e.preventDefault()}>
+                  <span className={`text-xs font-medium ${isToday(day) ? 'bg-teal-600 text-white w-5 h-5 rounded-full flex items-center justify-center' : 'text-gray-600'} ${!isSameMonth(day, currentDate) ? 'opacity-40' : ''}`}>{format(day, 'd')}</span>
+                  <button onClick={() => handleDayClick(day)} className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-0.5 hover:bg-gray-100 rounded"><Plus size={12} className="text-gray-400" /></button>
+                  <div className="mt-1 space-y-0.5">
+                    {dayEvents.slice(0, 3).map(ev => (
+                      <div key={ev.id} onClick={() => handleEventClick(ev)} draggable onDragStart={() => setDraggedEvent(ev)} className="text-[10px] px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80 text-white" style={{ backgroundColor: ev.color }}>
+                        {format(parseISO(ev.date), 'HH:mm')} {ev.title.slice(0, 25)}
+                      </div>
+                    ))}
+                    {dayEvents.length > 3 && <div className="text-[10px] text-gray-400 px-1">+{dayEvents.length - 3} more</div>}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Reminder toasts */}
-      <div className="fixed right-2 left-2 sm:left-auto sm:right-4 bottom-2 sm:bottom-4 z-40 space-y-2 w-auto sm:w-72">
-        {dueReminders.map(t => (
-          <div key={`rem-${t.id}`} className="rounded shadow bg-white dark:bg-gray-800 border border-teal-200 p-3 text-sm">
-            <div className="font-semibold text-teal-700 dark:text-teal-200">Reminder: {t.title}</div>
-            <div className="text-gray-500">Type: {t.type || 'task'}</div>
-            <div className="mt-2 flex gap-2">
-              <button
-                onClick={async ()=>{ try { await fetchJSON(`/calendar/tasks/${t.id}/complete`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ outcome: 'completed from reminder' }) }); await load(); setDueReminders(dueReminders.filter(x=>x.id!==t.id)); } catch(e){ setError(e instanceof Error? e.message:'Failed') } }}
-                className="px-2 py-1 bg-teal-600 text-white rounded"
-              >Done</button>
-              <button
-                onClick={async ()=>{ try { const newAt = new Date(Date.now()+10*60*1000).toISOString(); await fetchJSON(`/calendar/tasks/${t.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reminderAt: newAt }) }); setDueReminders(dueReminders.filter(x=>x.id!==t.id)); } catch(e){ setError(e instanceof Error? e.message:'Failed') } }}
-                className="px-2 py-1 border rounded"
-              >Snooze 10m</button>
+      {view === 'week' && (
+        <div className="flex-1 bg-white border rounded-xl flex flex-col min-h-0 overflow-auto">
+          <div className="grid grid-cols-7 border-b sticky top-0 bg-white z-10">
+            {weekDays.map((day, i) => (
+              <div key={i} className={`text-center py-2 border-r ${isToday(day) ? 'bg-teal-50' : ''}`}>
+                <div className="text-[10px] text-gray-500">{format(day, 'EEE')}</div>
+                <div className={`text-sm font-semibold ${isToday(day) ? 'text-teal-600' : 'text-gray-700'}`}>{format(day, 'd')}</div>
+              </div>
+            ))}
+          </div>
+          <div className="flex-1 grid grid-cols-7 min-h-0" onDragOver={e => e.preventDefault()}>
+            {weekDays.map((day, di) => {
+              const dayEvents = eventsForDay(day);
+              return (
+                <div key={di} className="border-r p-1 relative" onDrop={e => handleDrop(e, day)} onDragOver={e => e.preventDefault()}>
+                  <button onClick={() => handleDayClick(day)} className="absolute top-1 right-1 p-0.5 hover:bg-gray-100 rounded"><Plus size={12} className="text-gray-400" /></button>
+                  <div className="mt-1 space-y-0.5">
+                    {dayEvents.map(ev => (
+                      <div key={ev.id} onClick={() => handleEventClick(ev)} draggable onDragStart={() => setDraggedEvent(ev)} className="text-[10px] px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80 text-white" style={{ backgroundColor: ev.color }}>
+                        {format(parseISO(ev.date), 'HH:mm')} {ev.title.slice(0, 20)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {view === 'day' && (
+        <div className="flex-1 bg-white border rounded-xl overflow-y-auto" onDragOver={e => e.preventDefault()}>
+          {HOURS.map(hour => {
+            const hourEvents = eventsForHour(currentDate, hour);
+            return (
+              <div key={hour} className="flex border-b min-h-[60px] group" onDrop={e => {
+                e.preventDefault();
+                if (draggedEvent) {
+                  const newDate = setHours(setMinutes(currentDate, 0), hour);
+                  rescheduleEvent(draggedEvent, newDate.toISOString());
+                  setDraggedEvent(null);
+                }
+              }} onDragOver={e => e.preventDefault()}>
+                <div className="w-16 text-right pr-3 py-1 text-[11px] text-gray-400 font-medium border-r shrink-0">{hour.toString().padStart(2, '0')}:00</div>
+                <div className="flex-1 relative min-h-[60px] p-1">
+                  <button onClick={() => { const d = setHours(setMinutes(currentDate, 30), hour); setCreateDate(d.toISOString().slice(0, 16)); setShowCreateModal(true); }} className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-0.5 hover:bg-gray-100 rounded"><Plus size={12} className="text-gray-400" /></button>
+                  {hourEvents.map(ev => (
+                    <div key={ev.id} onClick={() => handleEventClick(ev)} draggable onDragStart={() => setDraggedEvent(ev)} className="flex items-center gap-2 px-2 py-1.5 mb-1 rounded text-xs cursor-pointer hover:opacity-80 text-white" style={{ backgroundColor: ev.color }}>
+                      <span className="font-medium">{format(parseISO(ev.date), 'HH:mm')}</span>
+                      <span className="truncate">{ev.title}</span>
+                      <span className="text-white/70 text-[10px] ml-auto">{ev.subType}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && selectedEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowEditModal(false)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-5" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: selectedEvent.color }}></div>
+                <h3 className="font-semibold text-gray-900">{selectedEvent.title}</h3>
+              </div>
+              <button onClick={() => setShowEditModal(false)} className="p-1 hover:bg-gray-100 rounded"><X size={16} /></button>
+            </div>
+            <div className="space-y-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2"><Clock size={14} /> {format(parseISO(selectedEvent.date), 'EEEE, MMMM d, yyyy HH:mm')}</div>
+              <div className="flex items-center gap-2"><Filter size={14} /> Type: {selectedEvent.subType || selectedEvent.type}</div>
+              <div className="flex items-center gap-2"><Sun size={14} /> Status: <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${selectedEvent.status === 'completed' ? 'bg-green-100 text-green-700' : selectedEvent.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{selectedEvent.status}</span></div>
+              {selectedEvent.assignedTo && <div className="flex items-center gap-2"><Moon size={14} /> Assigned: {selectedEvent.assignedTo}</div>}
+              {selectedEvent.notes && <div className="mt-2 p-2 bg-gray-50 rounded text-xs">{selectedEvent.notes}</div>}
+            </div>
+            <div className="flex items-center gap-2 mt-4 pt-3 border-t">
+              <button onClick={() => completeEvent(selectedEvent)} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700"><Check size={14} /> Mark Complete</button>
+              <button onClick={() => deleteEvent(selectedEvent)} className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700"><Trash2 size={14} /> Delete</button>
+              <button onClick={() => setShowEditModal(false)} className="px-3 py-1.5 border text-xs rounded hover:bg-gray-50 ml-auto">Close</button>
             </div>
           </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+        </div>
+      )}
 
-function MonthWeekGrid({ mode, date, events, onDayClick, onDragStart, onDrop }: { mode: 'month' | 'week', date: Date, events: EventItem[], onDayClick: (iso:string)=>void, onDragStart: (payload: {kind:'task'|'followup', id:number, time?:string})=>void, onDrop: (iso:string)=>void }) {
-  const start = new Date(date)
-  start.setDate(1)
-  const startDay = start.getDay() // 0 Sun
-  const firstCell = new Date(start)
-  firstCell.setDate(start.getDate() - ((startDay + 6) % 7)) // Monday-first grid
-  const cells = mode==='week' ? 7 : 42
-  const days = Array.from({length: cells}, (_,i)=>{
-    const d = new Date(firstCell)
-    d.setDate(firstCell.getDate()+i)
-    return d
-  })
-  const eventsByDay: Record<string, EventItem[]> = {}
-  for (const ev of events) {
-    if (!ev.date) continue
-    const key = new Date(ev.date).toISOString().slice(0,10)
-    ;(eventsByDay[key] ||= []).push(ev)
-  }
-  return (
-    <div className="grid grid-cols-7 gap-px bg-teal-200/60 dark:bg-teal-900/40">
-      {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(h=> (
-        <div key={h} className="hidden md:block text-xs text-center py-1 bg-teal-50 dark:bg-teal-900 text-teal-700 dark:text-teal-200">{h}</div>
-      ))}
-      {days.map(d=>{
-        const iso = d.toISOString().slice(0,10)
-        const isToday = new Date().toDateString() === d.toDateString()
-        return (
-          <div key={iso} onClick={()=>onDayClick(iso)} onDragOver={(e)=>e.preventDefault()} onDrop={(e)=>{ e.preventDefault(); onDrop(iso) }} className={`min-h-[90px] md:min-h-[110px] bg-white dark:bg-gray-800 p-1 text-left hover:bg-teal-50 focus:outline-none ${d.getMonth()===date.getMonth() ? '' : 'opacity-60'}`}>
-            <div className={`text-xs ${isToday ? 'text-teal-600 font-semibold' : 'text-gray-500'}`}>{d.getDate()}</div>
-            <div className="mt-1 space-y-1">
-              {(eventsByDay[iso]||[]).slice(0,3).map(ev=> (
-                <div key={ev.id} draggable onDragStart={()=>{ if (ev.type==='task') { const id = Number(String(ev.id).split('-')[1]); onDragStart({ kind:'task', id }) }}} className={`truncate text-[10px] px-1 py-0.5 rounded cursor-move ${ev.type==='followup' ? 'bg-teal-100 text-teal-700' : 'bg-rose-100 text-rose-700'}`}>{ev.title}</div>
-              ))}
-              {(eventsByDay[iso]||[]).length>3 && <div className="text-[10px] text-gray-400">+{(eventsByDay[iso]||[]).length-3} more</div>}
+      {/* Create Follow-up Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowCreateModal(false)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-5" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Schedule Follow-up</h3>
+              <button onClick={() => setShowCreateModal(false)} className="p-1 hover:bg-gray-100 rounded"><X size={16} /></button>
+            </div>
+            <div className="space-y-3">
+              <div><label className="text-xs text-gray-500 block mb-0.5">Inquiry</label>
+                <input value={createInquiryId} onChange={e => setCreateInquiryId(e.target.value)} placeholder="Enter inquiry ID or search..." list="inquiry-list" className="w-full border rounded px-2 py-1.5 text-sm" />
+                <datalist id="inquiry-list">{inquiries.map(i => <option key={i.id} value={String(i.id)}>{i.id} - {i.fullName}</option>)}</datalist>
+              </div>
+              <div><label className="text-xs text-gray-500 block mb-0.5">Type</label>
+                <select value={createType} onChange={e => setCreateType(e.target.value)} className="w-full border rounded px-2 py-1.5 text-sm">
+                  <option value="call">Call</option><option value="sms">SMS</option><option value="whatsapp">WhatsApp</option><option value="email">Email</option>
+                </select>
+              </div>
+              <div><label className="text-xs text-gray-500 block mb-0.5">Date & Time</label>
+                <input type="datetime-local" value={createDate} onChange={e => setCreateDate(e.target.value)} className="w-full border rounded px-2 py-1.5 text-sm" />
+              </div>
+              <div><label className="text-xs text-gray-500 block mb-0.5">Notes</label>
+                <textarea value={createNotes} onChange={e => setCreateNotes(e.target.value)} rows={3} className="w-full border rounded px-2 py-1.5 text-sm resize-none" />
+              </div>
+              <button onClick={createFollowup} className="w-full py-2 bg-teal-600 text-white text-sm rounded font-medium hover:bg-teal-700">Create Follow-up</button>
             </div>
           </div>
-        )
-      })}
+        </div>
+      )}
     </div>
-  )
+  );
 }
-
-
