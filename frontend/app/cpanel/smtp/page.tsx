@@ -18,7 +18,8 @@ export default function SmtpPage() {
 
   useEffect(() => {
     fetch('/api/proxy/cpanel/tenants').then(r => r.json()).then(d => {
-      if (d.success && Array.isArray(d.tenants)) { setTenants(d.tenants); if (d.tenants.length > 0) setSelectedTenantId(d.tenants[0].id); }
+      const list = d.tenants || d.data || [];
+      if (Array.isArray(list)) { setTenants(list); if (list.length > 0) setSelectedTenantId(list[0].id); }
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -27,9 +28,8 @@ export default function SmtpPage() {
     if (!selectedTenantId) return;
     setMsg('');
     fetch(`/api/proxy/cpanel/tenants/${selectedTenantId}/smtp`).then(r => r.json()).then(d => {
-      if (d.success && d.smtp) {
-        setConfig({ host: d.smtp.host || '', port: d.smtp.port || 587, secure: d.smtp.secure || false, user: d.smtp.user || '', pass: '', from: d.smtp.from || '' });
-      }
+      const smtp = d.smtp || d.data || {};
+      setConfig({ host: smtp.host || '', port: smtp.port || 587, secure: smtp.secure || false, user: smtp.user || '', pass: '', from: smtp.from || '' });
     }).catch(() => {});
   }, [selectedTenantId]);
 
