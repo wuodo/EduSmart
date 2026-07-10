@@ -47,7 +47,7 @@
     "js-cookie": "^3.0.5",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.4",
-    "next": "^15.3.2",
+    "next": "^15.3.8",
     "node-fetch": "^3.3.2",
     "papaparse": "^5.5.2",
     "pdf-lib": "^1.17.1",
