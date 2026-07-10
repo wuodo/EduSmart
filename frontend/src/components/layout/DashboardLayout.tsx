@@ -456,18 +456,18 @@ export default function DashboardLayout({
             <div className="flex items-center gap-1">
               {(userRole === 'admin' || userRole === 'senior_staff') ? (
                 <button onClick={() => setShowRequests(s => !s)} className="relative text-white hover:opacity-80 p-1.5" title="Delete Requests">
-                  <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.104 0 2-.896 2-2h-4c0 1.104.896 2 2 2Zm7-6v-5a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Z"/></svg>
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.104 0 2-.896 2-2h-4c0 1.104.896 2 2 2Zm7-6v-5a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Z"/></svg>
                   {deleteRequests.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{deleteRequests.length}</span>}
                 </button>
               ) : (
                 <OfficerApprovalsBell />
               )}
               <button onClick={() => setShowBroadcasts(s => !s)} className="relative text-white hover:opacity-80 p-1.5" title="Broadcasts">
-                <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5V13a1.5 1.5 0 001.5 1.5H6l1.5 4.5h2l-1.2-4.5H12a6 6 0 006-6V6a1 1 0 00-1.447-.894L12 7.5H4.5A1.5 1.5 0 003 9v1.5Z"/></svg>
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5V13a1.5 1.5 0 001.5 1.5H6l1.5 4.5h2l-1.2-4.5H12a6 6 0 006-6V6a1 1 0 00-1.447-.894L12 7.5H4.5A1.5 1.5 0 003 9v1.5Z"/></svg>
                 {broadcastUnreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{broadcastUnreadCount > 99 ? '99+' : broadcastUnreadCount}</span>}
               </button>
               <button onClick={async () => { setFloatingChat({ reopenTick: Date.now() }); setMentions([]); setUnreadChatCount(0); try { const e=(localStorage.getItem('userEmail')||'').toLowerCase(); await fetch(`${WEB_API}/chat/mark-read`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:e}) }); } catch {} }} className="relative text-white hover:opacity-80 p-1.5" title="Chat">
-                <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/></svg>
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/></svg>
                 {unreadChatCount > 0 && <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{unreadChatCount}</span>}
               </button>
             </div>
@@ -485,7 +485,7 @@ export default function DashboardLayout({
 
             {/* Logout */}
             <button onClick={handleLogout} className="text-white/60 hover:text-white p-1.5 transition-colors" title="Logout">
-              <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             </button>
           </div>
         </header>
