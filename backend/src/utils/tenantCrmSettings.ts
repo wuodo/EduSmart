@@ -9,6 +9,15 @@ export type TenantCrmWebhook = {
   active: boolean
 }
 
+export type TenantSmtpConfig = {
+  host: string
+  port: number
+  secure: boolean
+  user: string
+  pass: string
+  from: string
+}
+
 export type TenantCrmSettings = {
   /** Outbound webhooks (tenant-scoped; separate from global cpanel webhooks) */
   webhooks?: TenantCrmWebhook[]
@@ -33,6 +42,8 @@ export type TenantCrmSettings = {
   }
   /** Last run metadata for scheduled jobs (display-only) */
   scheduledJobsMeta?: Array<{ id: string; label: string; lastRunAt?: string; nextRunAt?: string; status?: string }>
+  /** Per-tenant SMTP configuration for sending emails as this tenant */
+  smtpConfig?: TenantSmtpConfig
 }
 
 export function mergeTenantCrmSettings(raw: unknown): TenantCrmSettings {
@@ -45,6 +56,21 @@ export function mergeTenantCrmSettings(raw: unknown): TenantCrmSettings {
     dataRetentionDays: typeof r.dataRetentionDays === 'number' ? r.dataRetentionDays : undefined,
     integrations: r.integrations && typeof r.integrations === 'object' ? r.integrations : {},
     scheduledJobsMeta: Array.isArray(r.scheduledJobsMeta) ? r.scheduledJobsMeta : [],
+    smtpConfig: r.smtpConfig && typeof r.smtpConfig === 'object' ? r.smtpConfig as TenantSmtpConfig : undefined,
+  }
+}
+
+export function validateSmtpConfig(cfg: unknown): TenantSmtpConfig | null {
+  if (!cfg || typeof cfg !== 'object') return null
+  const c = cfg as Record<string, unknown>
+  if (!c.host || !c.user || !c.pass) return null
+  return {
+    host: String(c.host),
+    port: Number(c.port) || 587,
+    secure: c.secure === true || String(c.secure) === 'true',
+    user: String(c.user),
+    pass: String(c.pass),
+    from: String(c.from || c.user),
   }
 }
 

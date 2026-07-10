@@ -1,15 +1,20 @@
 import prisma from '../lib/prisma';
-import { sendEmail, hasSmtpConfig } from '../utils/email';
+import { sendTenantEmail } from '../utils/tenantEmailService';
+import { mergeTenantCrmSettings, validateSmtpConfig } from '../utils/tenantCrmSettings';
 
 export async function sendDailyDigests() {
-  if (!hasSmtpConfig()) {
-    console.log('[digest] SMTP not configured — skipping daily digest');
-    return;
-  }
-
   const tenants = await prisma.tenant.findMany({ where: { isActive: true } });
 
   for (const tenant of tenants) {
+    const settings = mergeTenantCrmSettings(tenant.crmSettings);
+    const hasTenantSmtp = validateSmtpConfig(settings.smtpConfig);
+    const hasGlobalSmtp = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+
+    if (!hasTenantSmtp && !hasGlobalSmtp) {
+      console.log(`[digest] No SMTP for tenant "${tenant.name}" — skipping`);
+      continue;
+    }
+
     const staff = await prisma.user.findMany({
       where: { tenantId: tenant.id, approved: true },
     });
@@ -56,7 +61,6 @@ export async function sendDailyDigests() {
               </td>
             </tr>
           </table>
-
           <h3 style="margin:20px 0 8px;color:#374151">Today's Priorities</h3>
           <ul style="padding-left:20px;color:#4b5563;line-height:1.8">
             ${hotLeads > 0 ? `<li><strong>${hotLeads} hot lead(s)</strong> need immediate attention</li>` : ''}
@@ -65,7 +69,6 @@ export async function sendDailyDigests() {
             ${tasksDue > 0 ? `<li><strong>${tasksDue} task(s) past due</strong></li>` : ''}
             ${totalInquiries === 0 ? '<li>No inquiries assigned yet. Check the inquiry pool.</li>' : ''}
           </ul>
-
           <hr style="margin:20px 0;border:none;border-top:1px solid #e5e7eb"/>
           <p style="font-size:12px;color:#6b7280">EduSmart CRM — Automated Daily Digest</p>
         </div>
@@ -84,7 +87,7 @@ export async function sendDailyDigests() {
       ].join('\n');
 
       try {
-        await sendEmail(user.email, `EduSmart Daily Digest — ${new Date().toLocaleDateString()}`, text, html);
+        await sendTenantEmail(user.email, `EduSmart Daily Digest — ${new Date().toLocaleDateString()}`, text, html, tenant.id);
       } catch (e: any) {
         console.error(`[digest] Failed to send to ${user.email}:`, e.message);
       }

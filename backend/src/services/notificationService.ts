@@ -1,5 +1,4 @@
-import prisma from '../lib/prisma';
-import { sendEmail, hasSmtpConfig } from '../utils/email';
+import { sendTenantEmail } from '../utils/tenantEmailService';
 
 export type NotificationPriority = 'info' | 'warning' | 'critical';
 export type NotificationChannel = 'in_app' | 'email';
@@ -12,6 +11,7 @@ export interface StaffNotification {
   body: string;
   priority: NotificationPriority;
   link?: string;
+  tenantId?: number | null;
 }
 
 const inAppStore: StaffNotification[] = [];
@@ -37,7 +37,7 @@ export async function notifyStaff(
   if (channels.includes('in_app')) {
     pushInAppNotification(notification);
   }
-  if (channels.includes('email') && hasSmtpConfig()) {
+  if (channels.includes('email')) {
     const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
       <h2 style="color:#0f766e">${notification.title}</h2>
       <p>${notification.body}</p>
@@ -45,6 +45,6 @@ export async function notifyStaff(
       <hr style="margin-top:24px;border:none;border-top:1px solid #e5e7eb"/>
       <p style="color:#6b7280;font-size:12px">EduSmart CRM - Automated Notification</p>
     </div>`;
-    await sendEmail(notification.email, notification.title, notification.body, html);
+    await sendTenantEmail(notification.email, notification.title, notification.body, html, notification.tenantId);
   }
 }

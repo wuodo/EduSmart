@@ -39,6 +39,7 @@ export async function runEscalationChecks() {
           body: `Follow-up (#${f.id}, type: ${f.type}) for ${f.inquiry.fullName} is overdue by 48+ hours. Assigned to ${staffName}. Requires manager intervention.`,
           priority: 'critical',
           link: `/inquiries/${f.inquiry.id}`,
+          tenantId,
         },
         ['in_app', 'email'],
       );
@@ -70,6 +71,7 @@ export async function runEscalationChecks() {
           body: `Inquiry "${i.fullName}" (#${i.id}) has no response for 48+ hours. Review and assign immediately.`,
           priority: 'critical',
           link: `/inquiries/${i.id}`,
+          tenantId,
         },
         ['in_app', 'email'],
       );

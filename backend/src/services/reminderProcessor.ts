@@ -26,6 +26,7 @@ export async function processOverdueFollowups() {
         body: `Follow-up "${f.type}" for ${f.inquiry.fullName} (#${f.inquiry.id}) was due ${f.scheduledFor.toLocaleDateString()}. Please action.`,
         priority: 'warning',
         link: `/inquiries/${f.inquiryId}`,
+        tenantId: f.tenantId ?? f.inquiry.tenantId,
       },
       ['in_app', 'email'],
     );
@@ -49,6 +50,7 @@ export async function processOverdueFollowups() {
       body: `Task "${t.title}" was due ${t.dueDate?.toLocaleDateString() ?? 'N/A'}.${t.inquiry ? ` Related to ${t.inquiry.fullName}.` : ''}`,
       priority: 'warning',
       link: t.inquiry ? `/inquiries/${t.inquiry.id}` : undefined,
+      tenantId: t.tenantId,
     });
   }
 }
@@ -77,6 +79,7 @@ export async function processDormantLeads() {
         body: `Lead ${i.fullName} (#${i.id}) has been inactive for 14+ days. Consider re-engagement.`,
         priority: 'info',
         link: `/inquiries/${i.id}`,
+        tenantId: i.tenantId,
       });
     }
 
