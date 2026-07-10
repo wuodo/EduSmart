@@ -108,42 +108,9 @@ function resolveLetterTemplateId(
 }
 
 // ---------------------------------------------------------------------------
-// Counter caches — each file is read once (lazy) then held in-process.
-// Writes are deferred via setImmediate so they never block the request path.
-// ---------------------------------------------------------------------------
-const _intakeCounts: Record<string, number> = {};
-let _intakeCountsLoaded = false;
-const _intakeCountPath = path.join(__dirname, '../../data/intake-initial-count.json');
-
-const _userLetterCounts: Record<string, number> = {};
-let _userLetterCountsLoaded = false;
-const _userLetterCountPath = path.join(__dirname, '../../data/letter-count-by-user.json');
-
-let _seqCount = 0;
-let _seqCountLoaded = false;
-const _seqCountPath = path.join(__dirname, '../../data/letter-count.json');
-
-function _loadJsonSync<T>(filePath: string, fallback: T): T {
-  try {
-    if (fs.existsSync(filePath)) return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch { /* ignore */ }
-  return fallback;
-}
-
-function _saveJsonAsync(filePath: string, data: unknown) {
-  setImmediate(() => {
-    try {
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
-      fs.writeFileSync(filePath, JSON.stringify(data), 'utf8');
-    } catch { /* non-critical */ }
-  });
-}
-
-// ---------------------------------------------------------------------------
-// In-process PDF buffer cache — eliminates repeated generation for the
-// preview → download → share pattern on the same letter within a session.
+// PDF cache — eliminates repeated generation for preview → download → share
 // Key: `${tenantId}:${inquiryId|name}:${admissionDate}:${resolvedTemplate}`
-// Ceiling: 50 entries × ~1 MB = ~50 MB. TTL: 30 minutes.
+// Ceiling: 50 entries × ~1 MB. TTL: 30 minutes.
 // ---------------------------------------------------------------------------
 const _pdfCache = new Map<string, { buffer: Buffer; ts: number }>();
 const PDF_CACHE_TTL_MS = 30 * 60 * 1000;
@@ -164,16 +131,21 @@ function setCachedPdf(key: string, buffer: Buffer): void {
   _pdfCache.set(key, { buffer, ts: Date.now() });
 }
 
-function getNextIntakeInitialCounter(initial: string): number {
-  if (!_intakeCountsLoaded) {
-    const loaded = _loadJsonSync<Record<string, number>>(_intakeCountPath, {});
-    Object.assign(_intakeCounts, loaded);
-    _intakeCountsLoaded = true;
-  }
-  const next = (_intakeCounts[initial] || 0) + 1;
-  _intakeCounts[initial] = next;
-  _saveJsonAsync(_intakeCountPath, _intakeCounts);
-  return next;
+async function dbGetNextIntakeCounter(initial: string): Promise<number> {
+  const { getNextIntakeInitialCounter } = await import('../utils/letterCounters');
+  return getNextIntakeInitialCounter(initial);
+}
+
+async function dbGetNextLetterNum(userEmail: string): Promise<string> {
+  const { getNextLetterNumber } = await import('../utils/letterCounters');
+  const num = await getNextLetterNumber(userEmail);
+  return num.toString().padStart(4, '0');
+}
+
+async function dbGetNextSequentialNum(): Promise<string> {
+  const { getNextTenantLetterCounter } = await import('../utils/letterCounters');
+  const num = await getNextTenantLetterCounter(0);
+  return num.toString().padStart(4, '0');
 }
 
 // Helper function to validate date format (DD/MM/YYYY)
@@ -197,29 +169,13 @@ const formatStampDate = (date: Date): string => {
   return `${day}/${month}/${year}`;
 };
 
-function getNextLetterNumberForUser(userEmail: string): string {
-  if (!_userLetterCountsLoaded) {
-    const loaded = _loadJsonSync<Record<string, number>>(_userLetterCountPath, {});
-    Object.assign(_userLetterCounts, loaded);
-    _userLetterCountsLoaded = true;
-  }
-  const key = (userEmail || 'unknown').toLowerCase();
-  const next = (_userLetterCounts[key] || 0) + 1;
-  _userLetterCounts[key] = next;
-  _saveJsonAsync(_userLetterCountPath, _userLetterCounts);
-  return next.toString().padStart(4, '0');
+async function getNextLetterNumberForUser(userEmail: string): Promise<string> {
+  return dbGetNextLetterNum(userEmail);
 }
 
-function getSequentialNumber(): string {
-  if (!_seqCountLoaded) {
-    const data = _loadJsonSync<{ count: number }>(_seqCountPath, { count: 0 });
-    _seqCount = data.count || 0;
-    _seqCountLoaded = true;
-  }
-  _seqCount += 1;
-  _saveJsonAsync(_seqCountPath, { count: _seqCount });
-  return _seqCount.toString().padStart(4, '0');
-};
+async function getSequentialNumber(): Promise<string> {
+  return dbGetNextSequentialNum();
+}
 
 export const generateAdmissionLetter = async (req: Request, res: Response) => {
   try {
@@ -243,7 +199,7 @@ export const generateAdmissionLetter = async (req: Request, res: Response) => {
 
     const userEmail = getUserEmailHeader(req);
     const staffInitials = await getStaffInitialsForUser(userEmail);
-    const letterNumber = getNextLetterNumberForUser(userEmail);
+    const letterNumber = await getNextLetterNumberForUser(userEmail);
 
     let intakeInitial = 'X';
     try {
@@ -253,14 +209,14 @@ export const generateAdmissionLetter = async (req: Request, res: Response) => {
       console.warn('Could not fetch inquiry for intake initial:', e);
     }
 
-    const intakeSeq = getNextIntakeInitialCounter(intakeInitial);
+    const intakeSeq = await dbGetNextIntakeCounter(intakeInitial);
     const currentDate = new Date();
     const monthName = getMonthName(currentDate);
     const day = currentDate.getDate();
     const serialNumber = `${staffInitials}/L${letterNumber}/${monthName}${day}/${intakeInitial}${intakeSeq}`;
     const monthInitial = getMonthInitial(currentDate);
     const year = currentDate.getFullYear().toString().slice(-2);
-    const sequentialNumber = getSequentialNumber();
+    const sequentialNumber = await getSequentialNumber();
     const referenceCode = `JFCM/REG/${monthInitial}${sequentialNumber}/${year}`;
 
     // Best-effort status update; don't fail the whole request if the record
@@ -342,8 +298,8 @@ export const downloadAdmissionLetter = async (req: Request, res: Response) => {
 
     const intakeInitial = getIntakeInitial((inquiryRecord?.intakePeriod as any) ?? undefined);
     const effectiveCourse = String(course || (inquiryRecord?.programOfInterest ?? '') || '').trim();
-    const letterNumber = getNextLetterNumberForUser(userEmail);
-    const intakeSeq = getNextIntakeInitialCounter(intakeInitial);
+    const letterNumber = await getNextLetterNumberForUser(userEmail);
+    const intakeSeq = await dbGetNextIntakeCounter(intakeInitial);
     const intakeSegment = `${intakeInitial}${intakeSeq}`;
 
     const { buffer, referenceCode, serialNumber } = await generateAdmissionLetterBuffer({
@@ -395,7 +351,7 @@ async function generateAdmissionLetterBuffer({ name, phone, course, duration, ad
   const serialNumber = `${staffInitials}/L${letterNumber}/${monthName}${day}/${intakeSegment || 'X1'}`;
   const monthInitial = getMonthInitial(currentDate);
   const year = currentDate.getFullYear().toString().slice(-2);
-  const sequentialNumber = getSequentialNumber();
+  const sequentialNumber = await getSequentialNumber();
   const referenceCode = `JFCM/REG/${monthInitial}${sequentialNumber}/${year}`;
   const bgBytes = getBgBytes();
   const stampBytes = getStampBytes();
@@ -620,14 +576,15 @@ export const bulkGenerateAdmissionLetters = async (req: Request, res: Response) 
       )
     );
 
-    // Phase 2: Pre-compute counters synchronously — in-memory and instant, no race conditions
-    const prepared = inquiries.map((inq, i) => {
+    // Phase 2: Pre-compute counters — DB-backed, race-condition-free
+    const prepared: Array<{ inq: any; intakeSegment: string; letterNumber: string }> = [];
+    for (let i = 0; i < inquiries.length; i++) {
       const intakeInitial = getIntakeInitial((inquiryRecords[i]?.intakePeriod as any) ?? undefined);
-      const seq = getNextIntakeInitialCounter(intakeInitial);
+      const seq = await dbGetNextIntakeCounter(intakeInitial);
       const intakeSegment = `${intakeInitial}${seq}`;
-      const letterNumber = getNextLetterNumberForUser(userEmail);
-      return { inq, intakeSegment, letterNumber };
-    });
+      const letterNumber = await getNextLetterNumberForUser(userEmail);
+      prepared.push({ inq: inquiries[i], intakeSegment, letterNumber });
+    }
 
     // Phase 3: Generate PDFs in parallel batches of 5 (CPU-bound work parallelised)
     const CONCURRENCY = 5;

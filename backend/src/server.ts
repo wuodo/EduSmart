@@ -26,6 +26,7 @@ import accountabilityRoutes from './routes/accountability.routes';
 import emailMessagingRoutes from './routes/emailMessaging.routes';
 import { startScheduler } from './services/schedulerService';
 import { getInAppNotifications, clearInAppNotifications } from './services/notificationService';
+import { ensureLetterCountersTable } from './utils/letterCounters';
 import coursesRoutes from './routes/courses.routes';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
@@ -1385,10 +1386,11 @@ app.delete('/api/notifications/feed', (_req, res) => {
 
 // Start the server
 const PORT = process.env.PORT || 5000;
-app.listen(Number(PORT), '0.0.0.0', () => {
+app.listen(Number(PORT), '0.0.0.0', async () => {
   console.log(`EduSmart CRM Server running on port ${PORT}`);
   if (process.env.NODE_ENV === 'development') {
     console.log(`CORS enabled for: ${corsOrigins.join(', ')}`);
   }
+  await ensureLetterCountersTable().catch(e => console.warn('[startup] letter counters table:', e.message));
   startScheduler();
 });

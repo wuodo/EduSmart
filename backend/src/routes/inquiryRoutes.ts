@@ -500,32 +500,39 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const email = getEmail(req);
-    const { detail, kcseGrade, assignedTo, consentSms, consentEmail, consentWhatsapp, ...rest } = req.body;
+    const { createInquirySchema, whitelistUpdatePayload } = await import('../utils/inquiryValidation');
+
+    const parsed = createInquirySchema.safeParse(req.body);
+    if (!parsed.success) {
+      const first = parsed.error.errors[0];
+      return safeJson(res, { message: `Validation error: ${first.path.join('.')} - ${first.message}` }, 400);
+    }
+    const clean = parsed.data;
+
     const tenantId = await getTenantId(req as any);
     if (!tenantId) {
       return safeJson(res, { message: 'Tenant not found or inactive' }, 400);
     }
     const data: any = {
-      ...rest,
+      ...whitelistUpdatePayload(clean as any),
       createdBy: email || undefined,
       tenantId,
+      email: clean.email || null,
     };
-    // Prisma schema expects email; allow empty string if not provided
-    if (data.email === undefined || data.email === null) data.email = '';
-    if (kcseGrade) data.kcseGrade = kcseGrade;
-    if (detail && (detail.county && detail.town)) {
-      data.detail = { create: { county: detail.county, town: detail.town, idOrPassport: detail.idOrPassport || null } };
+    if (clean.kcseGrade) data.kcseGrade = clean.kcseGrade;
+    if (clean.county && clean.town) {
+      data.detail = { create: { county: clean.county, town: clean.town, idOrPassport: clean.idOrPassport || null } };
     }
 
     const tenantRow = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { crmSettings: true } });
     const crm = mergeTenantCrmSettings(tenantRow?.crmSettings);
-    if (typeof consentSms === 'boolean') data.consentSms = consentSms;
-    if (typeof consentEmail === 'boolean') data.consentEmail = consentEmail;
-    if (typeof consentWhatsapp === 'boolean') data.consentWhatsapp = consentWhatsapp;
+    data.consentSms = clean.consentSms ?? null;
+    data.consentEmail = clean.consentEmail ?? null;
+    data.consentWhatsapp = clean.consentWhatsapp ?? null;
 
-    const explicitAssign = assignedTo !== undefined && assignedTo !== null && String(assignedTo).trim() !== '';
+    const explicitAssign = clean.assignedTo !== undefined && clean.assignedTo !== null && String(clean.assignedTo).trim() !== '';
     if (explicitAssign) {
-      data.assignedTo = String(assignedTo).trim();
+      data.assignedTo = String(clean.assignedTo).trim();
     } else if (crm.roundRobinEmails && crm.roundRobinEmails.length > 0) {
       const { email: rrEmail, nextCursor } = pickNextRoundRobinEmail(crm.roundRobinEmails, crm.roundRobinCursor ?? 0);
       if (rrEmail) {
@@ -585,7 +592,7 @@ router.post('/', async (req, res) => {
     try {
       await auditLogger.createInquiry(req, {
         inquiryId: inquiry.id,
-        inquiryData: { ...rest, kcseGrade },
+        inquiryData: { fullName: data.fullName, phone: data.phone, email: data.email, kcseGrade: data.kcseGrade },
         tenantId
       });
     } catch (e) {
@@ -857,11 +864,24 @@ router.put('/:id', async (req, res) => {
       if (!existing) return safeJson(res, { message: 'Forbidden' }, 403);
     }
 
+    const { updateInquirySchema, whitelistUpdatePayload, validateStatusTransition } = await import('../utils/inquiryValidation');
+
+    const parsed = updateInquirySchema.safeParse(req.body);
+    if (!parsed.success) {
+      const first = parsed.error.errors[0];
+      return safeJson(res, { message: `Validation error: ${first.path.join('.')} - ${first.message}` }, 400);
+    }
+    const clean = parsed.data;
+
     const existingFull = await prisma.inquiry.findFirst({
       where: { id, tenantId },
       include: { _count: { select: { followups: true } } },
     });
-    let updatePayload: any = { ...req.body };
+    if (clean.status && existingFull) {
+      const error = validateStatusTransition(existingFull.status, clean.status);
+      if (error) return safeJson(res, { message: error }, 400);
+    }
+    let updatePayload: any = whitelistUpdatePayload(clean as any);
     if (existingFull) {
       const smart = await fetchSmartConfigMerged();
       if (smart.leadScoring.enabled) {
