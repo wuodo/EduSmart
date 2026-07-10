@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Building2, Users2, CreditCard, ShieldCheck, SlidersHorizontal, HardDrive,
-  BarChart3, Activity, KeyRound, Globe, Siren, ListChecks, Gavel, FileCheck2, LifeBuoy, Cog, Timer, Wrench, RotateCcw
+  BarChart3, Activity, KeyRound, Globe, Siren, ListChecks, Gavel, FileCheck2, LifeBuoy, Cog, Timer, Wrench, RotateCcw, UserCheck
 } from 'lucide-react';
 import React from 'react';
 import Topbar from './_components/Topbar';
@@ -18,7 +18,7 @@ const nav = [
   { href: '/cpanel/incidents', label: 'Incidents', icon: Siren },
   { href: '/cpanel/release', label: 'Release', icon: ListChecks },
   { href: '/cpanel/settings', label: 'Settings', icon: Cog },
-  { href: '/cpanel/accountability', label: 'Accountability', icon: BarChart3 },
+  { href: '/cpanel/accountability', label: 'Accountability', icon: UserCheck },
   { href: '/cpanel/backups', label: 'Backups', icon: HardDrive },
   { href: '/cpanel/restore-requests', label: 'Restore Requests', icon: RotateCcw },
   { href: '/cpanel/analytics', label: 'Analytics', icon: BarChart3 },
