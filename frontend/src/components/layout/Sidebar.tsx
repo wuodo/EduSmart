@@ -52,6 +52,7 @@ const navigation: NavigationItem[] = [
   { name: 'Campaigns', href: '/marketing/campaigns', icon: MegaphoneIcon },
   { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
   { name: 'Reports', href: '/reports', icon: DocumentTextIcon },
+  { name: 'Workflows', href: '/workflows', icon: ChartBarIcon },
   { name: 'Settings', href: '/settings', icon: CogIcon },
 ]
 

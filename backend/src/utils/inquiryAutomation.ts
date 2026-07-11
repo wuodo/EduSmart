@@ -22,9 +22,12 @@ export type AutomationAction =
 export type AutomationRule = {
   id: string;
   enabled: boolean;
+  order: number;
   trigger: AutomationTrigger;
   when?: AutomationWhen;
   action: AutomationAction;
+  /** Multi-step: additional actions executed in sequence after the primary action */
+  subsequentActions?: AutomationAction[];
 };
 
 export type AutomationLogEntry = {
@@ -45,49 +48,10 @@ export type AutomationConfig = {
 export const DEFAULT_AUTOMATION: AutomationConfig = {
   enabled: false,
   rules: [
-    {
-      id: 'hot-followup',
-      enabled: true,
-      trigger: 'inquiry_created',
-      when: { statusIn: ['hot'] },
-      action: {
-        type: 'create_followup',
-        followupType: 'call',
-        daysFromNow: 2,
-        notes: 'Automatic reminder: contact hot lead',
-      },
-    },
-    {
-      id: 'whatsapp-source',
-      enabled: false,
-      trigger: 'inquiry_created',
-      when: { sourceEquals: 'whatsapp' },
-      action: {
-        type: 'create_followup',
-        followupType: 'whatsapp',
-        daysFromNow: 1,
-        notes: 'Automatic reminder: WhatsApp source lead',
-      },
-    },
-    {
-      id: 'warm-to-hot-tags',
-      enabled: false,
-      trigger: 'inquiry_status_changed',
-      when: { fromStatus: 'warm', toStatus: 'hot' },
-      action: { type: 'add_tags', tags: ['priority-follow-up'] },
-    },
-    {
-      id: 'call-done-next',
-      enabled: false,
-      trigger: 'followup_completed',
-      when: { followupTypeEquals: 'call' },
-      action: {
-        type: 'create_followup',
-        followupType: 'whatsapp',
-        daysFromNow: 3,
-        notes: 'Automatic: follow up after completed call',
-      },
-    },
+    { id: 'hot-followup', enabled: true, order: 1, trigger: 'inquiry_created', when: { statusIn: ['hot'] }, action: { type: 'create_followup', followupType: 'call', daysFromNow: 2, notes: 'Automatic reminder: contact hot lead' } },
+    { id: 'whatsapp-source', enabled: false, order: 2, trigger: 'inquiry_created', when: { sourceEquals: 'whatsapp' }, action: { type: 'create_followup', followupType: 'whatsapp', daysFromNow: 1, notes: 'Automatic reminder: WhatsApp source lead' } },
+    { id: 'warm-to-hot-tags', enabled: false, order: 3, trigger: 'inquiry_status_changed', when: { fromStatus: 'warm', toStatus: 'hot' }, action: { type: 'add_tags', tags: ['priority-follow-up'] } },
+    { id: 'call-done-next', enabled: false, order: 4, trigger: 'followup_completed', when: { followupTypeEquals: 'call' }, action: { type: 'create_followup', followupType: 'whatsapp', daysFromNow: 3, notes: 'Automatic: follow up after completed call' } },
   ],
   log: [],
 };
@@ -290,48 +254,44 @@ export async function runAutomations(
   const entries: AutomationLogEntry[] = [];
   let live: InquiryAutomationContext = { ...ctx.inquiry };
 
-  for (const rule of auto.rules) {
+  const sortedRules = [...auto.rules].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+  for (const rule of sortedRules) {
     if (!rule.enabled || rule.trigger !== trigger) continue;
     if (!matchWhen(trigger, rule.when, { ...ctx, inquiry: live })) continue;
 
-    try {
-      const result = await executeAction(rule, live, tenantId);
-      entries.push({
-        ts: new Date().toISOString(),
-        ruleId: rule.id,
-        inquiryId: live.id,
-        action: result.actionLabel,
-        ok: result.ok,
-        message: result.message,
-      });
-      if (
-        result.ok &&
-        (rule.action.type === 'assign_inquiry' || rule.action.type === 'add_tags')
-      ) {
-        const row = await prisma.inquiry.findFirst({
-          where: { id: live.id, tenantId },
+    const actionsToExecute = [rule.action, ...(rule.subsequentActions || [])];
+    for (const action of actionsToExecute) {
+      try {
+        const ruleWithAction = { ...rule, action };
+        const result = await executeAction(ruleWithAction, live, tenantId);
+        entries.push({
+          ts: new Date().toISOString(),
+          ruleId: rule.id,
+          inquiryId: live.id,
+          action: result.actionLabel,
+          ok: result.ok,
+          message: result.message,
         });
-        if (row) {
-          live = {
-            id: row.id,
-            fullName: row.fullName,
-            status: row.status,
-            source: row.source,
-            assignedTo: row.assignedTo,
-            createdBy: row.createdBy,
-            leadTags: row.leadTags as unknown,
-          };
+        if (
+          result.ok &&
+          (action.type === 'assign_inquiry' || action.type === 'add_tags')
+        ) {
+          const row = await prisma.inquiry.findFirst({ where: { id: live.id, tenantId } });
+          if (row) {
+            live = {
+              id: row.id, fullName: row.fullName, status: row.status,
+              source: row.source, assignedTo: row.assignedTo,
+              createdBy: row.createdBy, leadTags: row.leadTags as unknown,
+            };
+          }
         }
+      } catch (e: any) {
+        entries.push({
+          ts: new Date().toISOString(), ruleId: rule.id,
+          inquiryId: live.id, action: (action as any)?.type || 'error',
+          ok: false, message: e?.message || String(e),
+        });
       }
-    } catch (e: any) {
-      entries.push({
-        ts: new Date().toISOString(),
-        ruleId: rule.id,
-        inquiryId: live.id,
-        action: (rule.action as any)?.type || 'error',
-        ok: false,
-        message: e?.message || String(e),
-      });
     }
   }
 
