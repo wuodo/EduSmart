@@ -38,14 +38,20 @@ async function fetchData(endpoint: string, request: NextRequest, owner?: string 
   const url = new URL(`${BACKEND}/api/${endpoint}`)
   if (owner) url.searchParams.set('owner', owner)
   const headers = forwardHeaders(request, baseHeaders)
-  console.log(`Reports API - Fetching ${endpoint} with headers:`, headers, 'URL:', url.toString())
   try {
     const res = await fetch(url.toString(), { headers, cache: 'no-store' })
-    if (!res.ok) return [] as any[]
+    if (!res.ok) return []
     const data = await res.json()
-    return data
+    if (Array.isArray(data)) return data
+    if (data?.inquiries && Array.isArray(data.inquiries)) return data.inquiries
+    if (data?.followups && Array.isArray(data.followups)) return data.followups
+    if (data?.tasks && Array.isArray(data.tasks)) return data.tasks
+    if (data?.users && Array.isArray(data.users)) return data.users
+    if (data?.data && Array.isArray(data.data)) return data.data
+    if (data?.results && Array.isArray(data.results)) return data.results
+    return []
   } catch {
-    return [] as any[]
+    return []
   }
 }
 
