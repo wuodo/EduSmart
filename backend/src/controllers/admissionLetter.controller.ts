@@ -201,9 +201,10 @@ export const generateAdmissionLetter = async (req: Request, res: Response) => {
     const staffInitials = await getStaffInitialsForUser(userEmail);
     const letterNumber = await getNextLetterNumberForUser(userEmail);
 
+    let inquiryRecord: any = null;
     let intakeInitial = 'X';
     try {
-      const inquiryRecord = await prisma.inquiry.findFirst({ where: { id: numericInquiryId, tenantId } });
+      inquiryRecord = await prisma.inquiry.findFirst({ where: { id: numericInquiryId, tenantId } });
       intakeInitial = getIntakeInitial(inquiryRecord?.intakePeriod as any);
     } catch (e) {
       console.warn('Could not fetch inquiry for intake initial:', e);
@@ -241,6 +242,29 @@ export const generateAdmissionLetter = async (req: Request, res: Response) => {
         console.warn('Error updating inquiry letter status:', e);
       }
     }
+
+    // Auto-send letter via email if tenant has feature enabled
+    try {
+      const { mergeTenantCrmSettings } = await import('../utils/tenantCrmSettings');
+      const tenantRow = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { crmSettings: true } });
+      const tSettings = mergeTenantCrmSettings(tenantRow?.crmSettings);
+      if (tSettings.featureToggles?.autoSendLetters !== false && inquiryRecord?.email) {
+        const { sendTenantEmail } = await import('../utils/tenantEmailService');
+        const letterResult = await generateAdmissionLetterBuffer({
+          name: inquiryRecord.fullName, phone: inquiryRecord.phone,
+          course: req.body.course || inquiryRecord?.programOfInterest || '', duration: req.body.duration, admissionDate,
+          staffInitials, intakeSegment: `${intakeInitial}${intakeSeq}`, letterNumber, templateId,
+        });
+        await sendTenantEmail(
+          inquiryRecord.email,
+          `Your Admission Letter - ${inquiryRecord.fullName}`,
+          `Dear ${inquiryRecord.fullName},\n\nYour admission letter is ready. Reference: ${referenceCode}\n\nPlease find your admission letter attached.\n\nBest regards,\nAdmissions Office`,
+          `<p>Dear ${inquiryRecord.fullName},</p><p>Your admission letter is ready.</p><p>Reference: <strong>${referenceCode}</strong></p><p>Please find your admission letter attached.</p><p>Best regards,<br/>Admissions Office</p>`,
+          tenantId,
+          [{ filename: `admission-letter-${inquiryRecord.fullName.replace(/\s+/g, '-')}.pdf`, content: letterResult.buffer, contentType: 'application/pdf' }]
+        );
+      }
+    } catch (e: any) { console.warn('[auto-send] Failed:', e.message); }
 
     if (res.headersSent) return;
     return res.json({ success: true, referenceCode, serialNumber, templateId: templateId || 'auto' });

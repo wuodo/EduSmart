@@ -12,6 +12,8 @@ export default function SmtpPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
   const [config, setConfig] = useState<SmtpConfig>({ host: '', port: 587, secure: false, user: '', pass: '', from: '' });
+  const [autoSend, setAutoSend] = useState(true);
+  const [enableESign, setEnableESign] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,9 @@ export default function SmtpPage() {
     fetch(`/api/proxy/cpanel/tenants/${selectedTenantId}/smtp`).then(r => r.json()).then(d => {
       const smtp = d.smtp || d.data || {};
       setConfig({ host: smtp.host || '', port: smtp.port || 587, secure: smtp.secure || false, user: smtp.user || '', pass: '', from: smtp.from || '' });
+      const toggles = d.toggles || {};
+      if (toggles.autoSendLetters !== undefined) setAutoSend(toggles.autoSendLetters);
+      if (toggles.enableESignature !== undefined) setEnableESign(toggles.enableESignature);
     }).catch(() => {});
   }, [selectedTenantId]);
 
@@ -38,6 +43,7 @@ export default function SmtpPage() {
     setSaving(true); setMsg('');
     const body: any = { host: config.host, port: config.port, secure: config.secure, user: config.user, from: config.from };
     if (config.pass) body.pass = config.pass;
+    body.featureToggles = { autoSendLetters: autoSend, enableESignature: enableESign };
     const r = await fetch(`/api/proxy/cpanel/tenants/${selectedTenantId}/smtp`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     });
@@ -90,8 +96,18 @@ export default function SmtpPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">From Address</label>
             <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={config.from} onChange={e => setConfig({ ...config, from: e.target.value })} placeholder="noreply@domain.com" />
           </div>
+          <hr className="border-gray-200" />
+          <h3 className="text-sm font-semibold text-gray-800">Feature Toggles</h3>
+          <label className="flex items-center gap-3 text-sm">
+            <input type="checkbox" checked={autoSend} onChange={e => setAutoSend(e.target.checked)} className="rounded" />
+            <span>Auto-send admission letters via email when generated</span>
+          </label>
+          <label className="flex items-center gap-3 text-sm">
+            <input type="checkbox" checked={enableESign} onChange={e => setEnableESign(e.target.checked)} className="rounded" />
+            <span>Enable e-signature signing on admission letters (coming soon)</span>
+          </label>
           <button onClick={save} disabled={saving} className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 disabled:opacity-50">
-            {saving ? 'Saving...' : 'Save SMTP Settings'}
+            {saving ? 'Saving...' : 'Save Settings'}
           </button>
           {msg && <p className={`text-sm ${msg.includes('Error') ? 'text-red-600' : 'text-green-600'}`}>{msg}</p>}
         </div>

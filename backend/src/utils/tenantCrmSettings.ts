@@ -9,6 +9,11 @@ export type TenantCrmWebhook = {
   active: boolean
 }
 
+export type TenantFeatureToggles = {
+  autoSendLetters?: boolean;
+  enableESignature?: boolean;
+}
+
 export type TenantSmtpConfig = {
   host: string
   port: number
@@ -44,6 +49,8 @@ export type TenantCrmSettings = {
   scheduledJobsMeta?: Array<{ id: string; label: string; lastRunAt?: string; nextRunAt?: string; status?: string }>
   /** Per-tenant SMTP configuration for sending emails as this tenant */
   smtpConfig?: TenantSmtpConfig
+  /** Feature toggles for auto-send, e-signature, etc. */
+  featureToggles?: TenantFeatureToggles
 }
 
 export function mergeTenantCrmSettings(raw: unknown): TenantCrmSettings {
@@ -57,6 +64,7 @@ export function mergeTenantCrmSettings(raw: unknown): TenantCrmSettings {
     integrations: r.integrations && typeof r.integrations === 'object' ? r.integrations : {},
     scheduledJobsMeta: Array.isArray(r.scheduledJobsMeta) ? r.scheduledJobsMeta : [],
     smtpConfig: r.smtpConfig && typeof r.smtpConfig === 'object' ? r.smtpConfig as TenantSmtpConfig : undefined,
+    featureToggles: r.featureToggles && typeof r.featureToggles === 'object' ? r.featureToggles as TenantFeatureToggles : undefined,
   }
 }
 

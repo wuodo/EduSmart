@@ -84,6 +84,7 @@ export default function DashboardLayout({
   const [userRole, setUserRole] = useState('');
   const [dateTime, setDateTime] = useState(new Date());
   const [showProfile, setShowProfile] = useState(false);
+  const [briefing, setBriefing] = useState<any>(null);
   const [profileName, setProfileName] = useState('');
   const [profileGender, setProfileGender] = useState('');
   const [profilePhone, setProfilePhone] = useState('');
@@ -198,6 +199,7 @@ export default function DashboardLayout({
       setUserName(localStorage.getItem('userName') || '');
       setUserRole(localStorage.getItem('userRole') || '');
     }
+    fetch('/api/proxy/briefing').then(r => r.json()).then(d => { if (d.briefing) setBriefing(d.briefing); }).catch(() => {});
     const interval = setInterval(() => setDateTime(new Date()), 1000);
 
     // Helper: skip poll when tab is hidden to avoid piling up requests
@@ -490,54 +492,26 @@ export default function DashboardLayout({
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pt-5 min-w-0 content-responsive flex flex-col">
-          {showCrmBanner && (
-            <div className="mb-4 rounded-xl border border-amber-300/70 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/35 px-4 py-3 flex flex-col gap-2 shadow-sm">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="text-xs font-extrabold uppercase tracking-widest text-amber-900 dark:text-amber-200">
-                    Today’s focus
+           {briefing && (
+            <div className="mb-4 border border-teal-200 bg-gradient-to-r from-teal-50 to-white dark:from-teal-950/30 dark:to-gray-900 px-4 py-3 flex flex-col gap-2 shadow-sm">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="text-sm font-semibold text-teal-800 dark:text-teal-200 whitespace-nowrap">{briefing.greeting}!</span>
+                  <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
+                    <span><strong className="text-teal-700">{briefing.hotLeads}</strong> hot</span>
+                    <span><strong className="text-amber-700">{briefing.overdueFollowups}</strong> overdue</span>
+                    <span><strong className="text-blue-700">{briefing.newToday}</strong> new today</span>
+                    <span><strong className="text-green-700">{briefing.conversionRate}%</strong> conv.</span>
+                    <span className="hidden sm:inline"><strong className="text-purple-700">{briefing.score}</strong> focus score</span>
                   </div>
-                  <p className="text-sm text-gray-900 dark:text-gray-100 mt-1 leading-snug">
-                    Start with <span className="font-semibold">overdue follow-ups</span> and <span className="font-semibold">new leads</span> waiting too long for a first contact.
-                  </p>
+                  <span className="text-xs text-gray-500 italic">{briefing.priorityMessage}</span>
                 </div>
-                <button
-                  type="button"
-                  className="text-xs font-semibold text-amber-900 dark:text-amber-200 hover:underline shrink-0"
-                  onClick={() => {
-                    try {
-                      localStorage.setItem(FOCUS_BANNER_DISMISS_KEY, '1')
-                    } catch {
-                      /* ignore */
-                    }
-                    setShowCrmBanner(false)
-                  }}
-                >
-                  Dismiss
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => router.push('/followups?focus=overdue')}
-                  className="rounded-md bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 text-xs font-semibold"
-                >
-                  Open overdue follow-ups
-                </button>
-                <button
-                  type="button"
-                  onClick={() => router.push('/inquiries?focus=first-contact')}
-                  className="rounded-md border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-900 hover:bg-amber-50 dark:hover:bg-amber-900/20 px-3 py-2 text-xs font-semibold text-amber-900 dark:text-amber-200"
-                >
-                  Open leads needing first contact
-                </button>
-                <button
-                  type="button"
-                  onClick={() => router.push('/pipeline')}
-                  className="rounded-md border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-900 hover:bg-amber-50 dark:hover:bg-amber-900/20 px-3 py-2 text-xs font-semibold text-amber-900 dark:text-amber-200"
-                >
-                  Open pipeline
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  {briefing.overdueFollowups > 0 && (
+                    <button onClick={() => router.push('/followups')} className="px-2 py-1 text-[11px] font-semibold bg-amber-600 text-white hover:bg-amber-700">View Overdue</button>
+                  )}
+                  <button onClick={() => setBriefing(null)} className="text-gray-400 hover:text-gray-600 text-xs px-1">✕</button>
+                </div>
               </div>
             </div>
           )}

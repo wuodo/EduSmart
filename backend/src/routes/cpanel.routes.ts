@@ -487,7 +487,7 @@ router.get('/tenants/:id/smtp', async (req, res) => {
     if (!tenant) return safeJson(res, { error: 'Tenant not found' }, 404);
     const { mergeTenantCrmSettings: m1 } = require('./../utils/tenantCrmSettings');
     const settings = m1(tenant.crmSettings);
-    return safeJson(res, { success: true, smtp: settings.smtpConfig || {} });
+    return safeJson(res, { success: true, smtp: settings.smtpConfig || {}, toggles: settings.featureToggles || {} });
   } catch (e: any) {
     return safeJson(res, { error: e.message }, 500);
   }
@@ -500,9 +500,15 @@ router.put('/tenants/:id/smtp', async (req, res) => {
     const existing = await prisma.tenant.findUnique({ where: { id }, select: { crmSettings: true } });
     if (!existing) return safeJson(res, { error: 'Tenant not found' }, 404);
     const prev = m.mergeTenantCrmSettings(existing.crmSettings);
-    const smtpInput = req.body && typeof req.body === 'object' ? req.body : {};
+    const smtpInput = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, unknown>;
+    const togglesInput = smtpInput.featureToggles as Record<string, unknown> | undefined;
+    delete smtpInput.featureToggles;
     if (prev.smtpConfig && !smtpInput.pass) smtpInput.pass = prev.smtpConfig.pass;
-    const merged = m.mergeTenantCrmSettings({ ...prev, smtpConfig: smtpInput });
+    const merged = m.mergeTenantCrmSettings({
+      ...prev,
+      smtpConfig: Object.keys(smtpInput).length > 0 ? smtpInput : prev.smtpConfig,
+      featureToggles: togglesInput ? { ...prev.featureToggles, ...togglesInput } : prev.featureToggles,
+    });
     const updated = await prisma.tenant.update({
       where: { id },
       data: { crmSettings: merged as any },
@@ -510,7 +516,7 @@ router.put('/tenants/:id/smtp', async (req, res) => {
     });
     const result = m.mergeTenantCrmSettings(updated.crmSettings);
     await auditLogger.custom(req, 'update_tenant_smtp', 'cpanel', { tenantId: id });
-    return safeJson(res, { success: true, smtp: result.smtpConfig || {} });
+    return safeJson(res, { success: true, smtp: result.smtpConfig || {}, toggles: result.featureToggles || {} });
   } catch (e: any) {
     return safeJson(res, { error: e.message }, 500);
   }
