@@ -1,5 +1,6 @@
 import express from 'express';
 import { addMessage, getMessages, getMessageById, markAsRead, markAsArchived, markAsDeleted, getUnreadCount } from '../utils/emailMessageStore';
+import { getReplies, addReply, updateReply, deleteReply } from '../utils/quickReplyStore';
 import { sendTenantEmail } from '../utils/tenantEmailService';
 import prisma from '../lib/prisma';
 
@@ -160,6 +161,31 @@ router.post('/inbound', async (req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// Quick reply templates
+router.get('/templates', (req, res) => {
+  const tenant = (req as any).tenant as { id: number } | undefined;
+  res.json({ success: true, templates: getReplies(tenant?.id) });
+});
+
+router.post('/templates', (req, res) => {
+  const tenant = (req as any).tenant as { id: number } | undefined;
+  const { title, body } = req.body || {};
+  if (!title || !body) { res.status(400).json({ error: 'title and body required' }); return; }
+  res.json({ success: true, template: addReply(title, body, tenant?.id) });
+});
+
+router.put('/templates/:id', (req, res) => {
+  const { title, body } = req.body || {};
+  const updated = updateReply(req.params.id, title, body);
+  if (!updated) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json({ success: true, template: updated });
+});
+
+router.delete('/templates/:id', (req, res) => {
+  if (deleteReply(req.params.id)) res.json({ success: true });
+  else res.status(404).json({ error: 'Not found' });
 });
 
 export default router;

@@ -22,6 +22,7 @@ export default function InboxPage() {
   const [composeSent, setComposeSent] = useState(false);
   const [composeError, setComposeError] = useState('');
   const [search, setSearch] = useState('');
+  const [templates, setTemplates] = useState<{ id: string; title: string; body: string }[]>([]);
 
   const fetchMessages = useCallback(() => {
     setLoading(true);
@@ -51,6 +52,7 @@ export default function InboxPage() {
       if (mode === 'reply') { setComposeTo(msg.from); setComposeSubject(`Re: ${msg.subject}`); setComposeBody(`\n\n--- Original message ---\nFrom: ${msg.from}\nDate: ${new Date(msg.createdAt).toLocaleString()}\nSubject: ${msg.subject}\n\n${msg.body}`); }
       else { setComposeTo(''); setComposeSubject(`Fwd: ${msg.subject}`); setComposeBody(`\n\n--- Forwarded message ---\nFrom: ${msg.from}\nDate: ${new Date(msg.createdAt).toLocaleString()}\nSubject: ${msg.subject}\nTo: ${msg.to}\n\n${msg.body}`); }
     }
+    fetch('/api/proxy/email/templates').then(r => r.json()).then(d => { if (d.templates) setTemplates(d.templates); }).catch(() => {});
     setComposeOpen(true);
   };
 
@@ -185,6 +187,19 @@ export default function InboxPage() {
                 <div className="px-4 py-3 space-y-3 flex-1 overflow-y-auto">
                   <div><label className="text-xs text-gray-500 block mb-0.5">To</label><input className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" value={composeTo} onChange={e => setComposeTo(e.target.value)} placeholder="email@example.com" /></div>
                   <div><label className="text-xs text-gray-500 block mb-0.5">Subject</label><input className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" value={composeSubject} onChange={e => setComposeSubject(e.target.value)} /></div>
+                  <div><label className="text-xs text-gray-500 block mb-0.5">Quick Templates</label>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {templates.map(t => (
+                        <button key={t.id} onClick={() => setComposeBody(composeBody + '\n' + t.body)} className="px-2 py-1 text-[10px] border border-gray-300 hover:bg-gray-100">{t.title}</button>
+                      ))}
+                      <button onClick={async () => {
+                        const title = prompt('Template name:'); if (!title) return;
+                        const body = prompt('Template body:'); if (!body) return;
+                        await fetch('/api/proxy/email/templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, body }) });
+                        fetch('/api/proxy/email/templates').then(r => r.json()).then(d => { if (d.templates) setTemplates(d.templates); }).catch(() => {});
+                      }} className="px-2 py-1 text-[10px] border border-dashed border-gray-400 text-gray-500 hover:bg-gray-50">+ Add</button>
+                    </div>
+                  </div>
                   <div><label className="text-xs text-gray-500 block mb-0.5">Message</label><textarea className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm resize-none" rows={10} value={composeBody} onChange={e => setComposeBody(e.target.value)} /></div>
                   {composeError && <p className="text-xs text-red-600 bg-red-50 p-2 rounded">{composeError}</p>}
                 </div>
