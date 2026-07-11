@@ -250,6 +250,7 @@ export const generateAdmissionLetter = async (req: Request, res: Response) => {
       const tSettings = mergeTenantCrmSettings(tenantRow?.crmSettings);
       if (tSettings.featureToggles?.autoSendLetters !== false && inquiryRecord?.email) {
         const { sendTenantEmail } = await import('../utils/tenantEmailService');
+        await prisma.inquiry.update({ where: { id: numericInquiryId, tenantId } as any, data: { letterStatus: 'Sending' } }).catch(() => {});
         const letterResult = await generateAdmissionLetterBuffer({
           name: inquiryRecord.fullName, phone: inquiryRecord.phone,
           course: req.body.course || inquiryRecord?.programOfInterest || '', duration: req.body.duration, admissionDate,
@@ -263,6 +264,7 @@ export const generateAdmissionLetter = async (req: Request, res: Response) => {
           tenantId,
           [{ filename: `admission-letter-${inquiryRecord.fullName.replace(/\s+/g, '-')}.pdf`, content: letterResult.buffer, contentType: 'application/pdf' }]
         );
+        await prisma.inquiry.update({ where: { id: numericInquiryId, tenantId } as any, data: { letterStatus: 'Sent' } }).catch(() => {});
       }
     } catch (e: any) { console.warn('[auto-send] Failed:', e.message); }
 

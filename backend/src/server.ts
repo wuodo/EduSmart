@@ -14,6 +14,7 @@ import auditLogsRoutes from './routes/auditLogs.routes';
 import { listAuditLogs, createAuditLog, clearAuditLogs } from './controllers/auditLog.controller';
 import chatRoutes from './routes/chat.routes';
 import { calendarRoutes } from './routes/calendar.routes';
+import esignRoutes from './routes/esign.routes';
 import { resolveTenant } from './middleware/tenantMiddleware';
 import tenantAdminRoutes from './routes/tenant.routes';
 import prisma from './lib/prisma';
@@ -824,6 +825,7 @@ app.use('/api/calendar', calendarRoutes);
 app.use('/api/ask-ai', askAiRoutes);
 app.use('/api/courses', coursesRoutes);
 app.use('/api/tenants', tenantAdminRoutes);
+app.use('/api/esign', esignRoutes);
 app.use('/api/email', emailMessagingRoutes);
 app.use('/api', permissionsRoutes);
 
