@@ -57,20 +57,22 @@ export default function AdmissionLettersPage() {
     'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40'
   const selectClass = inputClass
 
-  // Compute stats from real inquiry data (always accurate for current tenant/owner scope)
-  const counts: Record<string, number> = { 'Not Generated': 0, Generated: 0, Downloaded: 0, Sent: 0, Acknowledged: 0 }
+  // Compute stats from real inquiry data — includes all possible letter statuses
+  const counts: Record<string, number> = {}
   for (const i of inquiries as any[]) {
     const s = String(i?.letterStatus || 'Not Generated')
     counts[s] = (counts[s] || 0) + 1
   }
+  // Ensure all known statuses appear in the cards (even if count is 0)
+  const allStatuses = ['Not Generated', 'Generated', 'Sending', 'Sent', 'Downloaded', 'Acknowledged', 'Signed']
   const total = inquiries.length
   const cards = [
     { label: 'Total', value: total, color: 'bg-primary text-white' },
-    { label: 'Not Generated', value: counts['Not Generated'] || 0, color: 'bg-gray-600 text-white' },
-    { label: 'Generated', value: counts['Generated'] || 0, color: 'bg-blue-600 text-white' },
-    { label: 'Downloaded', value: counts['Downloaded'] || 0, color: 'bg-emerald-600 text-white' },
-    { label: 'Sent', value: counts['Sent'] || 0, color: 'bg-amber-600 text-white' },
-    { label: 'Acknowledged', value: counts['Acknowledged'] || 0, color: 'bg-green-700 text-white' },
+    ...allStatuses.map(s => ({
+      label: s,
+      value: counts[s] || 0,
+      color: s === 'Not Generated' ? 'bg-gray-600 text-white' : s === 'Generated' ? 'bg-blue-600 text-white' : s === 'Sending' ? 'bg-sky-500 text-white' : s === 'Sent' ? 'bg-amber-600 text-white' : s === 'Downloaded' ? 'bg-emerald-600 text-white' : s === 'Acknowledged' ? 'bg-green-700 text-white' : s === 'Signed' ? 'bg-purple-600 text-white' : 'bg-gray-500 text-white',
+    })),
   ]
 
   const filteredInquiries = inquiries.filter((i: any) => {

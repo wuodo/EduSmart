@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { saveAs } from 'file-saver'
 import Papa from 'papaparse'
-import { ArrowDownTrayIcon, DocumentIcon, TrashIcon, EyeIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline'
+import { ArrowDownTrayIcon, DocumentIcon, TrashIcon, EyeIcon, EllipsisVerticalIcon, ShareIcon } from '@heroicons/react/24/outline'
 import { API_BASE_URL, WEB_API } from '@/utils/api';
 import { FaWhatsapp } from 'react-icons/fa'
 import EmailComposeModal from '../email/EmailComposeModal'
@@ -129,7 +129,10 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
     load()
   }, [])
   const [loading, setLoading] = useState(false)
-  const [admissionDate, setAdmissionDate] = useState('')
+  const [admissionDate, setAdmissionDate] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() + 30);
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  })
   const [editForm, setEditForm] = useState<any>({})
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const isAdmissionsOfficer = userRole === 'admissions_officer'
@@ -486,7 +489,7 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
         </div>
 
         <div className="min-w-[220px]">
-          <label className="block text-[12px] font-semibold text-gray-700 mb-1">Template</label>
+          <label className="block text-[12px] font-semibold text-gray-700 mb-1">Template <span className="text-gray-400 font-normal text-[10px]">(controls letter body style)</span></label>
           <select
             className="w-full px-3 py-2 border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 text-[13px]"
             value={templateId}
@@ -709,7 +712,7 @@ export default function AdmissionLetterList({ inquiries, onRefresh }: Props) {
                                   }
                                 }}
                               >
-                                <FaWhatsappAny className="h-4 w-4" /> Share PDF (Web Share)
+                                <ShareIcon className="h-4 w-4 text-indigo-600" /> Share PDF (Web Share)
                               </button>
                             </div>
                             <div className="px-2 py-1">
