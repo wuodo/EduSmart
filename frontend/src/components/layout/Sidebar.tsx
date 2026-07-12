@@ -172,9 +172,9 @@ export default function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
       
       {/* Sidebar */}
       <div className={`
-        fixed lg:static inset-y-0 left-0 z-50 ${collapsed ? 'w-14' : 'w-48'} transform transition-all duration-300 ease-in-out h-full
+        fixed lg:sticky inset-y-0 left-0 z-50 ${collapsed ? 'w-14' : 'w-48'} transform transition-all duration-300 ease-in-out h-screen
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        flex flex-col border-r border-white/10 sidebar-static
+        flex flex-col border-r border-white/10 sidebar-static overflow-y-auto
       `}
       style={{ backgroundColor: 'var(--brand-sidebar-bg, var(--brand-primary, #003366))' }}
       >
