@@ -123,6 +123,11 @@ export default function CalendarPage() {
 
   const viewLabel = view === 'month' ? format(currentDate, 'MMMM yyyy') : view === 'week' ? `${format(weekDays[0], 'MMM d')} - ${format(weekDays[6], 'MMM d, yyyy')}` : format(currentDate, 'EEEE, MMMM d, yyyy');
 
+  const todayEvents = events.filter(e => isSameDay(parseISO(e.date), new Date()));
+  const overdue = events.filter(e => e.status === 'pending' && new Date(e.date) < new Date());
+  const pending = events.filter(e => e.status === 'pending');
+  const completed = events.filter(e => e.status === 'completed');
+
   const filteredEvents = events.filter(e => {
     if (search) { const q = search.toLowerCase(); if (!e.title.toLowerCase().includes(q) && !(e.notes || '').toLowerCase().includes(q)) return false; }
     if (filterType !== 'all' && e.subType !== filterType && e.type !== filterType) return false;
@@ -131,6 +136,15 @@ export default function CalendarPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
+      <div className="mb-3 text-xs text-gray-500 border-l-2 border-teal-400 pl-3 py-1 bg-teal-50/30">
+        <strong>Calendar</strong> — View and manage all follow-ups and tasks in one place. Schedule new follow-ups, track overdue items, and stay on top of daily priorities. Click any date to create a follow-up, drag events to reschedule.
+      </div>
+      <div className="grid grid-cols-4 gap-3 mb-3">
+        <div className="bg-white border p-2.5"><div className="text-lg font-bold text-teal-600">{todayEvents.length}</div><div className="text-[10px] text-gray-500">Today</div></div>
+        <div className="bg-white border p-2.5"><div className="text-lg font-bold text-amber-600">{overdue.length}</div><div className="text-[10px] text-gray-500">Overdue</div></div>
+        <div className="bg-white border p-2.5"><div className="text-lg font-bold text-blue-600">{pending.length}</div><div className="text-[10px] text-gray-500">Pending</div></div>
+        <div className="bg-white border p-2.5"><div className="text-lg font-bold text-green-600">{completed.length}</div><div className="text-[10px] text-gray-500">Completed</div></div>
+      </div>
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-gray-100 rounded"><ChevronLeft size={18} /></button>
