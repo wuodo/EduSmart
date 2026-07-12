@@ -361,7 +361,7 @@ export default function RegistrationsList({ registrations, inquiries, ownerLabel
               <div className="text-center py-8 text-gray-500">
                 No paid registrations found.
               </div>
-            ) : (
+            ) : (<>
               <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-500">
                 <label className="flex items-center gap-1.5 cursor-pointer">
                   <input type="checkbox" checked={showAllColumns} onChange={e => setShowAllColumns(e.target.checked)} className="rounded" />
@@ -484,7 +484,7 @@ export default function RegistrationsList({ registrations, inquiries, ownerLabel
                   })}
                 </tbody>
               </table>
-            )}
+            </>)}
           </div>
         </div>
       </div>

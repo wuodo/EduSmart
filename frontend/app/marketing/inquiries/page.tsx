@@ -135,7 +135,7 @@ export default function InquiriesPage() {
             .filter(u => (u.role === 'admissions_officer' || u.role === 'senior_staff' || u.role === 'admin'))
             // Exclude global seed/super-admin user from owner lists
             .filter(u => !/^\s*sadmin@edusmart\.com\s*$/i.test(String(u?.email || '')))
-            .map(u => ({ label: (u.name && String(u.name).trim()) ? `${String(u.name)} (${String(u.email)})` : String(u.email), value: String(u.email) }))
+            .map(u => ({ label: (u.name && String(u.name).trim()) ? String(u.name) : `User #${u.id || u.email.slice(0, 6)}`, value: String(u.email) }))
           setOwners(list)
         })
         .catch(() => setOwners([]))
