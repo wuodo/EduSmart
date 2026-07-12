@@ -40,6 +40,7 @@ export default function QaReviewPage() {
   }, [filter, typeFilter]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { if (!loading && items.length === 0) { autoFlag(); } }, [loading]);
 
   const autoFlag = async () => {
     await fetch('/api/proxy/qa/auto-flag', { method: 'POST' });
