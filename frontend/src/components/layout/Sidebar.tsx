@@ -45,14 +45,15 @@ const navigation: NavigationItem[] = [
   { name: 'QA review', href: '/qa-review', icon: ClipboardDocumentCheckIcon },
   { name: 'Follow-ups', href: '/followups', icon: CalendarIcon },
   { name: 'Calendar', href: '/calendar', icon: CalendarDaysIcon },
-  { name: 'Email', href: '/email/inbox', icon: EnvelopeIcon },
   { name: 'Admission Letters', href: '/admission-letters', icon: DocumentTextIcon },
   { name: 'Registrations', href: '/registrations', icon: DocumentTextIcon },
   { name: 'Courses', href: '/courses', icon: DocumentTextIcon },
   { name: 'Campaigns', href: '/marketing/campaigns', icon: MegaphoneIcon },
   { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
   { name: 'Reports', href: '/reports', icon: DocumentTextIcon },
+  { name: 'Email', href: '/email/inbox', icon: EnvelopeIcon },
   { name: 'Workflows', href: '/workflows', icon: ChartBarIcon },
+  { name: 'Accountability', href: '/accountability', icon: ChartBarIcon },
   { name: 'Settings', href: '/settings', icon: CogIcon },
 ]
 
