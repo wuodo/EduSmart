@@ -140,10 +140,10 @@ export default function CalendarPage() {
         <strong>Calendar</strong> — View and manage all follow-ups and tasks in one place. Schedule new follow-ups, track overdue items, and stay on top of daily priorities. Click any date to create a follow-up, drag events to reschedule.
       </div>
       <div className="grid grid-cols-4 gap-3 mb-3">
-        <div className="bg-teal-600 text-white p-2.5"><div className="text-lg font-bold">{todayEvents.length}</div><div className="text-[10px] text-white/80 uppercase tracking-wide">Today</div></div>
-        <div className="bg-amber-600 text-white p-2.5"><div className="text-lg font-bold">{overdue.length}</div><div className="text-[10px] text-white/80 uppercase tracking-wide">Overdue</div></div>
-        <div className="bg-blue-600 text-white p-2.5"><div className="text-lg font-bold">{pending.length}</div><div className="text-[10px] text-white/80 uppercase tracking-wide">Pending</div></div>
-        <div className="bg-green-600 text-white p-2.5"><div className="text-lg font-bold">{completed.length}</div><div className="text-[10px] text-white/80 uppercase tracking-wide">Completed</div></div>
+        <div className="bg-teal-600 text-white p-2.5 card-hover"><div className="text-lg font-bold">{todayEvents.length}</div><div className="text-[10px] text-white/80 uppercase tracking-wide">Today</div></div>
+        <div className="bg-amber-600 text-white p-2.5 card-hover"><div className="text-lg font-bold">{overdue.length}</div><div className="text-[10px] text-white/80 uppercase tracking-wide">Overdue</div></div>
+        <div className="bg-blue-600 text-white p-2.5 card-hover"><div className="text-lg font-bold">{pending.length}</div><div className="text-[10px] text-white/80 uppercase tracking-wide">Pending</div></div>
+        <div className="bg-green-600 text-white p-2.5 card-hover"><div className="text-lg font-bold">{completed.length}</div><div className="text-[10px] text-white/80 uppercase tracking-wide">Completed</div></div>
       </div>
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div className="flex items-center gap-2">

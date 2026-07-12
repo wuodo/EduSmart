@@ -98,7 +98,7 @@ export default function AdmissionLettersPage() {
 
       <div className="flex overflow-x-auto gap-2 pb-2 mb-3">
         {cards.map(card => (
-          <div key={card.label} className={`shadow-sm ring-1 ring-black/5 p-2 px-3 flex flex-col items-center shrink-0 ${card.color}`}>
+          <div key={card.label} className={`shadow-sm ring-1 ring-black/5 p-2 px-3 flex flex-col items-center shrink-0 card-hover ${card.color}`}>
             <div className="text-sm font-bold">{card.value}</div>
             <div className="text-[9px] font-medium uppercase tracking-wider mt-0.5 whitespace-nowrap">{card.label}</div>
           </div>
