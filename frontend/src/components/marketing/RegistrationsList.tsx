@@ -74,6 +74,7 @@ export default function RegistrationsList({ registrations, inquiries, ownerLabel
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [filters, setFilters] = useState<{ status: string; sentiment: string }>({ status: '', sentiment: '' });
+  const [showAllColumns, setShowAllColumns] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -361,10 +362,16 @@ export default function RegistrationsList({ registrations, inquiries, ownerLabel
                 No paid registrations found.
               </div>
             ) : (
+              <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-500">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" checked={showAllColumns} onChange={e => setShowAllColumns(e.target.checked)} className="rounded" />
+                  View all columns
+                </label>
+              </div>
               <table className="min-w-full border-separate border-spacing-0 text-[13px]">
                 <thead className="bg-gray-50/80">
                   <tr>
-                    <th scope="col" className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/90 backdrop-blur-sm px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-teal-800">
+                    <th scope="col" className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/90 backdrop-blur-sm px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-teal-800 w-8">
                       <input
                         type="checkbox"
                         checked={allSelected}
@@ -378,10 +385,10 @@ export default function RegistrationsList({ registrations, inquiries, ownerLabel
                     <th scope="col" className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/90 backdrop-blur-sm px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-teal-800 hidden md:table-cell">Intake</th>
                     <th scope="col" className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/90 backdrop-blur-sm px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-teal-800 hidden lg:table-cell">Mpesa Code</th>
                     <th scope="col" className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/90 backdrop-blur-sm px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-teal-800 hidden lg:table-cell">Payment Date</th>
-                    <th scope="col" className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/90 backdrop-blur-sm px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-teal-800 hidden xl:table-cell">Last Reminder</th>
+                    <th scope="col" className={`sticky top-0 z-10 border-b border-gray-200 bg-gray-50/90 backdrop-blur-sm px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-teal-800 ${showAllColumns ? 'table-cell' : 'hidden'}`}>Last Reminder</th>
                     <th scope="col" className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/90 backdrop-blur-sm px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-teal-800">Status</th>
-                    <th scope="col" className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/90 backdrop-blur-sm px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-teal-800 hidden xl:table-cell">Last Response</th>
-                    <th scope="col" className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/90 backdrop-blur-sm px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-teal-800 hidden xl:table-cell">Sentiment</th>
+                    <th scope="col" className={`sticky top-0 z-10 border-b border-gray-200 bg-gray-50/90 backdrop-blur-sm px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-teal-800 ${showAllColumns ? 'table-cell' : 'hidden'}`}>Last Response</th>
+                    <th scope="col" className={`sticky top-0 z-10 border-b border-gray-200 bg-gray-50/90 backdrop-blur-sm px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-teal-800 ${showAllColumns ? 'table-cell' : 'hidden'}`}>Sentiment</th>
                     <th scope="col" className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/90 backdrop-blur-sm px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-teal-800">Actions</th>
                   </tr>
                 </thead>
@@ -409,10 +416,10 @@ export default function RegistrationsList({ registrations, inquiries, ownerLabel
                         <td className="whitespace-nowrap border-b border-gray-100 px-2 py-1.5 text-[13px] text-gray-700 hidden md:table-cell">{intake}</td>
                         <td className="whitespace-nowrap border-b border-gray-100 px-2 py-1.5 text-[13px] text-gray-700 hidden lg:table-cell">{reg.paymentCode}</td>
                         <td className="whitespace-nowrap border-b border-gray-100 px-2 py-1.5 text-[13px] text-gray-700 hidden lg:table-cell">{reg.paymentDate ? new Date(reg.paymentDate).toLocaleDateString() : ''}</td>
-                        <td className="whitespace-nowrap border-b border-gray-100 px-2 py-1.5 text-[13px] text-gray-700 hidden xl:table-cell">{reminder.lastSent ? new Date(reminder.lastSent).toLocaleDateString() : 'Never'}</td>
+                        <td className={`whitespace-nowrap border-b border-gray-100 px-2 py-1.5 text-[13px] text-gray-700 ${showAllColumns ? 'table-cell' : 'hidden'}`}>{reminder.lastSent ? new Date(reminder.lastSent).toLocaleDateString() : 'Never'}</td>
                         <td className="whitespace-nowrap border-b border-gray-100 px-2 py-1.5 text-[13px] text-gray-700">{reminder.status}</td>
-                        <td className="whitespace-nowrap border-b border-gray-100 px-2 py-1.5 text-[13px] text-gray-700 hidden xl:table-cell">{reminder.lastResponse || '-'}</td>
-                        <td className={`whitespace-nowrap border-b border-gray-100 px-2 py-1.5 text-[13px] hidden xl:table-cell ${sentimentColor}`}>{reminder.sentiment ? reminder.sentiment.charAt(0).toUpperCase() + reminder.sentiment.slice(1) : '-'}</td>
+                        <td className={`whitespace-nowrap border-b border-gray-100 px-2 py-1.5 text-[13px] text-gray-700 ${showAllColumns ? 'table-cell' : 'hidden'}`}>{reminder.lastResponse || '-'}</td>
+                        <td className={`whitespace-nowrap border-b border-gray-100 px-2 py-1.5 text-[13px] ${showAllColumns ? 'table-cell' : 'hidden'} ${sentimentColor}`}>{reminder.sentiment ? reminder.sentiment.charAt(0).toUpperCase() + reminder.sentiment.slice(1) : '-'}</td>
                         <td className="whitespace-nowrap border-b border-gray-100 px-2 py-1.5 text-[13px] text-gray-700 flex gap-2">
                           {/* View */}
                           <button onClick={() => setViewReg(reg)} title="View" className="p-1 rounded hover:bg-blue-100 text-blue-600">

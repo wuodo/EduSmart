@@ -279,7 +279,7 @@ export default function FollowupsPage() {
       <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">
         <div className="p-3 sm:p-4 border-b border-neutral-light">
           <div className="flex flex-wrap md:flex-nowrap md:items-center gap-2">
-            <div className="flex-[1.6] min-w-[220px]">
+            <div className="flex-[1] min-w-[160px]">
               <input
                 type="text"
                 placeholder="Search follow-ups..."
@@ -288,7 +288,7 @@ export default function FollowupsPage() {
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
-            <div className="flex flex-wrap md:flex-nowrap gap-2 items-center flex-1 min-w-[220px]">
+            <div className="flex flex-wrap md:flex-nowrap gap-2 items-center flex-[2] min-w-[200px]">
               <select
                 className={selectClass}
                 value={status}

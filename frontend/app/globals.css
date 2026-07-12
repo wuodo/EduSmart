@@ -184,8 +184,26 @@ input, textarea, select { border-radius: 1mm !important; }
     color: rgb(229 231 235); /* text-gray-200 */
   }
 
-  .dark table thead th {
+  .dark table thead th,
+  .dark thead th,
+  .dark th {
     color: rgb(243 244 246) !important; /* high-contrast headers */
+  }
+  .dark thead th span,
+  .dark th span,
+  .dark thead th div,
+  .dark th div {
+    color: rgb(243 244 246) !important;
+  }
+  .dark thead .text-gray-500,
+  .dark thead .text-gray-600,
+  .dark thead .text-gray-700,
+  .dark thead .text-gray-400 {
+    color: rgb(243 244 246) !important;
+  }
+  .dark .bg-gray-50 thead,
+  .dark .bg-gray-50 th {
+    color: rgb(243 244 246) !important;
   }
 
   .dark table tbody td {

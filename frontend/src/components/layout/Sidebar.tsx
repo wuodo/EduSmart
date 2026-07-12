@@ -172,13 +172,13 @@ export default function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
       
       {/* Sidebar */}
       <div className={`
-        fixed lg:static inset-y-0 left-0 z-50 ${collapsed ? 'w-14' : 'w-48'} transform transition-all duration-300 ease-in-out
+        fixed lg:static inset-y-0 left-0 z-50 ${collapsed ? 'w-14' : 'w-48'} transform transition-all duration-300 ease-in-out h-full
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         flex flex-col border-r border-white/10 sidebar-static
       `}
       style={{ backgroundColor: 'var(--brand-sidebar-bg, var(--brand-primary, #003366))' }}
       >
-        <div className="flex h-14 items-center justify-between px-4 border-b border-white/20">
+        <div className="flex h-14 items-center justify-between px-4 border-b border-white/20 shrink-0">
           <div className="flex items-center gap-2">
             {logo && !collapsed ? (
               <img
@@ -215,7 +215,7 @@ export default function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
             </button>
           </div>
         </div>
-        <nav className="flex-1 space-y-0.5 px-2 py-3">
+        <nav className="flex-1 space-y-0.5 px-2 py-3 overflow-y-auto">
           {filteredNavigation.map((item) => (
             <SidebarItem
               key={item.name || item.title}

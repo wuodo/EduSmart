@@ -493,7 +493,7 @@ export default function DashboardLayout({
         </header>
         <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pt-5 min-w-0 content-responsive flex flex-col">
            {briefing && (
-            <div className="mb-4 border border-teal-200 bg-gradient-to-r from-teal-50 to-white dark:from-teal-950/30 dark:to-gray-900 px-4 py-2 flex items-center gap-4 overflow-x-auto">
+            <div className="mb-4 border border-teal-200 bg-gradient-to-r from-teal-50 to-white dark:from-teal-950/30 dark:to-gray-900 px-4 py-3 flex items-center gap-4 overflow-x-auto min-h-[48px]">
               <span className="text-sm font-semibold text-teal-800 dark:text-teal-200 whitespace-nowrap shrink-0">{briefing.greeting}!</span>
               <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap shrink-0">
                 <span><strong className="text-teal-700">{briefing.hotLeads}</strong> hot</span>
