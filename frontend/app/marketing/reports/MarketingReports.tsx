@@ -209,7 +209,7 @@ export default function MarketingReports() {
             />
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-900">{pct}%</div>
+            <div className="text-base font-bold text-gray-900">{pct}%</div>
             {subtitle ? <div className="text-[12px] text-gray-600">{subtitle}</div> : null}
           </div>
         </div>
@@ -258,8 +258,8 @@ export default function MarketingReports() {
     }
   }
 
-  if (!report && loading) return <div className="p-8 text-lg">Loading report...</div>
-  if (!report) return <div className="p-8 text-lg text-rose-600">Failed to load report.</div>
+  if (!report && loading) return <div className="p-8 text-sm">Loading report...</div>
+  if (!report) return <div className="p-8 text-sm text-rose-600">Failed to load report.</div>
 
   // Replace the abbreviate function with the registration module's abbreviateProgram logic
   function abbreviateProgram(name: string) {
@@ -326,7 +326,7 @@ export default function MarketingReports() {
     <div className="p-4 sm:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Reports</h1>
+          <h1 className="text-lg font-bold text-gray-900">Reports</h1>
           <div className="text-[12px] text-gray-600">
             {owner ? `Scope: ${selectedOwnerLabel || owner}` : 'Scope: All Users'}
           </div>
@@ -502,29 +502,29 @@ export default function MarketingReports() {
           <GaugeCard title="Letters sent" valuePct={lettersSentRatePct} subtitle={`${kpi.lettersSentCount || 0} sent/ack`} />
           <Card className="p-4 bg-white ring-1 ring-gray-200">
             <div className="text-[12px] font-bold uppercase tracking-wide text-gray-600">Overdue follow-ups</div>
-            <div className="mt-2 text-3xl font-bold text-amber-700">{overdueFollowups}</div>
+            <div className="mt-2 text-lg font-bold text-amber-700">{overdueFollowups}</div>
             <div className="text-[12px] text-gray-600 mt-1">Pending follow-ups past due date</div>
           </Card>
 
           {/* Extra KPI cards */}
           <Card className="p-4 bg-white ring-1 ring-gray-200">
             <div className="text-[12px] font-bold uppercase tracking-wide text-gray-600">Total inquiries</div>
-            <div className="mt-2 text-3xl font-bold text-sky-700">{Number(kpi.totalInquiries || 0)}</div>
+            <div className="mt-2 text-lg font-bold text-sky-700">{Number(kpi.totalInquiries || 0)}</div>
             <div className="text-[12px] text-gray-600 mt-1">All captured leads</div>
           </Card>
           <Card className="p-4 bg-white ring-1 ring-gray-200">
             <div className="text-[12px] font-bold uppercase tracking-wide text-gray-600">Total follow-ups</div>
-            <div className="mt-2 text-3xl font-bold text-indigo-700">{Number(kpi.totalFollowups || 0)}</div>
+            <div className="mt-2 text-lg font-bold text-indigo-700">{Number(kpi.totalFollowups || 0)}</div>
             <div className="text-[12px] text-gray-600 mt-1">Actions logged</div>
           </Card>
           <Card className="p-4 bg-white ring-1 ring-gray-200">
             <div className="text-[12px] font-bold uppercase tracking-wide text-gray-600">Paid registrations</div>
-            <div className="mt-2 text-3xl font-bold text-emerald-700">{Number(kpi.totalPaidRegistrations || 0)}</div>
+            <div className="mt-2 text-lg font-bold text-emerald-700">{Number(kpi.totalPaidRegistrations || 0)}</div>
             <div className="text-[12px] text-gray-600 mt-1">Converted to paid</div>
           </Card>
           <Card className="p-4 bg-white ring-1 ring-gray-200">
             <div className="text-[12px] font-bold uppercase tracking-wide text-gray-600">Avg response time</div>
-            <div className="mt-2 text-3xl font-bold text-fuchsia-700">{Number(kpi.avgResponseTimeHrs || 0)}h</div>
+            <div className="mt-2 text-lg font-bold text-fuchsia-700">{Number(kpi.avgResponseTimeHrs || 0)}h</div>
             <div className="text-[12px] text-gray-600 mt-1">From inquiry to first response</div>
           </Card>
         </div>
@@ -584,7 +584,7 @@ export default function MarketingReports() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
         {(!owner && report.users && report.users.length > 0) ? (
           <Card className="p-6 ring-1 ring-gray-200 lg:col-span-8">
-            <h2 className="text-xl font-semibold mb-2">Per-Officer Performance Index</h2>
+            <h2 className="text-sm font-semibold mb-2">Per-Officer Performance Index</h2>
             <p className="text-sm text-gray-600 mb-4">Index is normalized to 0–100. Higher index reflects stronger performance, weighted by registrations, follow-ups, and inquiries.</p>
             <div className="w-full h-80 px-2">
               <Bar
