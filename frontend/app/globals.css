@@ -72,15 +72,17 @@
   }
 }
 
-/* Global UX rule: no rounded corners — consistent square design */
+/* Global UX rule: consistent 6mm rounded corners */
 @layer base {
   * {
-    border-radius: 0 !important;
+    border-radius: 6mm !important;
+  }
+  input, textarea, select {
+    border-radius: 4mm !important;
   }
 }
 @layer utilities {
-  .animate-spin,
-  .rounded-full {
+  .animate-spin {
     border-radius: 9999px !important;
   }
 }

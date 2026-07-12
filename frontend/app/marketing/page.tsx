@@ -820,9 +820,11 @@ function TopOfficersChart({ inquiries, followups }: { inquiries: any[]; followup
     ownerStats[key].followups += 1;
   }
 
+  const nameLookup = Object.fromEntries(owners.map(o => [o.value.toLowerCase(), o.label]));
+  const idLookup = Object.fromEntries(owners.map((_, i) => [String(i + 1), `User ${i + 1}`]));
   const rows = Object.entries(ownerStats)
     .map(([key, v]) => ({
-      owner: key,
+      owner: nameLookup[key.toLowerCase()] || key.split('@')[0] || `User #${key.slice(0, 6)}`,
       score: v.inquiries + v.followups * 1.5,
       inquiries: v.inquiries,
       followups: v.followups,
