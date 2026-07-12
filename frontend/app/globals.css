@@ -99,6 +99,20 @@ input, textarea, select { border-radius: 1mm !important; }
   .dark thead .bg-gray-50\/95 {
     background-color: rgb(17 24 39) !important; /* gray-900 */
   }
+  .dark thead[style*="--brand-table-header"] {
+    background-color: rgb(17 24 39) !important;
+    color: rgb(243 244 246) !important;
+  }
+  .dark thead[style*="--brand-table-header"] th {
+    color: rgb(243 244 246) !important;
+  }
+  .dark [style*="--brand-table-header-bg"] {
+    background-color: rgb(17 24 39) !important;
+    color: rgb(243 244 246) !important;
+  }
+  .dark [style*="--brand-table-header-text"] {
+    color: rgb(243 244 246) !important;
+  }
   
   .dark .bg-gray-100 {
     background-color: rgb(75 85 99); /* bg-gray-600 */
