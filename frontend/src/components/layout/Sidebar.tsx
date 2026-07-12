@@ -48,6 +48,7 @@ const navigation: NavigationItem[] = [
   { name: 'Email', href: '/email/inbox', icon: EnvelopeIcon },
   { name: 'Workflows', href: '/workflows', icon: QueueListIcon },
   { name: 'Accountability', href: '/accountability', icon: UserGroupIcon },
+  { name: 'Data Quality', href: '/data-quality', icon: ChartBarIcon },
   { name: 'Settings', href: '/settings', icon: CogIcon },
 ]
 

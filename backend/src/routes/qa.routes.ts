@@ -1,6 +1,7 @@
 import express from 'express';
 import { listQaItems, getQaItem, createQaItem, updateQaItem, deleteQaItem, getQaStats } from '../utils/qaStore';
 import prisma from '../lib/prisma';
+import { notifyStaff } from '../services/notificationService';
 
 const router = express.Router();
 
@@ -64,10 +65,25 @@ router.put('/:id/review', (req, res) => {
   res.json({ success: true, item: updated });
 });
 
-router.post('/:id/assign', (req, res) => {
+router.post('/:id/assign', async (req, res) => {
   const { assignedTo } = req.body || {};
+  if (!assignedTo) { res.status(400).json({ error: 'assignedTo required' }); return; }
+  const item = getQaItem(req.params.id);
+  if (!item) { res.status(404).json({ error: 'Not found' }); return; }
   const updated = updateQaItem(req.params.id, { assignedTo });
   if (!updated) { res.status(404).json({ error: 'Not found' }); return; }
+
+  // Notify the reviewer
+  const user = await prisma.user.findFirst({ where: { email: { equals: assignedTo, mode: 'insensitive' }, tenantId: item.tenantId ?? undefined } });
+  if (user) {
+    notifyStaff({
+      userId: user.id, email: user.email, name: user.name || user.email,
+      title: 'QA Item Assigned',
+      body: `"${item.refName}" (#${item.refId}) — ${item.flags.join(', ')}. Please review.`,
+      priority: 'info', link: `/qa-review`, tenantId: item.tenantId,
+    }, ['in_app', 'email']);
+  }
+
   res.json({ success: true, item: updated });
 });
 
@@ -80,6 +96,66 @@ router.get('/:id', (req, res) => {
 router.delete('/:id', (req, res) => {
   if (deleteQaItem(req.params.id)) res.json({ success: true });
   else res.status(404).json({ error: 'Not found' });
+});
+
+// Data quality stats
+router.get('/data-quality', async (req, res) => {
+  try {
+    const tenant = (req as any).tenant as { id: number } | undefined;
+    const tenantId = tenant?.id;
+    if (!tenantId) { res.status(400).json({ error: 'Tenant required' }); return; }
+
+    const total = await prisma.inquiry.count({ where: { tenantId } });
+
+    // Count missing fields using raw SQL
+    const missing: Record<string, number> = {};
+    const rows: any[] = await prisma.$queryRawUnsafe(`
+      SELECT
+        COUNT(*) FILTER (WHERE "fullName" IS NULL) AS "fullName",
+        COUNT(*) FILTER (WHERE "phone" IS NULL) AS "phone",
+        COUNT(*) FILTER (WHERE "email" IS NULL OR "email" = '') AS "email",
+        COUNT(*) FILTER (WHERE "programOfInterest" IS NULL) AS "programOfInterest",
+        COUNT(*) FILTER (WHERE "intakePeriod" IS NULL) AS "intakePeriod",
+        COUNT(*) FILTER (WHERE "studyMode" IS NULL) AS "studyMode",
+        COUNT(*) FILTER (WHERE "source" IS NULL) AS "source",
+        COUNT(*) FILTER (WHERE "preferredContactMethod" IS NULL) AS "preferredContactMethod",
+        COUNT(*) FILTER (WHERE "kcseGrade" IS NULL OR "kcseGrade" = 'Unknown') AS "kcseGrade",
+        COUNT(*) FILTER (WHERE "gender" IS NULL) AS "gender"
+      FROM inquiries WHERE "tenantId" = $1
+    `, tenantId);
+    const row = rows[0];
+    for (const key of Object.keys(row || {})) {
+      const val = Number(row[key]);
+      if (val > 0) missing[key] = val;
+    }
+
+    // Per-staff data quality using raw SQL
+    const staffRows: any[] = await prisma.$queryRawUnsafe(`
+      SELECT u.email, COALESCE(u.name, u.email) AS name,
+        COALESCE((SELECT COUNT(*) FROM inquiries WHERE "tenantId" = $1 AND "createdBy" = u.email), 0) AS created,
+        COALESCE((SELECT ROUND(AVG(score)::numeric, 0) FROM (
+          SELECT i.id,
+            (CASE WHEN i.email IS NOT NULL AND i.email != '' THEN 10 ELSE 0 END +
+             CASE WHEN i.phone IS NOT NULL THEN 10 ELSE 0 END +
+             CASE WHEN i."kcseGrade" IS NOT NULL AND i."kcseGrade" != 'Unknown' THEN 10 ELSE 0 END +
+             CASE WHEN i."programOfInterest" IS NOT NULL THEN 10 ELSE 0 END +
+             CASE WHEN i.gender IS NOT NULL THEN 10 ELSE 0 END +
+             CASE WHEN i."fullName" IS NOT NULL THEN 10 ELSE 0 END +
+             CASE WHEN i."intakePeriod" IS NOT NULL THEN 10 ELSE 0 END +
+             CASE WHEN i."studyMode" IS NOT NULL THEN 10 ELSE 0 END +
+             CASE WHEN i.source IS NOT NULL THEN 10 ELSE 0 END +
+             CASE WHEN i."preferredContactMethod" IS NOT NULL THEN 10 ELSE 0 END) AS score
+          FROM inquiries i WHERE i."tenantId" = $1 AND i."createdBy" = u.email
+        ) sub), 100) AS "avgScore"
+      FROM users u WHERE u."tenantId" = $1 ORDER BY "avgScore" ASC LIMIT 20
+    `, tenantId, tenantId, tenantId);
+    const staffQuality = staffRows.map((r: any) => ({ email: r.email, name: r.name, created: Number(r.created), avgScore: Number(r.avgScore) || 100 }));
+
+    res.json({
+      success: true, total, fields: Object.entries(missing).map(([field, count]) => ({ field, count, pct: total > 0 ? Math.round((count / total) * 100) : 0 })),
+      staffQuality: staffQuality.sort((a, b) => a.avgScore - b.avgScore),
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 export default router;
