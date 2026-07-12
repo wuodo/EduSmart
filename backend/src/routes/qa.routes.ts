@@ -158,4 +158,12 @@ router.get('/data-quality', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// Debug: return raw store data count
+router.get('/debug', (req, res) => {
+  const tenant = (req as any).tenant as { id: number } | undefined;
+  const items = listQaItems(tenant?.id);
+  const { getQaStats: stats } = require('../utils/qaStore');
+  res.json({ success: true, count: items.length, items: items.slice(0, 5), stats: stats(tenant?.id) });
+});
+
 export default router;

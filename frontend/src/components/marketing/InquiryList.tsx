@@ -76,6 +76,10 @@ export default function InquiryList({
   const [loadingDeleted, setLoadingDeleted] = useState(false)
   const [selectedDeletedArchiveIds, setSelectedDeletedArchiveIds] = useState<string[]>([])
   const [mergeTargetId, setMergeTargetId] = useState('')
+  const [reassignOpen, setReassignOpen] = useState(false)
+  const [reassignTarget, setReassignTarget] = useState<any>(null)
+  const [reassignEmail, setReassignEmail] = useState('')
+  const [users, setUsers] = useState<{ email: string; name: string }[]>([])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -898,7 +902,7 @@ export default function InquiryList({
                 {selected.agentOrReferralName && <tr><td className="font-semibold p-2">Agent/Referral Name</td><td className="p-2">{selected.agentOrReferralName}</td></tr>}
                 <tr><td className="font-semibold p-2">Preferred Contact Method</td><td className="p-2">{selected.preferredContactMethod}</td></tr>
                 {selected.bestTimeToContact && <tr><td className="font-semibold p-2">Best Time to Contact</td><td className="p-2">{selected.bestTimeToContact}</td></tr>}
-                <tr><td className="font-semibold p-2">Assigned To</td><td className="p-2">{selected.assignedTo || 'Unassigned'} {(isAdminLike && userRole !== 'admissions_officer') ? <button onClick={() => { const e = prompt('New assignee email:', selected.assignedTo || ''); if (e && e.trim()) { fetch(`/api/proxy/inquiries/${selected.id}/reassign`, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ assignedTo: e.trim() }) }).then(r => r.json()).then(d => { setToast({ type: d.success ? 'success' : 'error', message: d.message || d.error }); if (d.success) onRefresh(); }).catch(() => {}); } }} className="ml-2 px-1.5 py-0.5 text-[10px] bg-amber-600 text-white hover:bg-amber-700">Reassign</button> : null}</td></tr>
+                <tr><td className="font-semibold p-2">Assigned To</td><td className="p-2">{selected.assignedTo || 'Unassigned'} {(isAdminLike && userRole !== 'admissions_officer') ? <button onClick={() => { fetch('/api/proxy/users').then(r => r.json()).then(d => { const list = Array.isArray(d) ? d : d.users || d.data || []; setUsers(list.map((u: any) => ({ email: u.email, name: u.name || u.email }))); setReassignTarget(selected); setReassignEmail(selected.assignedTo || ''); setReassignOpen(true); }).catch(() => {}); }} className="ml-2 px-1.5 py-0.5 text-[10px] bg-amber-600 text-white hover:bg-amber-700">Reassign</button> : null}</td></tr>
                 <tr><td className="font-semibold p-2">Lead Tags</td><td className="p-2">{selected.leadTags.join(', ')}</td></tr>
                 <tr>
                   <td className="font-semibold p-2">{selected.updatedAt && selected.updatedAt !== selected.createdAt ? 'Edited on' : 'Created'}</td>
@@ -908,12 +912,28 @@ export default function InquiryList({
               </table>
             </div>
             <div className="mt-4 text-right">
-              <button
-                className={primaryButtonClass}
-                onClick={() => setShowModal(false)}
-              >
-                Close
-              </button>
+              <button className={primaryButtonClass} onClick={() => setShowModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Reassign Modal */}
+      {reassignOpen && reassignTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setReassignOpen(false)}>
+          <div className="bg-white w-full max-w-sm mx-4 p-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Reassign Inquiry #{reassignTarget.id}</h3>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {users.map(u => (
+                <button key={u.email} onClick={() => setReassignEmail(u.email)} className={`w-full text-left px-3 py-2 text-xs border hover:bg-gray-50 flex items-center justify-between ${reassignEmail === u.email ? 'border-teal-500 bg-teal-50' : ''}`}>
+                  <span className="font-medium">{u.name.split('@')[0]}</span>
+                  <span className="text-gray-400 text-[10px]">{u.email}</span>
+                </button>
+              ))}
+              {users.length === 0 && <div className="text-xs text-gray-400 py-4 text-center">No users found</div>}
+            </div>
+            <div className="flex gap-2 mt-3 pt-3 border-t">
+              <button onClick={async () => { if (!reassignEmail) return; const r = await fetch(`/api/proxy/inquiries/${reassignTarget.id}/reassign`, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ assignedTo: reassignEmail }) }); const d = await r.json(); setToast({ type: d.success ? 'success' : 'error', message: d.message || d.error }); if (d.success) { setReassignOpen(false); onRefresh(); } }} disabled={!reassignEmail} className="px-3 py-1.5 bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 disabled:opacity-50">Reassign</button>
+              <button onClick={() => setReassignOpen(false)} className="px-3 py-1.5 border text-xs hover:bg-gray-50">Cancel</button>
             </div>
           </div>
         </div>
