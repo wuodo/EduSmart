@@ -626,6 +626,22 @@ router.post('/', async (req, res) => {
       console.warn('[webhook] inquiry.created:', e);
     }
 
+    // Auto-flag for QA if completeness is low
+    try {
+      const { createQaItem } = await import('../utils/qaStore');
+      const flags: string[] = [];
+      if (!inquiry.email) flags.push('Missing email');
+      if (!inquiry.kcseGrade || inquiry.kcseGrade === 'Unknown') flags.push('Missing KCSE grade');
+      if (!inquiry.programOfInterest) flags.push('Missing program');
+      if (flags.length > 0) {
+        createQaItem({
+          tenantId, type: 'inquiry', refId: inquiry.id, refName: inquiry.fullName,
+          score: Math.max(0, 100 - flags.length * 25), flags, status: 'pending',
+          createdBy: email || 'system',
+        });
+      }
+    } catch (e) { console.warn('[qa] auto-flag failed:', e); }
+
     return safeJson(res, inquiry, 201);
   } catch (error) {
     if (res.headersSent) return;
@@ -951,6 +967,23 @@ router.put('/:id', async (req, res) => {
       }
     }
     
+    // Auto-flag for QA if completeness is low
+    try {
+      const { createQaItem, listQaItems } = await import('../utils/qaStore');
+      const existing = listQaItems(tenantId, 'inquiry', 'pending').filter(i => i.refId === id);
+      const flags: string[] = [];
+      if (!inquiry.email) flags.push('Missing email');
+      if (!inquiry.kcseGrade || inquiry.kcseGrade === 'Unknown') flags.push('Missing KCSE grade');
+      if (!inquiry.programOfInterest) flags.push('Missing program');
+      if (flags.length > 0 && existing.length === 0) {
+        createQaItem({
+          tenantId, type: 'inquiry', refId: inquiry.id, refName: inquiry.fullName,
+          score: Math.max(0, 100 - flags.length * 25), flags, status: 'pending',
+          createdBy: email || 'system',
+        });
+      }
+    } catch (e) { console.warn('[qa] auto-flag failed:', e); }
+
     return safeJson(res, inquiry);
   } catch (error) {
     if (res.headersSent) return;
