@@ -616,20 +616,22 @@ export default function CreateInquiryButton({
 
               {/* Duplicate Phone Warning */}
               {duplicateWarning && (
-                <div className="border border-amber-300 bg-amber-50 rounded p-3 text-sm">
+                <div className="border border-amber-300 bg-amber-50 p-3 text-sm">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="font-semibold text-amber-800 mb-1">⚠️ Duplicate Phone Number Detected</p>
-                      <p className="text-amber-700">This phone number already exists in the system:</p>
-                      <ul className="mt-1 ml-3 text-amber-800 space-y-0.5 text-xs">
+                      <p className="font-semibold text-amber-800 mb-1">Duplicate Phone Number Detected</p>
+                      <p className="text-amber-700 text-xs mb-1">This phone already belongs to:</p>
+                      <ul className="text-amber-800 space-y-0.5 text-xs">
                         <li><span className="font-semibold">Name:</span> {duplicateWarning.fullName}</li>
                         <li><span className="font-semibold">Course:</span> {duplicateWarning.programOfInterest || 'N/A'}</li>
-                        <li><span className="font-semibold">Added by:</span> {duplicateWarning.createdBy || 'Unknown'}</li>
-                        <li><span className="font-semibold">Added on:</span> {new Date(duplicateWarning.createdAt).toLocaleDateString()}</li>
+                        <li><span className="font-semibold">Added:</span> {new Date(duplicateWarning.createdAt).toLocaleDateString()}</li>
                       </ul>
-                      <p className="mt-1.5 text-xs text-amber-700">This inquiry will not be saved. Please verify the phone number.</p>
+                      <div className="flex gap-2 mt-2">
+                        <a href={`/inquiries?openInquiry=${duplicateWarning.id}`} target="_blank" className="text-xs text-teal-700 underline hover:text-teal-800">View existing record →</a>
+                        <button type="button" onClick={() => setDuplicateWarning(null)} className="text-xs text-gray-500 underline hover:text-gray-700">Create anyway</button>
+                      </div>
                     </div>
-                    <button type="button" onClick={() => setDuplicateWarning(null)} className="text-amber-500 hover:text-amber-700 text-lg leading-none mt-0.5">×</button>
+                    <button type="button" onClick={() => setDuplicateWarning(null)} className="text-amber-500 hover:text-amber-700 leading-none mt-0.5">×</button>
                   </div>
                 </div>
               )}

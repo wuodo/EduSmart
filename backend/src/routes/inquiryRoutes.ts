@@ -936,6 +936,32 @@ router.put('/:id', async (req, res) => {
       }
     }
 
+    // Stage-gate validation: check required fields on status transition
+    if (clean.status && existingFull && existingFull.status !== clean.status) {
+      try {
+        const { mergeTenantCrmSettings } = await import('../utils/tenantCrmSettings');
+        const tenantRow = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { crmSettings: true } });
+        const tSettings = mergeTenantCrmSettings(tenantRow?.crmSettings);
+        const rules = tSettings.stageGateRules || [];
+        const from = (existingFull.status || '').toLowerCase();
+        const to = (clean.status || '').toLowerCase();
+        const matching = rules.find(r => r.from.toLowerCase() === from && r.to.toLowerCase() === to);
+        if (matching && matching.requiredFields.length > 0) {
+          const missing: string[] = [];
+          for (const field of matching.requiredFields) {
+            const val = (updatePayload as any)[field] ?? (existingFull as any)[field];
+            if (!val || val === '' || val === 'Unknown') missing.push(field);
+          }
+          if (missing.length > 0) {
+            return safeJson(res, {
+              message: `Stage-gate validation failed. "${from}" → "${to}" requires: ${missing.join(', ')}. Please fill in these fields first.`,
+              requiredFields: missing,
+            }, 400);
+          }
+        }
+      } catch (e) { console.warn('[stage-gate] validation error:', e); }
+    }
+
     const inquiry = await prisma.inquiry.update({ 
       where: { 
         id,

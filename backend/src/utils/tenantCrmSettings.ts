@@ -53,6 +53,8 @@ export type TenantCrmSettings = {
   featureToggles?: TenantFeatureToggles
   /** Custom pipeline stages (ordered) */
   pipelineStages?: string[]
+  /** Stage-gate validation rules: required fields per transition */
+  stageGateRules?: Array<{ from: string; to: string; requiredFields: string[] }>
 }
 
 export function mergeTenantCrmSettings(raw: unknown): TenantCrmSettings {
@@ -68,6 +70,7 @@ export function mergeTenantCrmSettings(raw: unknown): TenantCrmSettings {
     smtpConfig: r.smtpConfig && typeof r.smtpConfig === 'object' ? r.smtpConfig as TenantSmtpConfig : undefined,
     featureToggles: r.featureToggles && typeof r.featureToggles === 'object' ? r.featureToggles as TenantFeatureToggles : undefined,
     pipelineStages: Array.isArray(r.pipelineStages) ? r.pipelineStages : undefined,
+    stageGateRules: Array.isArray(r.stageGateRules) ? r.stageGateRules : undefined,
   }
 }
 
