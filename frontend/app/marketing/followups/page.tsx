@@ -138,7 +138,7 @@ export default function FollowupsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 flex-1 flex flex-col">
       <div className="flex justify-between items-center">
         <h1 className="text-xl sm:text-2xl font-bold">Follow-ups</h1>
         {canEdit && (
@@ -330,7 +330,7 @@ export default function FollowupsPage() {
             </div>
           </div>
         </div>
-        <div className="p-3 sm:p-4">
+        <div className="p-3 sm:p-4 flex-1">
           <FollowupList
             followups={filteredFollowups}
             inquiries={inquiries}
