@@ -107,52 +107,49 @@ router.get('/data-quality', async (req, res) => {
 
     const total = await prisma.inquiry.count({ where: { tenantId } });
 
-    // Count missing fields using raw SQL
+    // Count missing fields using individual queries (avoids complex SQL compatibility issues)
     const missing: Record<string, number> = {};
-    const rows: any[] = await prisma.$queryRawUnsafe(`
-      SELECT
-        COUNT(*) FILTER (WHERE "fullName" IS NULL) AS "fullName",
-        COUNT(*) FILTER (WHERE "phone" IS NULL) AS "phone",
-        COUNT(*) FILTER (WHERE "email" IS NULL OR "email" = '') AS "email",
-        COUNT(*) FILTER (WHERE "programOfInterest" IS NULL) AS "programOfInterest",
-        COUNT(*) FILTER (WHERE "intakePeriod" IS NULL) AS "intakePeriod",
-        COUNT(*) FILTER (WHERE "studyMode" IS NULL) AS "studyMode",
-        COUNT(*) FILTER (WHERE "source" IS NULL) AS "source",
-        COUNT(*) FILTER (WHERE "preferredContactMethod" IS NULL) AS "preferredContactMethod",
-        COUNT(*) FILTER (WHERE "kcseGrade" IS NULL OR "kcseGrade" = 'Unknown') AS "kcseGrade",
-        COUNT(*) FILTER (WHERE "gender" IS NULL) AS "gender"
-      FROM inquiries WHERE "tenantId" = $1
-    `, tenantId);
-    const row = rows[0];
-    for (const key of Object.keys(row || {})) {
-      const val = Number(row[key]);
-      if (val > 0) missing[key] = val;
+    const fieldChecks: [string, any][] = [
+      ['fullName', { fullName: null }],
+      ['phone', { phone: null }],
+      ['email', { OR: [{ email: null }, { email: '' }] }],
+      ['programOfInterest', { programOfInterest: null }],
+      ['intakePeriod', { intakePeriod: null }],
+      ['studyMode', { studyMode: null }],
+      ['source', { source: null }],
+      ['preferredContactMethod', { preferredContactMethod: null }],
+      ['kcseGrade', { OR: [{ kcseGrade: null }, { kcseGrade: 'Unknown' }] }],
+      ['gender', { gender: null }],
+    ];
+    for (const [field, where] of fieldChecks) {
+      const count = await prisma.inquiry.count({ where: { tenantId, ...where } as any });
+      if (count > 0) missing[field] = count;
     }
 
-    // Per-staff data quality using raw SQL
-    const staffRows: any[] = await prisma.$queryRawUnsafe(`
-      SELECT u.email, COALESCE(u.name, u.email) AS name,
-        COALESCE((SELECT COUNT(*) FROM inquiries WHERE "tenantId" = $1 AND "createdBy" = u.email), 0) AS created,
-        COALESCE((SELECT ROUND(AVG(score)::numeric, 0) FROM (
-          SELECT i.id,
-            (CASE WHEN i.email IS NOT NULL AND i.email != '' THEN 10 ELSE 0 END +
-             CASE WHEN i.phone IS NOT NULL THEN 10 ELSE 0 END +
-             CASE WHEN i."kcseGrade" IS NOT NULL AND i."kcseGrade" != 'Unknown' THEN 10 ELSE 0 END +
-             CASE WHEN i."programOfInterest" IS NOT NULL THEN 10 ELSE 0 END +
-             CASE WHEN i.gender IS NOT NULL THEN 10 ELSE 0 END +
-             CASE WHEN i."fullName" IS NOT NULL THEN 10 ELSE 0 END +
-             CASE WHEN i."intakePeriod" IS NOT NULL THEN 10 ELSE 0 END +
-             CASE WHEN i."studyMode" IS NOT NULL THEN 10 ELSE 0 END +
-             CASE WHEN i.source IS NOT NULL THEN 10 ELSE 0 END +
-             CASE WHEN i."preferredContactMethod" IS NOT NULL THEN 10 ELSE 0 END) AS score
-          FROM inquiries i WHERE i."tenantId" = $1 AND i."createdBy" = u.email
-        ) sub), 100) AS "avgScore"
-      FROM users u WHERE u."tenantId" = $1 ORDER BY "avgScore" ASC LIMIT 20
-    `, tenantId, tenantId, tenantId);
-    const staffQuality = staffRows.map((r: any) => ({ email: r.email, name: r.name, created: Number(r.created), avgScore: Number(r.avgScore) || 100 }));
+    // Per-staff data quality using simple queries
+    const staffList = await prisma.user.findMany({ where: { tenantId }, take: 20, select: { email: true, name: true } });
+    const staffQuality: { email: string; name: string; created: number; avgScore: number }[] = [];
+    for (const u of staffList) {
+      const created = await prisma.inquiry.count({ where: { tenantId, createdBy: u.email } });
+      if (created === 0) { staffQuality.push({ email: u.email, name: u.name || u.email, created: 0, avgScore: 100 }); continue; }
+      // Sample up to 50 inquiries to calculate average score
+      const inqs = await prisma.inquiry.findMany({ where: { tenantId, createdBy: u.email }, take: 50, select: { email: true, phone: true, kcseGrade: true, programOfInterest: true, gender: true, fullName: true, intakePeriod: true, studyMode: true, source: true, preferredContactMethod: true } });
+      let totalScore = 0;
+      for (const i of inqs) {
+        let s = 0;
+        if (i.email) s += 10; if (i.phone) s += 10; if (i.kcseGrade && i.kcseGrade !== 'Unknown') s += 10;
+        if (i.programOfInterest) s += 10; if (i.gender) s += 10; if (i.fullName) s += 10;
+        if (i.intakePeriod) s += 10; if (i.studyMode) s += 10; if (i.source) s += 10;
+        if (i.preferredContactMethod) s += 10;
+        totalScore += s;
+      }
+      const avgScore = inqs.length > 0 ? Math.round(totalScore / inqs.length) : 100;
+      staffQuality.push({ email: u.email, name: u.name || u.email, created, avgScore });
+    }
 
     res.json({
-      success: true, total, fields: Object.entries(missing).map(([field, count]) => ({ field, count, pct: total > 0 ? Math.round((count / total) * 100) : 0 })),
+      success: true, total,
+      fields: Object.entries(missing).map(([field, count]) => ({ field, count, pct: total > 0 ? Math.round((count / total) * 100) : 0 })),
       staffQuality: staffQuality.sort((a, b) => a.avgScore - b.avgScore),
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
