@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { BrandingProvider } from '@/contexts/BrandingContext'
+import { ToastProvider } from '@/components/ui/ToastProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -24,7 +25,9 @@ export default function RootLayout({
       <body className={inter.className} suppressHydrationWarning>
         <ThemeProvider>
           <BrandingProvider>
-            {children}
+            <ToastProvider>
+              {children}
+            </ToastProvider>
           </BrandingProvider>
         </ThemeProvider>
       </body>

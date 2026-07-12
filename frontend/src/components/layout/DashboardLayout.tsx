@@ -426,11 +426,12 @@ export default function DashboardLayout({
             {instName ? (
               <div className="flex items-center gap-3 min-w-0">
                 <span className="text-white font-bold text-sm tracking-wide truncate">{instName}</span>
-                <span className="hidden lg:block text-white/50 text-xs font-medium">/ {moduleName}</span>
+                <span className="hidden lg:flex items-center gap-1 text-white/50 text-xs font-medium">/ {moduleName}</span>
               </div>
             ) : (
               <span className="text-white font-semibold text-sm truncate">{moduleName}</span>
             )}
+            <div className="hidden lg:flex items-center gap-1 ml-2 text-[10px] text-white/50"><span className="live-dot"></span>Live</div>
           </div>
 
           {/* Right: tool groups */}
