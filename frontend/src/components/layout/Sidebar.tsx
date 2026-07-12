@@ -4,16 +4,10 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useBranding } from '@/contexts/BrandingContext'
 import {
-  MegaphoneIcon,
-  CogIcon,
-  CalendarIcon,
-  DocumentTextIcon,
-  ChartBarIcon,
-  BellIcon,
-  CalendarDaysIcon,
-  ViewColumnsIcon,
-  ClipboardDocumentCheckIcon,
-  EnvelopeIcon,
+  MegaphoneIcon, CogIcon, CalendarIcon, DocumentTextIcon, ChartBarIcon, BellIcon,
+  CalendarDaysIcon, ViewColumnsIcon, ClipboardDocumentCheckIcon, EnvelopeIcon,
+  HomeIcon, PhoneIcon, CheckBadgeIcon, UserGroupIcon, BookOpenIcon,
+  ChartPieIcon, ArrowTrendingUpIcon, QueueListIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import { cachedApiFetch } from '@/utils/apiClient'
@@ -38,22 +32,21 @@ function normalizeNavRole(role: string): string {
 }
 
 const navigation: NavigationItem[] = [
-  // Main dashboard
-  { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
-  { name: 'Inquiries', href: '/inquiries', icon: ChartBarIcon },
+  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+  { name: 'Inquiries', href: '/inquiries', icon: PhoneIcon },
   { name: 'Pipeline', href: '/pipeline', icon: ViewColumnsIcon },
   { name: 'QA review', href: '/qa-review', icon: ClipboardDocumentCheckIcon },
   { name: 'Follow-ups', href: '/followups', icon: CalendarIcon },
   { name: 'Calendar', href: '/calendar', icon: CalendarDaysIcon },
-  { name: 'Admission Letters', href: '/admission-letters', icon: DocumentTextIcon },
-  { name: 'Registrations', href: '/registrations', icon: DocumentTextIcon },
-  { name: 'Courses', href: '/courses', icon: DocumentTextIcon },
+  { name: 'ADM Letters', href: '/admission-letters', icon: DocumentTextIcon },
+  { name: 'Registrations', href: '/registrations', icon: CheckBadgeIcon },
+  { name: 'Courses', href: '/courses', icon: BookOpenIcon },
   { name: 'Campaigns', href: '/marketing/campaigns', icon: MegaphoneIcon },
-  { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
-  { name: 'Reports', href: '/reports', icon: DocumentTextIcon },
+  { name: 'Analytics', href: '/analytics', icon: ChartPieIcon },
+  { name: 'Reports', href: '/reports', icon: ArrowTrendingUpIcon },
   { name: 'Email', href: '/email/inbox', icon: EnvelopeIcon },
-  { name: 'Workflows', href: '/workflows', icon: ChartBarIcon },
-  { name: 'Accountability', href: '/accountability', icon: ChartBarIcon },
+  { name: 'Workflows', href: '/workflows', icon: QueueListIcon },
+  { name: 'Accountability', href: '/accountability', icon: UserGroupIcon },
   { name: 'Settings', href: '/settings', icon: CogIcon },
 ]
 
@@ -179,7 +172,7 @@ export default function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
       
       {/* Sidebar */}
       <div className={`
-        fixed lg:static inset-y-0 left-0 z-50 ${collapsed ? 'w-16' : 'w-56'} transform transition-all duration-300 ease-in-out
+        fixed lg:static inset-y-0 left-0 z-50 ${collapsed ? 'w-14' : 'w-48'} transform transition-all duration-300 ease-in-out
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         flex flex-col border-r border-white/10 sidebar-static
       `}

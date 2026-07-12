@@ -706,7 +706,7 @@ export default function MarketingPage() {
           </div>
         </div>
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-none">
-          <TopOfficersChart inquiries={inquiries} followups={followups} />
+          <TopOfficersChart inquiries={inquiries} followups={followups} owners={owners} />
         </div>
       </div>
 
@@ -802,7 +802,7 @@ export default function MarketingPage() {
 }
 
 // Compact per-officer performance chart using real inquiry/follow-up counts
-function TopOfficersChart({ inquiries, followups }: { inquiries: any[]; followups: any[] }) {
+function TopOfficersChart({ inquiries, followups, owners: ownersList }: { inquiries: any[]; followups: any[]; owners: { label: string; value: string }[] }) {
   // Derive owner from assignedTo, createdBy or email
   const ownerStats: Record<string, { inquiries: number; followups: number }> = {};
 
@@ -820,8 +820,7 @@ function TopOfficersChart({ inquiries, followups }: { inquiries: any[]; followup
     ownerStats[key].followups += 1;
   }
 
-  const nameLookup = Object.fromEntries(owners.map(o => [o.value.toLowerCase(), o.label]));
-  const idLookup = Object.fromEntries(owners.map((_, i) => [String(i + 1), `User ${i + 1}`]));
+  const nameLookup = Object.fromEntries(ownersList.map(o => [o.value.toLowerCase(), o.label]));
   const rows = Object.entries(ownerStats)
     .map(([key, v]) => ({
       owner: nameLookup[key.toLowerCase()] || key.split('@')[0] || `User #${key.slice(0, 6)}`,
