@@ -12,7 +12,7 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', type: 'email', audience: '', subject: '', body: '', scheduleAt: '' });
+  const [form, setForm] = useState({ name: '', description: '', type: 'email', statusIn: [] as string[], sourceEquals: '', programEquals: '', subject: '', body: '', scheduleAt: '' });
   const [sending, setSending] = useState(false);
 
   const fetchList = () => {
@@ -24,13 +24,15 @@ export default function CampaignsPage() {
 
   const createCampaign = async () => {
     if (!form.name) return;
-    let audience = {};
-    try { audience = form.audience ? JSON.parse(form.audience) : {}; } catch {}
+    const audience: Record<string, unknown> = {};
+    if (form.statusIn.length > 0) audience.statusIn = form.statusIn;
+    if (form.sourceEquals) audience.sourceEquals = form.sourceEquals;
+    if (form.programEquals) audience.programEquals = form.programEquals;
     const r = await fetch('/api/proxy/campaigns', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: form.name, description: form.description, type: form.type, audience, content: { subject: form.subject, body: form.body }, scheduleAt: form.scheduleAt || undefined }),
     });
-    if (r.ok) { setShowCreate(false); fetchList(); setForm({ name: '', description: '', type: 'email', audience: '', subject: '', body: '', scheduleAt: '' }); }
+    if (r.ok) { setShowCreate(false); fetchList(); setForm({ name: '', description: '', type: 'email', statusIn: [], sourceEquals: '', programEquals: '', subject: '', body: '', scheduleAt: '' }); }
   };
 
   const sendCampaign = async (id: string) => {
@@ -71,7 +73,18 @@ export default function CampaignsPage() {
               <div><label className="text-xs text-gray-500 block mb-0.5">Type</label><select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} className="w-full border px-2 py-1.5 text-sm">
                 <option value="email">Email Blast</option><option value="sms">SMS Broadcast</option><option value="sequence">Multi-Step Sequence</option>
               </select></div>
-              <div><label className="text-xs text-gray-500 block mb-0.5">Audience (JSON, e.g. {"statusIn:['hot'],sourceEquals:'website'"})</label><input value={form.audience} onChange={e => setForm({ ...form, audience: e.target.value })} className="w-full border px-2 py-1.5 text-sm font-mono text-[11px]" placeholder='{"statusIn":["hot","warm"]}' /></div>
+              <div><label className="text-xs text-gray-500 block mb-0.5">Target Audience</label>
+                <div className="flex flex-wrap gap-2">
+                  <select multiple value={form.statusIn} onChange={e => setForm({ ...form, statusIn: Array.from(e.target.selectedOptions, o => o.value) })} className="border px-2 py-1.5 text-xs flex-1 min-w-[120px]" title="Lead status">
+                    <option value="hot">Hot leads</option><option value="warm">Warm leads</option><option value="cold">Cold leads</option>
+                  </select>
+                  <select value={form.sourceEquals} onChange={e => setForm({ ...form, sourceEquals: e.target.value })} className="border px-2 py-1.5 text-xs flex-1 min-w-[120px]" title="Lead source">
+                    <option value="">Any source</option><option value="website">Website</option><option value="facebook">Facebook</option><option value="whatsapp">WhatsApp</option><option value="referral">Referral</option><option value="walk-in">Walk-in</option>
+                  </select>
+                  <input value={form.programEquals} onChange={e => setForm({ ...form, programEquals: e.target.value })} placeholder="Program (optional)" className="border px-2 py-1.5 text-xs flex-1 min-w-[120px]" />
+                </div>
+                <div className="text-[10px] text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple statuses. Leave all empty to target everyone.</div>
+              </div>
               <div><label className="text-xs text-gray-500 block mb-0.5">Subject</label><input value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} className="w-full border px-2 py-1.5 text-sm" /></div>
               <div><label className="text-xs text-gray-500 block mb-0.5">Body (use {"{{name}}"} for recipient name)</label><textarea value={form.body} onChange={e => setForm({ ...form, body: e.target.value })} rows={4} className="w-full border px-2 py-1.5 text-sm resize-none" /></div>
               <div><label className="text-xs text-gray-500 block mb-0.5">Schedule (leave blank to save as draft)</label><input type="datetime-local" value={form.scheduleAt} onChange={e => setForm({ ...form, scheduleAt: e.target.value })} className="w-full border px-2 py-1.5 text-sm" /></div>
