@@ -413,9 +413,9 @@ export default function DashboardLayout({
 
 
   return (
-    <div className="flex h-screen bg-neutral-light overflow-hidden">
+    <div className="h-screen bg-neutral-light">
       <Sidebar isMobileOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} />
-      <div className="flex-1 flex flex-col h-full min-w-0">
+      <div className="lg:ml-48 h-full flex flex-col min-w-0">
         {/* Top header bar */}
         <header className="w-full h-14 flex items-center px-3 sm:px-6 shadow-sm justify-between" style={{ backgroundColor: 'var(--brand-primary)' }}>
           {/* Left: logo + module */}
@@ -491,7 +491,7 @@ export default function DashboardLayout({
             </button>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pt-5 min-w-0 content-responsive flex flex-col">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pt-5 min-w-0 content-responsive flex flex-col" style={{overflowAnchor: 'none'}}>
            {briefing && (
             <div className="mb-4 border border-teal-200 bg-gradient-to-r from-teal-50 to-white dark:from-teal-950/30 dark:to-gray-900 px-4 py-3 flex items-center gap-4 overflow-x-auto min-h-[48px]">
               <span className="text-sm font-semibold text-teal-800 dark:text-teal-200 whitespace-nowrap shrink-0">{briefing.greeting}!</span>

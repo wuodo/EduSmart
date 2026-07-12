@@ -493,8 +493,7 @@ export default function InquiryList({
             type="button"
             onClick={handleBulkDelete}
             disabled={loading || selectedIds.length === 0}
-            className="px-3 py-1.5 rounded-md text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold"
-            style={{ backgroundColor: 'var(--brand-action-btn, #dc2626)', color: 'var(--brand-action-btn-text, #ffffff)' }}
+            className="px-3 py-1.5 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold bg-red-600 hover:bg-red-700"
             title="Delete selected inquiries"
           >
             Delete Selected

@@ -504,7 +504,7 @@ export default function InquiriesPage() {
             <>
               <CreateInquiryButton addInquiry={handleAddInquiry} />
               <button
-                className="px-3 py-2 text-[13px] rounded-md border dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 font-semibold"
+                className="px-3 py-2 text-[13px] font-semibold bg-sky-600 text-white hover:bg-sky-700"
                 onClick={downloadImportTemplate}
                 title="Download bulk import CSV template"
               >
@@ -513,7 +513,7 @@ export default function InquiriesPage() {
               <BulkImportButton onImported={refreshInquiries} />
               {canExport && (
                 <button
-                  className="px-3 py-2 text-[13px] rounded-md bg-emerald-600 text-white hover:bg-emerald-700 font-semibold"
+                  className="px-3 py-2 text-[13px] font-semibold bg-emerald-600 text-white hover:bg-emerald-700"
                   onClick={exportFilteredCsv}
                   title="Export filtered inquiries to CSV"
                 >
@@ -521,14 +521,14 @@ export default function InquiriesPage() {
                 </button>
               )}
               <button
-                className="px-3 py-2 text-[13px] rounded-md border dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 font-semibold"
+                className="px-3 py-2 text-[13px] font-semibold bg-teal-600 text-white hover:bg-teal-700"
                 onClick={() => setShowHiddenCols(v => !v)}
                 title={showHiddenCols ? 'Hide extra columns' : 'Show extra columns'}
               >
                 {showHiddenCols ? 'Hide Columns' : 'Show Columns'}
               </button>
               <button
-                className="px-3 py-2 text-[13px] rounded-md border dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 font-semibold"
+                className="px-3 py-2 text-[13px] font-semibold bg-gray-600 text-white hover:bg-gray-700"
                 onClick={() => refreshInquiries(isAdmin ? (owner || undefined) : undefined)}
                 title="Refresh inquiries"
               >
