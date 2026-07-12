@@ -629,17 +629,24 @@ router.post('/', async (req, res) => {
       console.warn('[webhook] inquiry.created:', e);
     }
 
-    // Auto-flag for QA if completeness is low
+    // Auto-flag for QA if completeness is low (checks same fields as profileCompleteness)
     try {
       const { createQaItem } = await import('../utils/qaStore');
       const flags: string[] = [];
+      if (!inquiry.fullName) flags.push('Missing fullName');
+      if (!inquiry.phone) flags.push('Missing phone');
       if (!inquiry.email) flags.push('Missing email');
-      if (!inquiry.kcseGrade || inquiry.kcseGrade === 'Unknown') flags.push('Missing KCSE grade');
       if (!inquiry.programOfInterest) flags.push('Missing program');
+      if (!inquiry.intakePeriod) flags.push('Missing intakePeriod');
+      if (!inquiry.studyMode) flags.push('Missing studyMode');
+      if (!inquiry.source) flags.push('Missing source');
+      if (!inquiry.preferredContactMethod) flags.push('Missing preferredContactMethod');
+      if (!inquiry.kcseGrade || inquiry.kcseGrade === 'Unknown') flags.push('Missing KCSE grade');
+      if (!inquiry.gender) flags.push('Missing gender');
       if (flags.length > 0) {
         createQaItem({
           tenantId, type: 'inquiry', refId: inquiry.id, refName: inquiry.fullName,
-          score: Math.max(0, 100 - flags.length * 25), flags, status: 'pending',
+          score: Math.max(0, 100 - flags.length * 10), flags, status: 'pending',
           createdBy: email || 'system',
         });
       }
@@ -975,13 +982,20 @@ router.put('/:id', async (req, res) => {
       const { createQaItem, listQaItems } = await import('../utils/qaStore');
       const existing = listQaItems(tenantId, 'inquiry', 'pending').filter(i => i.refId === id);
       const flags: string[] = [];
+      if (!inquiry.fullName) flags.push('Missing fullName');
+      if (!inquiry.phone) flags.push('Missing phone');
       if (!inquiry.email) flags.push('Missing email');
-      if (!inquiry.kcseGrade || inquiry.kcseGrade === 'Unknown') flags.push('Missing KCSE grade');
       if (!inquiry.programOfInterest) flags.push('Missing program');
+      if (!inquiry.intakePeriod) flags.push('Missing intakePeriod');
+      if (!inquiry.studyMode) flags.push('Missing studyMode');
+      if (!inquiry.source) flags.push('Missing source');
+      if (!inquiry.preferredContactMethod) flags.push('Missing preferredContactMethod');
+      if (!inquiry.kcseGrade || inquiry.kcseGrade === 'Unknown') flags.push('Missing KCSE grade');
+      if (!inquiry.gender) flags.push('Missing gender');
       if (flags.length > 0 && existing.length === 0) {
         createQaItem({
           tenantId, type: 'inquiry', refId: inquiry.id, refName: inquiry.fullName,
-          score: Math.max(0, 100 - flags.length * 25), flags, status: 'pending',
+          score: Math.max(0, 100 - flags.length * 10), flags, status: 'pending',
           createdBy: email || 'system',
         });
       }
