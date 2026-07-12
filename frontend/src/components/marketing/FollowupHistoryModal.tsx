@@ -1,15 +1,6 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { Followup } from '@/types/followup';
-import {
-  modalOverlayClass,
-  modalPanelClass,
-  modalHeaderClass,
-  modalTitleClass,
-  modalCloseButtonClass,
-  primaryButtonClass,
-  secondaryButtonClass,
-} from '@/styles/modalForm'
 
 interface Props {
   inquiryId: string;
@@ -28,26 +19,22 @@ function getSuggestion(history: Followup[]) {
 }
 
 function downloadCSV(history: Followup[]) {
-  const header = ['Scheduled For', 'Type', 'Status', 'Assigned To', 'Notes', 'Created By', 'Created At', 'Updated At'];
+  const header = ['Date', 'Type', 'Status', 'Notes'];
   const rows = history.map(f => [
     format(new Date(f.scheduledFor), 'PPpp'),
-    f.type,
-    f.status,
-    f.assignedTo,
-    f.notes || '',
-    f.createdBy,
-    format(new Date(f.createdAt), 'PPpp'),
-    format(new Date(f.updatedAt), 'PPpp'),
+    f.type, f.status, f.notes || '',
   ]);
   const csv = [header, ...rows].map(r => r.map(x => '"' + String(x).replace(/"/g, '""') + '"').join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = 'followup-history.csv';
-  a.click();
+  a.href = url; a.download = 'followup-history.csv'; a.click();
   window.URL.revokeObjectURL(url);
 }
+
+const statusColors: Record<string, string> = {
+  pending: 'bg-amber-500', rescheduled: 'bg-sky-500', completed: 'bg-emerald-500', cancelled: 'bg-gray-500',
+};
 
 export default function FollowupHistoryModal({ inquiryId, allFollowups, onClose }: Props) {
   const history = useMemo(() =>
@@ -55,87 +42,68 @@ export default function FollowupHistoryModal({ inquiryId, allFollowups, onClose 
     [allFollowups, inquiryId]
   );
 
-  // For the horizontal timeline
-  const statusColors = {
-    pending: 'bg-amber-500',
-    rescheduled: 'bg-sky-500',
-    completed: 'bg-emerald-500',
-    cancelled: 'bg-gray-500',
-  };
-
   return (
-    <div className={modalOverlayClass}>
-      <div className={`${modalPanelClass} max-w-3xl w-[90vw]`}>
-        <div className={modalHeaderClass}>
-          <h2 className={modalTitleClass}>Follow-up History</h2>
-          <button onClick={onClose} className={modalCloseButtonClass} aria-label="Close">
-            ✕
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-3 border-b">
+          <h2 className="text-sm font-semibold text-gray-800">Follow-up History</h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded text-gray-500">✕</button>
         </div>
-        <div className="mb-4 overflow-x-auto">
-          <div className="flex items-center space-x-8 min-w-[400px]" style={{ paddingBottom: 24 }}>
-            {history.map((f, i) => (
-              <div key={i} className="flex flex-col items-center min-w-[80px]">
-                <div className="flex items-center">
-                  <div className={`w-5 h-5 rounded-full border-2 border-white shadow ${statusColors[f.status]}`}></div>
-                  {i < history.length - 1 && (
-                    <div className="h-1 w-12 bg-neutral-300 mx-1" />
-                  )}
-                </div>
-                <div className="text-xs mt-2 text-neutral-dark whitespace-nowrap">{format(new Date(f.scheduledFor), 'MMM d, yyyy')}</div>
-                <div className="text-xs mt-1 font-semibold capitalize text-neutral-700">{f.status}</div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          {history.length === 0 ? (
+            <div className="text-center py-8 text-sm text-gray-400">No follow-up history</div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2">
+                {history.map((f, i) => (
+                  <div key={i} className="flex items-center gap-1 shrink-0">
+                    <div className={`w-2.5 h-2.5 rounded-full ${statusColors[f.status]}`}></div>
+                    <span className="text-[10px] text-gray-500 whitespace-nowrap">{format(new Date(f.scheduledFor), 'd MMM')}</span>
+                    <span className="text-[9px] text-gray-400 capitalize">{f.status}</span>
+                    {i < history.length - 1 && <span className="text-gray-300 text-[10px] mx-1">→</span>}
+                  </div>
+                ))}
               </div>
-            ))}
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left px-3 py-2 text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                      <th className="text-left px-3 py-2 text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Type</th>
+                      <th className="text-left px-3 py-2 text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                      <th className="text-left px-3 py-2 text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Assigned</th>
+                      <th className="text-left px-3 py-2 text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {history.map((f, i) => (
+                      <tr key={i} className="hover:bg-gray-50">
+                        <td className="px-3 py-2 whitespace-nowrap text-xs">{format(new Date(f.scheduledFor), 'MMM d, yyyy HH:mm')}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-xs capitalize">{f.type}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-xs">
+                          <span className={`px-1.5 py-0.5 text-[10px] font-medium ${f.status === 'completed' ? 'bg-green-100 text-green-700' : f.status === 'pending' ? 'bg-amber-100 text-amber-700' : f.status === 'rescheduled' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{f.status}</span>
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-600">{f.assignedTo ? f.assignedTo.split('@')[0] : '-'}</td>
+                        <td className="px-3 py-2 text-xs text-gray-600 max-w-[200px] truncate">{f.notes || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="px-4 py-3 border-t flex items-center justify-between text-xs">
+          <span className="text-gray-500"><strong>System:</strong> {getSuggestion(history)}</span>
+          <div className="flex gap-2">
+            <button onClick={() => downloadCSV(history)} className="px-3 py-1.5 bg-teal-600 text-white text-xs font-medium hover:bg-teal-700">Download CSV</button>
+            <button onClick={onClose} className="px-3 py-1.5 border text-xs hover:bg-gray-50">Close</button>
           </div>
-        </div>
-        <div className="overflow-x-auto mb-4">
-          <table className="min-w-full divide-y divide-neutral-light">
-            <thead className="bg-neutral-light/30">
-              <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-neutral-dark uppercase tracking-wider">Scheduled For</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-neutral-dark uppercase tracking-wider">Type</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-neutral-dark uppercase tracking-wider">Status</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-neutral-dark uppercase tracking-wider">Assigned To</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-neutral-dark uppercase tracking-wider">Notes</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-neutral-dark uppercase tracking-wider">Created By</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-neutral-dark uppercase tracking-wider">Created At</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-neutral-dark uppercase tracking-wider">Updated At</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-neutral-light">
-              {history.map((f, i) => (
-                <tr key={i}>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm">{format(new Date(f.scheduledFor), 'PPpp')}</td>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm">{f.type}</td>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm">{f.status}</td>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm">{f.assignedTo}</td>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm">{f.notes}</td>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm">{f.createdBy}</td>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm">{format(new Date(f.createdAt), 'PPpp')}</td>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm">{format(new Date(f.updatedAt), 'PPpp')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="mb-4">
-          <strong>System Suggestion:</strong> {getSuggestion(history)}
-        </div>
-        <div className="flex justify-end gap-4">
-          <button
-            className={primaryButtonClass}
-            onClick={() => downloadCSV(history)}
-          >
-            Download as Excel
-          </button>
-          <button
-            className={secondaryButtonClass}
-            onClick={onClose}
-          >
-            Close
-          </button>
         </div>
       </div>
     </div>
   );
-} 
+}
