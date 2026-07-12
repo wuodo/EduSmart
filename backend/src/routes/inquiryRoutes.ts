@@ -208,12 +208,15 @@ router.get('/completeness/summary', async (req, res) => {
       .sort((a, b) => a.score - b.score)
       .slice(0, 15);
 
+    const allIncomplete = incomplete.sort((a, b) => a.score - b.score).slice(0, 50);
+
     return safeJson(res, {
       total: inquiries.length,
       incompleteCount: incomplete.length,
       completeCount: inquiries.length - incomplete.length,
       highPriorityCount: highPriority.length,
       highPriority,
+      allIncomplete,
     });
   } catch (error) {
     if (res.headersSent) return;

@@ -684,7 +684,7 @@ export default function InquiriesPage() {
               <button onClick={() => { setShowCompletenessNudge(false); try { localStorage.setItem('edusmart_completeness_dismissed', '1'); } catch {} }} className="px-2 py-1 border text-xs bg-white hover:bg-gray-50">Close</button>
             </div>
             <div className="p-4 space-y-3 text-sm">
-              <p className="text-xs text-gray-600">{completenessSummary.highPriorityCount} high-priority profiles need attention. Click a row to jump to the inquiry and update missing fields.</p>
+              <p className="text-xs text-gray-600">{completenessSummary.incompleteCount} incomplete profile(s) — all shown below sorted by priority (lowest score first). Click a row to jump to the inquiry and update missing fields.</p>
               <div className="max-h-80 overflow-auto border">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
@@ -696,10 +696,10 @@ export default function InquiriesPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {completenessSummary.highPriority.map((x) => (
+                    {completenessSummary.allIncomplete?.map((x: any) => (
                       <tr key={x.id} className="border-b hover:bg-gray-50">
                         <td className="px-3 py-2 text-sm">{x.fullName || x.phone}</td>
-                        <td className="px-3 py-2 font-semibold text-amber-700 text-sm">{x.score}%</td>
+                        <td className="px-3 py-2 font-semibold text-sm" style={{ color: x.score < 50 ? '#dc2626' : x.score < 70 ? '#d97706' : '#0d9488' }}>{x.score}%</td>
                         <td className="px-3 py-2 text-xs text-gray-500">{x.missingFields.join(', ')}</td>
                         <td className="px-3 py-2">
                           <button onClick={() => { window.location.href = `/inquiries?openInquiry=${x.id}`; }} className="px-2.5 py-1 text-xs font-medium bg-teal-600 text-white hover:bg-teal-700">Edit Inquiry</button>
