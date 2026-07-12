@@ -139,6 +139,56 @@ export async function getEscalationSummary(req: Request, res: Response) {
   }
 }
 
+export async function getPerformanceTrend(req: Request, res: Response) {
+  try {
+    const tenantId = ((req as any).tenant as { id: number } | undefined)?.id;
+    if (!tenantId) { res.status(400).json({ success: false, message: 'Tenant required' }); return; }
+    const period = String(req.query.period || 'week').toLowerCase();
+    const staffFilter = String(req.query.staff || '').trim().toLowerCase();
+
+    const now = new Date();
+    let startDate: Date;
+    let step: number;
+
+    if (period === 'month') { startDate = new Date(now.getTime() - 90 * 86400000); step = 7; }
+    else if (period === 'week') { startDate = new Date(now.getTime() - 7 * 86400000); step = 1; }
+    else { startDate = new Date(now.getTime() - 30 * 86400000); step = 1; }
+
+    const staff = await prisma.user.findMany({
+      where: { tenantId, approved: true },
+      select: { id: true, name: true, email: true },
+    });
+
+    const filtered = staffFilter ? staff.filter(s => s.email.toLowerCase() === staffFilter || s.name?.toLowerCase().includes(staffFilter)) : staff;
+
+    const series = await Promise.all(filtered.map(async (user) => {
+      const points: { date: string; score: number; inquiries: number; conversions: number }[] = [];
+      const cursor = new Date(startDate);
+      while (cursor <= now) {
+        const dayStart = new Date(cursor);
+        const dayEnd = new Date(cursor.getTime() + step * 86400000);
+        const inquiries = await prisma.inquiry.count({
+          where: { tenantId, createdBy: user.email, createdAt: { gte: dayStart, lt: dayEnd } },
+        });
+        const conversions = await prisma.inquiry.count({
+          where: { tenantId, createdBy: user.email, paymentStatus: 'Paid', createdAt: { gte: dayStart, lt: dayEnd } },
+        });
+        const overdue = await prisma.followup.count({
+          where: { tenantId, assignedTo: user.email, status: 'pending', scheduledFor: { lte: dayEnd } },
+        });
+        const score = inquiries > 0 ? Math.round((conversions / inquiries) * 100) - overdue * 5 : 0;
+        points.push({ date: dayStart.toISOString().slice(0, 10), score: Math.max(0, score), inquiries, conversions });
+        cursor.setTime(cursor.getTime() + step * 86400000);
+      }
+      return { email: user.email, name: user.name || user.email, points };
+    }));
+
+    res.json({ success: true, series, period });
+  } catch (e: any) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+}
+
 export async function updateInquiryFirstResponse(req: Request, res: Response) {
   try {
     const id = parseInt(req.params.id);

@@ -1,7 +1,7 @@
 'use client'
 
 import { useMarketingData } from '@/hooks/useMarketingData'
-import { Bar, Pie, Line } from 'react-chartjs-2'
+import { Bar, Doughnut, Line } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -538,7 +538,7 @@ export default function MarketingPage() {
             Inquiry sources
           </div>
           <div className="h-[220px]">
-            <Pie
+            <Doughnut
               data={{
                 labels: Object.keys(sourceCounts),
                 datasets: [{
@@ -551,6 +551,7 @@ export default function MarketingPage() {
                     '#f43f5e',
                     '#6b7280',
                   ],
+                  borderWidth: 0,
                 }],
               }}
               options={{
@@ -646,7 +647,7 @@ export default function MarketingPage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="h-[120px]">
-                <Pie
+                <Doughnut
                   data={{
                     labels: ['≤ 24h', '> 24h'],
                     datasets: [{
@@ -655,6 +656,7 @@ export default function MarketingPage() {
                         Math.max(0, 100 - slaWithin24Pct),
                       ],
                       backgroundColor: ['#16a34a', '#e5e7eb'],
+                      borderWidth: 0,
                     }],
                   }}
                   options={{
