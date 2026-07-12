@@ -560,6 +560,15 @@ export const getPerformanceAnalytics = async (req: Request, res: Response) => {
       if (row.type) channelEffectiveness[row.type] = row._count._all;
     }
 
+    let staffName = staff || null;
+    if (staff) {
+      const user = await prisma.user.findFirst({
+        where: { email: { equals: staff, mode: 'insensitive' }, tenantId },
+        select: { name: true },
+      });
+      if (user?.name) staffName = user.name;
+    }
+
     return safeJson(res, {
       totalLeads,
       conversions,
@@ -569,7 +578,8 @@ export const getPerformanceAnalytics = async (req: Request, res: Response) => {
       conversionRateAfter24h,
       overdueFollowups,
       channelEffectiveness,
-      staff: staff || null,
+      staff: staffName,
+      staffEmail: staff || null,
     });
   } catch (err) {
     return safeJson(res, { error: 'Failed to get performance analytics' }, 500);
