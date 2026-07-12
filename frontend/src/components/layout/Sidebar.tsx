@@ -42,7 +42,7 @@ const navigation: NavigationItem[] = [
   { name: 'ADM Letters', href: '/admission-letters', icon: DocumentTextIcon },
   { name: 'Registrations', href: '/registrations', icon: CheckBadgeIcon },
   { name: 'Courses', href: '/courses', icon: BookOpenIcon },
-  { name: 'Campaigns', href: '/marketing/campaigns', icon: MegaphoneIcon },
+
   { name: 'Analytics', href: '/analytics', icon: ChartPieIcon },
   { name: 'Reports', href: '/reports', icon: ArrowTrendingUpIcon },
   { name: 'Email', href: '/email/inbox', icon: EnvelopeIcon },
