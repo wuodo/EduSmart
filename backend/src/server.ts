@@ -15,6 +15,7 @@ import { listAuditLogs, createAuditLog, clearAuditLogs } from './controllers/aud
 import chatRoutes from './routes/chat.routes';
 import { calendarRoutes } from './routes/calendar.routes';
 import esignRoutes from './routes/esign.routes';
+import campaignRoutes from './routes/campaign.routes';
 import { resolveTenant } from './middleware/tenantMiddleware';
 import tenantAdminRoutes from './routes/tenant.routes';
 import prisma from './lib/prisma';
@@ -826,6 +827,17 @@ app.use('/api/ask-ai', askAiRoutes);
 app.use('/api/courses', coursesRoutes);
 app.use('/api/tenants', tenantAdminRoutes);
 app.use('/api/esign', esignRoutes);
+app.use('/api/campaigns', campaignRoutes);
+
+// SSE endpoint for real-time chat updates
+app.get('/api/chat/events', (req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+  res.write('data: {"connected":true}\n\n');
+  const interval = setInterval(() => {
+    res.write(`data: ${JSON.stringify({ type: 'heartbeat', ts: new Date().toISOString() })}\n\n`);
+  }, 30000);
+  req.on('close', () => { clearInterval(interval); });
+});
 app.use('/api/email', emailMessagingRoutes);
 app.use('/api', permissionsRoutes);
 

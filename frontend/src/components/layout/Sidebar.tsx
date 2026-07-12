@@ -38,6 +38,7 @@ const navigation: NavigationItem[] = [
   { name: 'QA review', href: '/qa-review', icon: ClipboardDocumentCheckIcon },
   { name: 'Follow-ups', href: '/followups', icon: CalendarIcon },
   { name: 'Calendar', href: '/calendar', icon: CalendarDaysIcon },
+  { name: 'Campaigns', href: '/campaigns', icon: MegaphoneIcon },
   { name: 'ADM Letters', href: '/admission-letters', icon: DocumentTextIcon },
   { name: 'Registrations', href: '/registrations', icon: CheckBadgeIcon },
   { name: 'Courses', href: '/courses', icon: BookOpenIcon },
