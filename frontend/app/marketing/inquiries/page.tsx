@@ -179,9 +179,8 @@ export default function InquiriesPage() {
   // Show periodic reminder when there are incomplete profiles
   useEffect(() => {
     if (!completenessSummary?.incompleteCount) return
-    setShowCompletenessNudge(true)
-    const timer = setInterval(() => setShowCompletenessNudge(true), 2 * 60 * 1000)
-    return () => clearInterval(timer)
+    const dismissed = typeof window !== 'undefined' ? localStorage.getItem('edusmart_completeness_dismissed') : null
+    if (!dismissed) setShowCompletenessNudge(true)
   }, [completenessSummary?.incompleteCount])
 
   useEffect(() => {
@@ -678,42 +677,44 @@ export default function InquiriesPage() {
 
       {showCompletenessNudge && completenessSummary && completenessSummary.incompleteCount > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowCompletenessNudge(false)} />
-          <div className="relative bg-white dark:bg-gray-800 rounded shadow-lg w-full max-w-2xl mx-4 border dark:border-gray-700">
-            <div className="px-5 py-3 border-b dark:border-gray-700 flex items-center justify-between">
-              <div className="font-semibold text-gray-900 dark:text-gray-100">Data Completion Reminder</div>
-              <button onClick={() => setShowCompletenessNudge(false)} className="px-2 py-1 rounded border dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">Close</button>
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setShowCompletenessNudge(false); try { localStorage.setItem('edusmart_completeness_dismissed', '1'); } catch {} }} />
+          <div className="relative bg-white dark:bg-gray-800 shadow-lg w-full max-w-3xl mx-4 border">
+            <div className="px-5 py-3 border-b flex items-center justify-between">
+              <div className="font-semibold text-gray-900 text-sm">Data Completion Reminder</div>
+              <button onClick={() => { setShowCompletenessNudge(false); try { localStorage.setItem('edusmart_completeness_dismissed', '1'); } catch {} }} className="px-2 py-1 border text-xs bg-white hover:bg-gray-50">Close</button>
             </div>
-            <div className="p-5 space-y-3">
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                Incomplete inquiry profiles reduce system intelligence for gap analysis, conversion forecasting, and follow-up prioritization.
-              </p>
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                High-priority incomplete profiles: <strong>{completenessSummary.highPriorityCount}</strong>
-              </p>
-              <div className="max-h-64 overflow-auto border dark:border-gray-700 rounded">
+            <div className="p-4 space-y-3 text-sm">
+              <p className="text-xs text-gray-600">{completenessSummary.highPriorityCount} high-priority profiles need attention. Click a row to jump to the inquiry and update missing fields.</p>
+              <div className="max-h-80 overflow-auto border">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 dark:bg-gray-700/90">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <th className="text-left px-3 py-2 border-b">Name</th>
-                      <th className="text-left px-3 py-2 border-b">Score</th>
-                      <th className="text-left px-3 py-2 border-b">Missing Fields</th>
+                      <th className="text-left px-3 py-2 text-[11px] font-semibold text-gray-600 uppercase tracking-wider border-b">Name</th>
+                      <th className="text-left px-3 py-2 text-[11px] font-semibold text-gray-600 uppercase tracking-wider border-b">Score</th>
+                      <th className="text-left px-3 py-2 text-[11px] font-semibold text-gray-600 uppercase tracking-wider border-b">Missing Fields</th>
+                      <th className="text-left px-3 py-2 text-[11px] font-semibold text-gray-600 uppercase tracking-wider border-b">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {completenessSummary.highPriority.map((x) => (
-                      <tr key={x.id} className="border-b">
-                        <td className="px-3 py-2">{x.fullName || x.phone}</td>
-                        <td className="px-3 py-2 font-semibold text-amber-700 dark:text-amber-300">{x.score}%</td>
-                        <td className="px-3 py-2">{x.missingFields.join(', ')}</td>
+                      <tr key={x.id} className="border-b hover:bg-gray-50">
+                        <td className="px-3 py-2 text-sm">{x.fullName || x.phone}</td>
+                        <td className="px-3 py-2 font-semibold text-amber-700 text-sm">{x.score}%</td>
+                        <td className="px-3 py-2 text-xs text-gray-500">{x.missingFields.join(', ')}</td>
+                        <td className="px-3 py-2">
+                          <button onClick={() => { window.location.href = `/inquiries?openInquiry=${x.id}`; }} className="px-2.5 py-1 text-xs font-medium bg-teal-600 text-white hover:bg-teal-700">Edit Inquiry</button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
-            <div className="px-5 py-3 border-t dark:border-gray-700 flex justify-end">
-              <button onClick={() => setShowCompletenessNudge(false)} className="px-4 py-2 rounded bg-primary text-white hover:bg-primary/90">Will Update</button>
+            <div className="px-4 py-3 border-t flex justify-between items-center">
+              <button onClick={() => { try { localStorage.removeItem('edusmart_completeness_dismissed'); } catch {} setShowCompletenessNudge(true); }} className="text-xs text-gray-400 hover:text-gray-600">Show again later</button>
+              <div className="flex gap-2">
+                <button onClick={() => { setShowCompletenessNudge(false); try { localStorage.setItem('edusmart_completeness_dismissed', '1'); } catch {} }} className="px-3 py-1.5 border text-xs hover:bg-gray-50">Dismiss</button>
+              </div>
             </div>
           </div>
         </div>
