@@ -17,6 +17,7 @@ import { calendarRoutes } from './routes/calendar.routes';
 import esignRoutes from './routes/esign.routes';
 import campaignRoutes from './routes/campaign.routes';
 import pipelineRoutes from './routes/pipeline.routes';
+import qaRoutes from './routes/qa.routes';
 import { resolveTenant } from './middleware/tenantMiddleware';
 import tenantAdminRoutes from './routes/tenant.routes';
 import prisma from './lib/prisma';
@@ -830,6 +831,7 @@ app.use('/api/tenants', tenantAdminRoutes);
 app.use('/api/esign', esignRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/pipeline', pipelineRoutes);
+app.use('/api/qa', qaRoutes);
 
 // SSE endpoint for real-time chat updates
 app.get('/api/chat/events', (req, res) => {
