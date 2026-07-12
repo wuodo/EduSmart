@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Phone, Mail, MessageCircle, RefreshCw } from 'lucide-react';
 
-type InquiryCard = { id: number; fullName: string; phone: string; email: string; programOfInterest?: string; score?: number; assignedTo?: string; status: string };
+type InquiryCard = { id: number; fullName: string; phone: string; email: string; programOfInterest?: string; score?: number; assignedTo?: string; status: string; };
 type StageStat = { stage: string; total: number; converted: number; conversionRate: number };
 
 export default function PipelinePage() {
@@ -86,6 +86,7 @@ export default function PipelinePage() {
                     <div key={c.id} draggable onDragStart={() => handleDragStart(c.id)} className="bg-white border p-2.5 cursor-grab active:cursor-grabbing hover:border-teal-300 transition-colors card-hover">
                       <div className="text-xs font-semibold text-gray-900 truncate">{c.fullName}</div>
                       <div className="text-[10px] text-gray-500 truncate mt-0.5">{c.programOfInterest || '—'}</div>
+                      {c.assignedTo && <div className="text-[9px] text-gray-400 mt-0.5 truncate">Assigned: {c.assignedTo.split('@')[0]}</div>}
                       {c.score !== undefined && c.score > 0 && <div className="text-[10px] text-teal-600 mt-0.5">Score: {c.score}</div>}
                       <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-gray-100">
                         {c.phone && <a href={`tel:${c.phone}`} className="p-1 hover:bg-green-50 text-green-600" title={`Call ${c.phone}`}><Phone size={12} /></a>}

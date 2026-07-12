@@ -1077,6 +1077,59 @@ router.get('/:id/reminder', async (req, res) => {
   }
 });
 
+// Dedicated reassign endpoint — cascades to follow-ups + tasks + audit + notification
+router.post('/:id/reassign', async (req, res) => {
+  try {
+    const tenantId = await getTenantId(req as any);
+    if (!tenantId) return safeJson(res, { message: 'Tenant not found' }, 400);
+    const role = getRole(req);
+    if (role !== 'admin' && role !== 'senior_staff') return safeJson(res, { message: 'Only admin/senior_staff can reassign' }, 403);
+    const id = parseInt(req.params.id);
+    const { assignedTo } = req.body || {};
+    if (!assignedTo) return safeJson(res, { message: 'assignedTo email required' }, 400);
+    const email = getEmail(req);
+
+    const inquiry = await prisma.inquiry.findFirst({ where: { id, tenantId } });
+    if (!inquiry) return safeJson(res, { message: 'Not found' }, 404);
+
+    const oldAssignee = inquiry.assignedTo;
+
+    // Update inquiry
+    await prisma.inquiry.update({ where: { id, tenantId }, data: { assignedTo } });
+
+    // Cascade: transfer pending follow-ups to new assignee
+    await prisma.followup.updateMany({
+      where: { inquiryId: id, tenantId, status: 'pending', assignedTo: oldAssignee },
+      data: { assignedTo },
+    });
+
+    // Cascade: transfer incomplete tasks to new assignee
+    await prisma.task.updateMany({
+      where: { inquiryId: id, tenantId, status: { not: 'completed' }, ownerEmail: oldAssignee },
+      data: { ownerEmail: assignedTo },
+    });
+
+    // Audit log
+    await auditLogger.custom(req, 'inquiry_reassigned', 'inquiries', {
+      inquiryId: id, from: oldAssignee, to: assignedTo, by: email,
+    });
+
+    // Auto-flag QA item for reassignment review
+    try {
+      const { createQaItem } = await import('../utils/qaStore');
+      createQaItem({
+        tenantId, type: 'inquiry', refId: id, refName: inquiry.fullName,
+        score: 100, flags: [`Reassigned from ${oldAssignee?.split('@')[0] || 'unassigned'} to ${assignedTo.split('@')[0]}`],
+        status: 'pending', createdBy: email || 'system',
+      });
+    } catch {}
+
+    return safeJson(res, { success: true, message: `Reassigned to ${assignedTo}` });
+  } catch (error) {
+    return safeJson(res, { message: 'Error reassigning inquiry', error: error instanceof Error ? error.message : String(error) }, 500);
+  }
+});
+
 router.post('/:id/reminder', async (req, res) => {
   const { lastReminderSent, reminderStatus } = req.body;
   try {
