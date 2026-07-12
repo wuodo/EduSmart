@@ -57,21 +57,23 @@ export default function AdmissionLettersPage() {
     'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40'
   const selectClass = inputClass
 
-  // Compute stats from real inquiry data — includes all possible letter statuses
+  // Compute stats — flow-based: Generated includes all non-null letter statuses
   const counts: Record<string, number> = {}
   for (const i of inquiries as any[]) {
     const s = String(i?.letterStatus || 'Not Generated')
     counts[s] = (counts[s] || 0) + 1
   }
-  // Ensure all known statuses appear in the cards (even if count is 0)
-  const allStatuses = ['Not Generated', 'Generated', 'Sending', 'Sent', 'Downloaded', 'Acknowledged', 'Signed']
   const total = inquiries.length
+  const notGenerated = counts['Not Generated'] || 0
+  const generated = total - notGenerated // any status other than "Not Generated"
+  const breakdownStatuses = ['Generated', 'Sending', 'Sent', 'Downloaded', 'Acknowledged', 'Signed']
   const cards = [
     { label: 'Total', value: total, color: 'bg-primary text-white' },
-    ...allStatuses.map(s => ({
-      label: s,
-      value: counts[s] || 0,
-      color: s === 'Not Generated' ? 'bg-gray-600 text-white' : s === 'Generated' ? 'bg-blue-600 text-white' : s === 'Sending' ? 'bg-sky-500 text-white' : s === 'Sent' ? 'bg-amber-600 text-white' : s === 'Downloaded' ? 'bg-emerald-600 text-white' : s === 'Acknowledged' ? 'bg-green-700 text-white' : s === 'Signed' ? 'bg-purple-600 text-white' : 'bg-gray-500 text-white',
+    { label: 'No Letter', value: notGenerated, color: 'bg-gray-600 text-white' },
+    { label: 'Letter Gen.', value: generated, color: 'bg-blue-600 text-white' },
+    ...breakdownStatuses.filter(s => (counts[s] || 0) > 0 || s === 'Sent').map(s => ({
+      label: s, value: counts[s] || 0,
+      color: s === 'Sending' ? 'bg-sky-500 text-white' : s === 'Sent' ? 'bg-amber-600 text-white' : s === 'Downloaded' ? 'bg-emerald-600 text-white' : s === 'Acknowledged' ? 'bg-green-700 text-white' : s === 'Signed' ? 'bg-purple-600 text-white' : 'bg-blue-600 text-white',
     })),
   ]
 
@@ -94,11 +96,11 @@ export default function AdmissionLettersPage() {
         <h1 className="text-xl sm:text-2xl font-bold">Admission Letters</h1>
       </div>
 
-      <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4 mb-3 sm:mb-6">
+      <div className="flex overflow-x-auto gap-2 pb-2 mb-3">
         {cards.map(card => (
-          <div key={card.label} className={`shadow-sm ring-1 ring-black/5 p-2 sm:p-3 flex flex-col items-center ${card.color}`}>
-            <div className="text-base sm:text-2xl font-bold">{card.value}</div>
-            <div className="text-[10px] sm:text-xs font-medium uppercase tracking-wider mt-1 text-center">{card.label}</div>
+          <div key={card.label} className={`shadow-sm ring-1 ring-black/5 p-2 px-3 flex flex-col items-center shrink-0 ${card.color}`}>
+            <div className="text-sm font-bold">{card.value}</div>
+            <div className="text-[9px] font-medium uppercase tracking-wider mt-0.5 whitespace-nowrap">{card.label}</div>
           </div>
         ))}
       </div>
