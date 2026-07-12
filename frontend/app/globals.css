@@ -93,6 +93,12 @@ input, textarea, select { border-radius: 1mm !important; }
   .dark .bg-gray-50 {
     background-color: rgb(55 65 81); /* bg-gray-700 */
   }
+  .dark thead .bg-gray-50,
+  .dark thead .bg-gray-50\/80,
+  .dark thead .bg-gray-50\/90,
+  .dark thead .bg-gray-50\/95 {
+    background-color: rgb(17 24 39) !important; /* gray-900 */
+  }
   
   .dark .bg-gray-100 {
     background-color: rgb(75 85 99); /* bg-gray-600 */
@@ -100,8 +106,9 @@ input, textarea, select { border-radius: 1mm !important; }
 
   .dark .bg-gray-50\/80,
   .dark .bg-gray-50\/95,
-  .dark .bg-gray-50\/70 {
-    background-color: rgb(31 41 55 / 0.95); /* dark table headers / sticky bars */
+  .dark .bg-gray-50\/70,
+  .dark .bg-gray-50\/90 {
+    background-color: rgb(17 24 39) !important; /* gray-900 — dark table headers */
   }
   
   /* Text colors */
