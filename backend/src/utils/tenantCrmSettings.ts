@@ -70,7 +70,11 @@ export function mergeTenantCrmSettings(raw: unknown): TenantCrmSettings {
     smtpConfig: r.smtpConfig && typeof r.smtpConfig === 'object' ? r.smtpConfig as TenantSmtpConfig : undefined,
     featureToggles: r.featureToggles && typeof r.featureToggles === 'object' ? r.featureToggles as TenantFeatureToggles : undefined,
     pipelineStages: Array.isArray(r.pipelineStages) ? r.pipelineStages : undefined,
-    stageGateRules: Array.isArray(r.stageGateRules) ? r.stageGateRules : undefined,
+    stageGateRules: Array.isArray(r.stageGateRules) ? r.stageGateRules : [
+      { from: 'new', to: 'contacted', requiredFields: ['email', 'phone'] },
+      { from: 'contacted', to: 'qualified', requiredFields: ['kcseGrade', 'programOfInterest'] },
+      { from: 'qualified', to: 'proposal', requiredFields: ['intakePeriod', 'studyMode'] },
+    ],
   }
 }
 
