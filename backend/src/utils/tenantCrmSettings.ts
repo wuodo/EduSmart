@@ -51,6 +51,8 @@ export type TenantCrmSettings = {
   smtpConfig?: TenantSmtpConfig
   /** Feature toggles for auto-send, e-signature, etc. */
   featureToggles?: TenantFeatureToggles
+  /** Custom pipeline stages (ordered) */
+  pipelineStages?: string[]
 }
 
 export function mergeTenantCrmSettings(raw: unknown): TenantCrmSettings {
@@ -65,6 +67,7 @@ export function mergeTenantCrmSettings(raw: unknown): TenantCrmSettings {
     scheduledJobsMeta: Array.isArray(r.scheduledJobsMeta) ? r.scheduledJobsMeta : [],
     smtpConfig: r.smtpConfig && typeof r.smtpConfig === 'object' ? r.smtpConfig as TenantSmtpConfig : undefined,
     featureToggles: r.featureToggles && typeof r.featureToggles === 'object' ? r.featureToggles as TenantFeatureToggles : undefined,
+    pipelineStages: Array.isArray(r.pipelineStages) ? r.pipelineStages : undefined,
   }
 }
 

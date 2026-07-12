@@ -1,81 +1,106 @@
-'use client'
+"use client";
+import { useEffect, useState, useCallback } from 'react';
+import { Phone, Mail, MessageCircle, RefreshCw } from 'lucide-react';
 
-import { useMarketingData } from '@/hooks/useMarketingData'
-import Link from 'next/link'
-import { useMemo } from 'react'
-
-const STATUS_PRIORITY = ['hot', 'warm', 'cold', 'Pending', 'scholarship-seeker', 'graduate']
+type InquiryCard = { id: number; fullName: string; phone: string; email: string; programOfInterest?: string; score?: number; assignedTo?: string; status: string };
+type StageStat = { stage: string; total: number; converted: number; conversionRate: number };
 
 export default function PipelinePage() {
-  const { inquiries, loading, refreshInquiries } = useMarketingData() as any
+  const [inquiries, setInquiries] = useState<InquiryCard[]>([]);
+  const [stages, setStages] = useState<string[]>([]);
+  const [stats, setStats] = useState<StageStat[]>([]);
+  const [overallRate, setOverallRate] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [error, setError] = useState('');
 
-  const keys = useMemo(() => {
-    const out = new Set<string>()
-    for (const x of inquiries || []) out.add(String(x.status || '').trim() || 'other')
-    return Array.from(out).sort((a, b) => {
-      const ia = STATUS_PRIORITY.indexOf(a)
-      const ib = STATUS_PRIORITY.indexOf(b)
-      if (ia >= 0 && ib >= 0) return ia - ib
-      if (ia >= 0) return -1
-      if (ib >= 0) return 1
-      return a.localeCompare(b)
-    })
-  }, [inquiries])
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [iRes, cRes] = await Promise.all([
+        fetch('/api/proxy/inquiries?limit=200'),
+        fetch('/api/proxy/pipeline/config'),
+      ]);
+      const iData = await iRes.json();
+      const cData = await cRes.json();
+      const list = iData.inquiries || iData.data || [];
+      setInquiries(Array.isArray(list) ? list : []);
+      if (cData.success) { setStages(cData.stages); setStats(cData.stats); setOverallRate(cData.overallRate); }
+    } catch {}
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const moveCard = async (id: number, newStatus: string) => {
+    setError('');
+    const r = await fetch(`/api/proxy/pipeline/inquiries/${id}/stage`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    if (!r.ok) { setError('Failed to update stage'); return; }
+    setInquiries(prev => prev.map(i => i.id === id ? { ...i, status: newStatus } : i));
+    fetchAll();
+  };
+
+  const handleDragStart = (id: number) => setDraggedId(id);
+  const handleDrop = (newStatus: string) => { if (draggedId) { moveCard(draggedId, newStatus); setDraggedId(null); } };
+
+  const stageInquiries = (stage: string) => inquiries.filter(i => (i.status || 'Pending') === stage);
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Pipeline</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Columns by lead status. Click a card to open the inquiry.
-          </p>
+          <h1 className="text-lg font-bold text-gray-900">Pipeline</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Drag cards between columns to update lead status. Click icons to call/email/WhatsApp.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => refreshInquiries()}
-          className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-semibold"
-        >
-          Refresh
-        </button>
+        <div className="flex items-center gap-3 text-xs text-gray-500">
+          <span>Overall conversion: <strong className="text-teal-700">{overallRate}%</strong></span>
+          <button onClick={fetchAll} className="p-1 hover:bg-gray-100"><RefreshCw size={14} /></button>
+        </div>
       </div>
 
-      {loading && <p className="text-sm text-gray-500">Loading…</p>}
+      {error && <div className="text-xs text-red-600 bg-red-50 p-2">{error}</div>}
 
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="flex gap-3 overflow-x-auto p-3 sm:p-4 min-h-[360px]">
-          {keys.map((status) => {
-            const rows = (inquiries || []).filter(
-              (i: any) => (String(i.status || '').trim() || 'other') === status,
-            )
+      {loading ? (
+        <div className="text-sm text-gray-400 py-8 text-center">Loading pipeline...</div>
+      ) : (
+        <div className="flex gap-3 overflow-x-auto pb-4" style={{ minHeight: '60vh' }}>
+          {stages.map((stage) => {
+            const cards = stageInquiries(stage);
+            const stat = stats.find(s => s.stage === stage);
+            const stageTotal = stat?.total || 0;
+            const stageRate = stat?.conversionRate ?? 0;
             return (
-              <div
-                key={status}
-                className="flex-shrink-0 w-72 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col"
-              >
-                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center justify-between">
-                  <span className="truncate">{status}</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{rows.length}</span>
+              <div key={stage} className="flex-shrink-0 w-64 bg-gray-50 border flex flex-col" onDragOver={e => e.preventDefault()} onDrop={() => handleDrop(stage)}>
+                <div className="px-3 py-2 border-b bg-white flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold capitalize text-gray-800">{stage}</span>
+                    <span className="text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5">{cards.length}</span>
+                  </div>
+                  <span className={`text-[10px] font-medium ${stageRate >= 50 ? 'text-green-600' : stageRate >= 20 ? 'text-amber-600' : 'text-gray-400'}`}>{stageRate}%</span>
                 </div>
-                <div className="p-2 space-y-2 flex-1 overflow-y-auto max-h-[72vh]">
-                  {rows.map((i: any) => (
-                    <Link
-                      key={i.id}
-                      href={`/inquiries?openInquiry=${i.id}`}
-                      className="block rounded-md border border-gray-100 dark:border-gray-800 px-2.5 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
-                      title="Open inquiry"
-                    >
-                      <div className="font-semibold text-gray-900 dark:text-white truncate">{i.fullName}</div>
-                      <div className="text-[11px] text-gray-500 truncate">{i.programOfInterest || '—'}</div>
-                    </Link>
+                <div className="flex-1 overflow-y-auto p-2 space-y-1.5" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+                  {cards.map(c => (
+                    <div key={c.id} draggable onDragStart={() => handleDragStart(c.id)} className="bg-white border p-2.5 cursor-grab active:cursor-grabbing hover:border-teal-300 transition-colors card-hover">
+                      <div className="text-xs font-semibold text-gray-900 truncate">{c.fullName}</div>
+                      <div className="text-[10px] text-gray-500 truncate mt-0.5">{c.programOfInterest || '—'}</div>
+                      {c.score !== undefined && c.score > 0 && <div className="text-[10px] text-teal-600 mt-0.5">Score: {c.score}</div>}
+                      <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-gray-100">
+                        {c.phone && <a href={`tel:${c.phone}`} className="p-1 hover:bg-green-50 text-green-600" title={`Call ${c.phone}`}><Phone size={12} /></a>}
+                        {c.email && <a href={`mailto:${c.email}`} className="p-1 hover:bg-blue-50 text-blue-600" title={`Email ${c.email}`}><Mail size={12} /></a>}
+                        {c.phone && <a href={`https://wa.me/${c.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-emerald-50 text-emerald-600" title="WhatsApp"><MessageCircle size={12} /></a>}
+                      </div>
+                    </div>
                   ))}
-                  {rows.length === 0 && <p className="text-xs text-gray-400 px-1">Empty</p>}
+                  {cards.length === 0 && <div className="text-[10px] text-gray-400 text-center py-4">Drag leads here</div>}
                 </div>
               </div>
-            )
+            );
           })}
         </div>
-      </div>
+      )}
     </div>
-  )
+  );
 }
