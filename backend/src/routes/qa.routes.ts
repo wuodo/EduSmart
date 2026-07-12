@@ -29,14 +29,14 @@ router.post('/auto-flag', async (req, res) => {
     let created = 0;
 
     const incomplete = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT id, "fullName" FROM inquiries WHERE "tenantId" = $1 AND ("email" IS NULL OR "email" = '' OR "kcseGrade" = 'Unknown' OR "programOfInterest" IS NULL) LIMIT 100`,
+      `SELECT id, "fullName", "email", "kcseGrade", "programOfInterest" FROM inquiries WHERE "tenantId" = $1 AND ("email" IS NULL OR "email" = '' OR "kcseGrade" = 'Unknown' OR "programOfInterest" IS NULL) LIMIT 100`,
       tenantId
     );
     for (const i of incomplete) {
       if (existingKeys.has(`inquiry-${i.id}`)) continue;
       const flags: string[] = [];
-      if (!i.email) flags.push('Missing email');
-      if (i.kcseGrade === 'Unknown' || !i.kcseGrade) flags.push('Missing KCSE grade');
+      if (!i.email || i.email === '') flags.push('Missing email');
+      if (!i.kcseGrade || i.kcseGrade === 'Unknown') flags.push('Missing KCSE grade');
       if (!i.programOfInterest) flags.push('Missing program');
       createQaItem({ tenantId, type: 'inquiry', refId: i.id, refName: i.fullName, score: Math.max(0, 100 - flags.length * 25), flags, status: 'pending', createdBy: userEmail });
       created++;
