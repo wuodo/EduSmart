@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { mergeTenantCrmSettings } from '../utils/tenantCrmSettings';
 
 const router = express.Router();
+router.use(express.json());
 
 router.post('/inquiry', async (req, res) => {
   try {
