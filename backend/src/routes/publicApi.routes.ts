@@ -107,21 +107,22 @@ router.post('/inquiry', async (req, res) => {
       }
     } catch {}
 
-    // Notify assigned staff
-    if (inquiry.assignedTo) {
-      try {
-        const { notifyStaff } = await import('../services/notificationService');
-        const assignedUser = await prisma.user.findFirst({ where: { email: { equals: inquiry.assignedTo, mode: 'insensitive' }, tenantId } });
-        if (assignedUser) {
-          notifyStaff({
-            userId: assignedUser.id, email: assignedUser.email, name: assignedUser.name || assignedUser.email,
-            title: 'New Inquiry Assigned',
-            body: `"${inquiry.fullName}" (#${inquiry.id}) from website has been assigned to you. Score: ${inquiry.score}/100.`,
-            priority: 'info', link: `/inquiries?openInquiry=${inquiry.id}`, tenantId,
-          }, ['in_app', 'email']);
-        }
-      } catch (e) { console.warn('[notify] website assignment failed:', e); }
-    }
+    // Notify staff about new website inquiry
+    try {
+      const { notifyStaff } = await import('../services/notificationService');
+      const staffToNotify = inquiry.assignedTo
+        ? [await prisma.user.findFirst({ where: { email: { equals: inquiry.assignedTo, mode: 'insensitive' }, tenantId } })]
+        : await prisma.user.findMany({ where: { tenantId, role: { in: ['admin', 'senior_staff'] } } });
+      for (const user of staffToNotify) {
+        if (!user) continue;
+        notifyStaff({
+          userId: user.id, email: user.email, name: user.name || user.email,
+          title: inquiry.assignedTo ? 'New Inquiry Assigned' : 'New Website Inquiry',
+          body: `"${inquiry.fullName}" (#${inquiry.id}) from website. Score: ${inquiry.score}/100.${inquiry.assignedTo ? '' : ' Unassigned — please assign.'}`,
+          priority: 'info', link: `/inquiries?openInquiry=${inquiry.id}`, tenantId,
+        }, ['in_app', 'email']);
+      }
+    } catch (e) { console.warn('[notify] website assignment failed:', e); }
 
     res.status(201).json({
       success: true,
