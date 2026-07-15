@@ -77,6 +77,9 @@ export default function InquiryList({
   const [selectedDeletedArchiveIds, setSelectedDeletedArchiveIds] = useState<string[]>([])
   const [mergeTargetId, setMergeTargetId] = useState('')
   const [reassignOpen, setReassignOpen] = useState(false)
+  const [seenWebsiteIds, setSeenWebsiteIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('edusmart_seen_website') || '[]')); } catch { return new Set<string>(); }
+  })
   const [reassignTarget, setReassignTarget] = useState<any>(null)
   const [reassignEmail, setReassignEmail] = useState('')
   const [users, setUsers] = useState<{ email: string; name: string }[]>([])
@@ -87,6 +90,19 @@ export default function InquiryList({
     }
   }, [])
   const isAdminLike = userRole === 'admin' || userRole === 'senior_staff'
+  const isUnseenWebsite = (inq: any) => {
+    if (String(inq.source || '').toLowerCase() !== 'website') return false;
+    if (inq.firstResponseAt) return false;
+    return !seenWebsiteIds.has(String(inq.id));
+  };
+  const markAsSeen = (inq: any) => {
+    if (!isUnseenWebsite(inq)) return;
+    const id = String(inq.id);
+    const next = new Set(seenWebsiteIds);
+    next.add(id);
+    setSeenWebsiteIds(next);
+    try { localStorage.setItem('edusmart_seen_website', JSON.stringify([...next])); } catch {}
+  };
   const [hasApproval, setHasApproval] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
@@ -666,7 +682,7 @@ export default function InquiryList({
                   <React.Fragment key={inquiry.id || index}>
                   <tr
                     ref={(el) => { rowRefs.current[String(inquiry.id)] = el }}
-                    className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${pulseRowId === String(inquiry.id) ? 'ring-2 ring-teal-600/70 ring-inset bg-teal-50/30' : ''}`}
+                    className={`${index % 2 === 0 && !isUnseenWebsite(inquiry) ? 'bg-white' : ''} ${index % 2 === 1 && !isUnseenWebsite(inquiry) ? 'bg-gray-50' : ''} ${isUnseenWebsite(inquiry) ? 'bg-green-50' : ''} ${pulseRowId === String(inquiry.id) ? 'ring-2 ring-teal-600/70 ring-inset bg-teal-50/30' : ''}`}
                   >
                     <td className="whitespace-nowrap border-b border-gray-100 py-1.5 pl-3 pr-2 text-[13px] text-gray-700 sm:pl-4 lg:pl-6">
                       <button className="mr-2 md:hidden text-gray-600" title="Expand" onClick={() => setExpanded(prev => ({ ...prev, [inquiry.id]: !prev[inquiry.id] }))}>{expanded[inquiry.id] ? '▾' : '▸'}</button>
@@ -768,7 +784,7 @@ export default function InquiryList({
                         <TrashIconAny className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => { setSelected(inquiry); setShowModal(true) }}
+                        onClick={() => { markAsSeen(inquiry); setSelected(inquiry); setShowModal(true) }}
                         className="text-blue-600 hover:text-blue-800 mr-2"
                         title="View Inquiry"
                       >
