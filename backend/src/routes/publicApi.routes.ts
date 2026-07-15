@@ -57,7 +57,7 @@ router.post('/inquiry', async (req, res) => {
     const data: any = {
       fullName: String(fullName).trim(),
       phone: String(phone).trim(),
-      email: email ? String(email).trim().toLowerCase() : null,
+      email: email ? String(email).trim().toLowerCase() : '',
       programOfInterest: programOfInterest ? String(programOfInterest).trim() : null,
       intakePeriod: intakePeriod ? String(intakePeriod).trim() : null,
       studyMode: studyMode ? String(studyMode).trim() : null,
