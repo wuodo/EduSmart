@@ -59,6 +59,7 @@ router.post('/inquiry', async (req, res) => {
 
     if (!tenant) { res.status(401).json({ success: false, error: 'Invalid API key' }); return; }
 
+    const crm = mergeTenantCrmSettings(tenant.crmSettings);
     const tenantId = tenant.id;
     const { fullName, phone, email, programOfInterest, intakePeriod, studyMode, source, kcseGrade, gender, county, town, message } = req.body || {};
 
