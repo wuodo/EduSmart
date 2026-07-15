@@ -652,6 +652,22 @@ router.post('/', async (req, res) => {
       }
     } catch (e) { console.warn('[qa] auto-flag failed:', e); }
 
+    // Notify assigned staff
+    if (inquiry.assignedTo) {
+      try {
+        const { notifyStaff } = await import('../services/notificationService');
+        const assignedUser = await prisma.user.findFirst({ where: { email: { equals: inquiry.assignedTo, mode: 'insensitive' }, tenantId } });
+        if (assignedUser) {
+          notifyStaff({
+            userId: assignedUser.id, email: assignedUser.email, name: assignedUser.name || assignedUser.email,
+            title: 'New Inquiry Assigned',
+            body: `"${inquiry.fullName}" (#${inquiry.id}) has been assigned to you. Score: ${inquiry.score}/100.`,
+            priority: 'info', link: `/inquiries?openInquiry=${inquiry.id}`, tenantId,
+          }, ['in_app', 'email']);
+        }
+      } catch (e) { console.warn('[notify] assignment failed:', e); }
+    }
+
     return safeJson(res, inquiry, 201);
   } catch (error) {
     if (res.headersSent) return;
@@ -1166,6 +1182,20 @@ router.post('/:id/reassign', async (req, res) => {
         status: 'pending', createdBy: email || 'system',
       });
     } catch {}
+
+    // Notify new assignee
+    try {
+      const { notifyStaff } = await import('../services/notificationService');
+      const newUser = await prisma.user.findFirst({ where: { email: { equals: assignedTo, mode: 'insensitive' }, tenantId } });
+      if (newUser) {
+        notifyStaff({
+          userId: newUser.id, email: newUser.email, name: newUser.name || newUser.email,
+          title: 'Inquiry Reassigned to You',
+          body: `"${inquiry.fullName}" (#${inquiry.id}) was reassigned from ${oldAssignee?.split('@')[0] || 'unassigned'} to you by ${email?.split('@')[0]}`,
+          priority: 'info', link: `/inquiries?openInquiry=${inquiry.id}`, tenantId,
+        }, ['in_app', 'email']);
+      }
+    } catch (e) { console.warn('[notify] reassign failed:', e); }
 
     return safeJson(res, { success: true, message: `Reassigned to ${assignedTo}` });
   } catch (error) {
