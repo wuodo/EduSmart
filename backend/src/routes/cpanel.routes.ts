@@ -138,7 +138,10 @@ router.post('/tenants', async (req, res) => {
 	try {
 		const { name, subdomain, domain } = req.body || {};
 		if (!name) return safeJson(res, { error: 'name is required' }, 400);
-		const t = await prisma.tenant.create({ data: { name, subdomain: subdomain || null, domain: domain || null } });
+		const apiKey = `edusmart-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+		const t = await prisma.tenant.create({
+			data: { name, subdomain: subdomain || null, domain: domain || null, crmSettings: { publicApiKey: apiKey } },
+		});
 			// Audit logging must not break the actual creation request.
 			try {
 				await auditLogger.custom(req, 'create_tenant', 'cpanel', { tenantId: t.id, name: t.name });
