@@ -14,11 +14,12 @@ const PUBLIC_PATHS: Array<{ method: string; pattern: RegExp }> = [
   { method: 'GET', pattern: /^\/api\/tenants\/by-code$/ },
   { method: 'GET', pattern: /^\/api\/tenants\/me$/ },
   { method: 'GET', pattern: /^\/api\/tenants\/me\/branding$/ },
+  { method: 'ALL', pattern: /^\/api\/public\// },
 ];
 
 function isPublicPath(method: string, path: string): boolean {
   const normalized = path.replace(/\?.*$/, '');
-  return PUBLIC_PATHS.some(({ method: m, pattern }) => m === method && pattern.test(normalized));
+  return PUBLIC_PATHS.some(({ method: m, pattern }) => (m === 'ALL' || m === method) && pattern.test(normalized));
 }
 
 /**
