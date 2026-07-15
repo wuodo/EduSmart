@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma';
-import { notifyStaff } from './notificationService';
+import { notifyStaff, getInAppNotifications } from './notificationService';
 
 export async function runEscalationChecks() {
   const now = new Date();
@@ -29,6 +29,9 @@ export async function runEscalationChecks() {
     for (const mgr of managers) {
       const assignedUser = await prisma.user.findFirst({ where: { email: assignedEmail, tenantId } });
       const staffName = assignedUser?.name || assignedEmail;
+
+      const existingNotifs = getInAppNotifications().filter(n => n.title === 'Escalation: Critical Overdue Follow-up' && n.body.includes(`#${f.id}`));
+      if (existingNotifs.length > 0) continue;
 
       await notifyStaff(
         {
