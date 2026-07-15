@@ -134,7 +134,8 @@ router.post('/inquiry', async (req, res) => {
       },
     });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
+    console.error('[public-api] inquiry create error:', e);
+    res.status(500).json({ success: false, error: e.message, stack: e.stack?.slice(0, 500) });
   }
 });
 
