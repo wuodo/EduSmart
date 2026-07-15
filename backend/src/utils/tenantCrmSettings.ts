@@ -51,6 +51,8 @@ export type TenantCrmSettings = {
   smtpConfig?: TenantSmtpConfig
   /** Feature toggles for auto-send, e-signature, etc. */
   featureToggles?: TenantFeatureToggles
+  /** Public API key for website integration */
+  publicApiKey?: string
   /** Custom pipeline stages (ordered) */
   pipelineStages?: string[]
   /** Stage-gate validation rules: required fields per transition */
@@ -69,6 +71,7 @@ export function mergeTenantCrmSettings(raw: unknown): TenantCrmSettings {
     scheduledJobsMeta: Array.isArray(r.scheduledJobsMeta) ? r.scheduledJobsMeta : [],
     smtpConfig: r.smtpConfig && typeof r.smtpConfig === 'object' ? r.smtpConfig as TenantSmtpConfig : undefined,
     featureToggles: r.featureToggles && typeof r.featureToggles === 'object' ? r.featureToggles as TenantFeatureToggles : undefined,
+    publicApiKey: typeof r.publicApiKey === 'string' ? r.publicApiKey : undefined,
     pipelineStages: Array.isArray(r.pipelineStages) ? r.pipelineStages : undefined,
     stageGateRules: Array.isArray(r.stageGateRules) ? r.stageGateRules : [
       { from: 'new', to: 'contacted', requiredFields: ['email', 'phone'] },

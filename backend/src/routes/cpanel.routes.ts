@@ -487,7 +487,7 @@ router.get('/tenants/:id/smtp', async (req, res) => {
     if (!tenant) return safeJson(res, { error: 'Tenant not found' }, 404);
     const { mergeTenantCrmSettings: m1 } = require('./../utils/tenantCrmSettings');
     const settings = m1(tenant.crmSettings);
-    return safeJson(res, { success: true, smtp: settings.smtpConfig || {}, toggles: settings.featureToggles || {} });
+    return safeJson(res, { success: true, smtp: settings.smtpConfig || {}, toggles: settings.featureToggles || {}, apiKey: settings.publicApiKey || '' });
   } catch (e: any) {
     return safeJson(res, { error: e.message }, 500);
   }

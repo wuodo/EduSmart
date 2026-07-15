@@ -4,22 +4,29 @@ import { mergeTenantCrmSettings } from '../utils/tenantCrmSettings';
 
 const router = express.Router();
 
-const API_KEY = process.env.PUBLIC_API_KEY || 'test-key-123';
-
 router.post('/inquiry', async (req, res) => {
   try {
     const apiKey = req.headers['x-api-key'] as string;
-    if (apiKey !== API_KEY) { res.status(401).json({ success: false, error: 'Invalid API key' }); return; }
+    const { tenant: tenantSlug } = req.query as { tenant?: string };
 
+    // Resolve tenant from query param or use first active tenant
+    let tenant;
+    if (tenantSlug) {
+      tenant = await prisma.tenant.findFirst({ where: { OR: [{ subdomain: tenantSlug }, { name: tenantSlug }], isActive: true } });
+    } else {
+      tenant = await prisma.tenant.findFirst({ where: { isActive: true }, orderBy: { id: 'asc' } });
+    }
+    if (!tenant) { res.status(500).json({ success: false, error: 'No active tenant' }); return; }
+
+    const crm = mergeTenantCrmSettings(tenant.crmSettings);
+    const expectedKey = crm.publicApiKey || process.env.PUBLIC_API_KEY || 'test-key-123';
+    if (apiKey !== expectedKey) { res.status(401).json({ success: false, error: 'Invalid API key' }); return; }
+
+    const tenantId = tenant.id;
     const { fullName, phone, email, programOfInterest, intakePeriod, studyMode, source, kcseGrade, gender, county, town, message } = req.body || {};
 
     if (!fullName) { res.status(400).json({ success: false, error: 'Full name is required' }); return; }
     if (!phone) { res.status(400).json({ success: false, error: 'Phone is required' }); return; }
-
-    const tenant = await prisma.tenant.findFirst({ where: { isActive: true }, orderBy: { id: 'asc' } });
-    if (!tenant) { res.status(500).json({ success: false, error: 'No active tenant' }); return; }
-    const tenantId = tenant.id;
-    const crm = mergeTenantCrmSettings(tenant.crmSettings);
 
     const data: any = {
       fullName: String(fullName).trim(),

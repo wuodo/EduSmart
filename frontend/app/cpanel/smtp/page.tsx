@@ -14,6 +14,7 @@ export default function SmtpPage() {
   const [config, setConfig] = useState<SmtpConfig>({ host: '', port: 587, secure: false, user: '', pass: '', from: '' });
   const [autoSend, setAutoSend] = useState(true);
   const [enableESign, setEnableESign] = useState(false);
+  const [publicApiKey, setPublicApiKey] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(true);
@@ -35,6 +36,7 @@ export default function SmtpPage() {
       const toggles = d.toggles || {};
       if (toggles.autoSendLetters !== undefined) setAutoSend(toggles.autoSendLetters);
       if (toggles.enableESignature !== undefined) setEnableESign(toggles.enableESignature);
+      if (d.apiKey) setPublicApiKey(d.apiKey);
     }).catch(() => {});
   }, [selectedTenantId]);
 
@@ -44,6 +46,7 @@ export default function SmtpPage() {
     const body: any = { host: config.host, port: config.port, secure: config.secure, user: config.user, from: config.from };
     if (config.pass) body.pass = config.pass;
     body.featureToggles = { autoSendLetters: autoSend, enableESignature: enableESign };
+    body.publicApiKey = publicApiKey;
     const r = await fetch(`/api/proxy/cpanel/tenants/${selectedTenantId}/smtp`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     });
@@ -106,6 +109,13 @@ export default function SmtpPage() {
             <input type="checkbox" checked={enableESign} onChange={e => setEnableESign(e.target.checked)} className="rounded" />
             <span>Enable e-signature signing on admission letters (coming soon)</span>
           </label>
+          <hr className="border-gray-200" />
+          <h3 className="text-sm font-semibold text-gray-800">API Integration</h3>
+          <div>
+            <label className="block text-xs text-gray-500 mb-0.5">Public API Key (for website integration)</label>
+            <input value={publicApiKey} onChange={e => setPublicApiKey(e.target.value)} placeholder="Leave blank to use system default" className="w-full border px-2 py-1.5 text-xs" />
+            <p className="text-[10px] text-gray-400 mt-0.5">Website forms POST to <code>/api/public/inquiry</code> with this key in the <code>x-api-key</code> header. Set in <code>?tenant=subdomain</code> for multi-tenant.</p>
+          </div>
           <button onClick={save} disabled={saving} className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 disabled:opacity-50">
             {saving ? 'Saving...' : 'Save Settings'}
           </button>
