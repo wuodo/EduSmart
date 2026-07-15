@@ -87,8 +87,9 @@ run('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
     const userCount = await p.user.count();
     if (userCount === 0) {
       console.log('[render-start] Empty DB detected — seeding default data...');
+      const defaultApiKey = 'edusmart-' + Math.random().toString(36).slice(2, 10) + '-' + Date.now().toString(36);
       const tenant = await p.tenant.create({
-        data: { name: 'Default College', subdomain: 'default', isActive: true },
+        data: { name: 'Default College', subdomain: 'default', isActive: true, crmSettings: { publicApiKey: defaultApiKey } },
       });
       const superEmail = process.env.SUPERADMIN_EMAIL || 'admin@edusmart.app';
       const superPass = process.env.SUPERADMIN_PASSWORD || 'Admin@123456';

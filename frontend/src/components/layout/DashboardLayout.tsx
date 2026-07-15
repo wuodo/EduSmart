@@ -97,6 +97,8 @@ export default function DashboardLayout({
   const [sentBroadcastNotifications, setSentBroadcastNotifications] = useState<any[]>([]);
   const [broadcastUnreadCount, setBroadcastUnreadCount] = useState(0);
   const [showBroadcasts, setShowBroadcasts] = useState(false);
+  const [staffNotifications, setStaffNotifications] = useState<any[]>([]);
+  const [showStaffNotif, setShowStaffNotif] = useState(false);
   const [broadcastTitle, setBroadcastTitle] = useState('');
   const [broadcastBody, setBroadcastBody] = useState('');
   const [broadcastPriority, setBroadcastPriority] = useState<'info' | 'warning' | 'critical'>('info');
@@ -134,6 +136,17 @@ export default function DashboardLayout({
       if (!res.ok) return;
       const data = await res.json().catch(() => ({} as any));
       setBroadcastNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
+    } catch {}
+  }
+
+  async function loadStaffNotifications() {
+    try {
+      const email = typeof window !== 'undefined' ? localStorage.getItem('userEmail') || '' : '';
+      if (!email) return;
+      const res = await fetch(`/api/proxy/notifications/feed?email=${encodeURIComponent(email)}`);
+      if (!res.ok) return;
+      const data = await res.json().catch(() => ({} as any));
+      if (data?.notifications) setStaffNotifications(data.notifications);
     } catch {}
   }
 
@@ -294,6 +307,10 @@ export default function DashboardLayout({
         setBroadcastUnreadCount(0);
       } finally { pollBroadcastInFlight.current = false; }
     }, 20000);
+
+    // Staff assignment notifications polling
+    const pollStaffNotif = setInterval(loadStaffNotifications, 30000);
+    loadStaffNotifications();
 
     // Tenant suspension guard — 30 000 ms. Tenant status changes are rare.
     // In-flight guard + visibility. Uses cachedApiFetch (30 s TTL).
@@ -468,6 +485,10 @@ export default function DashboardLayout({
               <button onClick={() => setShowBroadcasts(s => !s)} className="relative text-white hover:opacity-80 p-1.5" title="Broadcasts">
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5V13a1.5 1.5 0 001.5 1.5H6l1.5 4.5h2l-1.2-4.5H12a6 6 0 006-6V6a1 1 0 00-1.447-.894L12 7.5H4.5A1.5 1.5 0 003 9v1.5Z"/></svg>
                 {broadcastUnreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{broadcastUnreadCount > 99 ? '99+' : broadcastUnreadCount}</span>}
+              </button>
+              <button onClick={() => setShowStaffNotif(s => !s)} className="relative text-white hover:opacity-80 p-1.5" title="Assignment Notifications">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
+                {staffNotifications.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-teal-400 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{staffNotifications.length > 99 ? '99+' : staffNotifications.length}</span>}
               </button>
               <button onClick={async () => { setFloatingChat({ reopenTick: Date.now() }); setMentions([]); setUnreadChatCount(0); try { const e=(localStorage.getItem('userEmail')||'').toLowerCase(); await fetch(`${WEB_API}/chat/mark-read`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:e}) }); } catch {} }} className="relative text-white hover:opacity-80 p-1.5" title="Chat">
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/></svg>
@@ -900,6 +921,34 @@ export default function DashboardLayout({
         <CommandPalette />
         <KeyboardShortcutsModal open={showShortcuts} onClose={() => setShowShortcuts(false)} />
       </div>
+
+      {/* Staff Notifications Modal */}
+      {showStaffNotif && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowStaffNotif(false)}>
+          <div className="bg-white w-full max-w-md mx-4 p-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+              <button onClick={() => setShowStaffNotif(false)} className="p-1 hover:bg-gray-100 text-gray-500">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {staffNotifications.length === 0 ? (
+                <div className="text-xs text-gray-400 py-8 text-center">No notifications</div>
+              ) : (
+                staffNotifications.slice(0, 50).map((n, i) => (
+                  <div key={i} className="border p-3 text-xs">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`px-1 py-0.5 text-[9px] font-medium ${n.priority === 'critical' ? 'bg-red-100 text-red-700' : n.priority === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{n.priority}</span>
+                      <span className="font-semibold text-gray-800">{n.title}</span>
+                    </div>
+                    <p className="text-gray-600">{n.body}</p>
+                    {n.link && <a href={n.link} className="text-teal-600 hover:underline text-[10px] mt-1 inline-block">View details →</a>}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
