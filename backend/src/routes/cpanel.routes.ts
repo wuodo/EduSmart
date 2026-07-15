@@ -486,7 +486,16 @@ router.get('/tenants/:id/smtp', async (req, res) => {
     const tenant = await prisma.tenant.findUnique({ where: { id }, select: { crmSettings: true } });
     if (!tenant) return safeJson(res, { error: 'Tenant not found' }, 404);
     const { mergeTenantCrmSettings: m1 } = require('./../utils/tenantCrmSettings');
-    const settings = m1(tenant.crmSettings);
+    let settings = m1(tenant.crmSettings);
+
+    // Auto-generate and persist API key if missing
+    if (!settings.publicApiKey) {
+      const newKey = `edusmart-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+      const merged = m1({ ...(tenant.crmSettings as any), publicApiKey: newKey });
+      await prisma.tenant.update({ where: { id }, data: { crmSettings: merged as any } });
+      settings = merged;
+    }
+
     return safeJson(res, { success: true, smtp: settings.smtpConfig || {}, toggles: settings.featureToggles || {}, apiKey: settings.publicApiKey || '' });
   } catch (e: any) {
     return safeJson(res, { error: e.message }, 500);
