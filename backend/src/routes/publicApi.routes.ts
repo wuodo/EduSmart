@@ -5,6 +5,31 @@ import { mergeTenantCrmSettings } from '../utils/tenantCrmSettings';
 const router = express.Router();
 router.use(express.json());
 
+// Debug: get or generate API key for a tenant
+router.get('/key', async (req, res) => {
+  try {
+    const { tenant: tenantSlug } = req.query as { tenant?: string };
+    let tenant;
+    if (tenantSlug) {
+      tenant = await prisma.tenant.findFirst({ where: { OR: [{ subdomain: tenantSlug }, { name: tenantSlug }], isActive: true } });
+    } else {
+      tenant = await prisma.tenant.findFirst({ where: { isActive: true }, orderBy: { id: 'asc' } });
+    }
+    if (!tenant) { res.status(404).json({ error: 'No active tenant' }); return; }
+
+    const settings = mergeTenantCrmSettings(tenant.crmSettings);
+    let apiKey = settings.publicApiKey;
+
+    if (!apiKey) {
+      apiKey = `edusmart-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+      const merged = mergeTenantCrmSettings({ ...(tenant.crmSettings as any), publicApiKey: apiKey });
+      await prisma.tenant.update({ where: { id: tenant.id }, data: { crmSettings: merged as any } });
+    }
+
+    res.json({ success: true, apiKey, tenant: tenant.name });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 router.post('/inquiry', async (req, res) => {
   try {
     const apiKey = req.headers['x-api-key'] as string;
