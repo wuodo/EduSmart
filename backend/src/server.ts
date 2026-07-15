@@ -18,6 +18,7 @@ import esignRoutes from './routes/esign.routes';
 import campaignRoutes from './routes/campaign.routes';
 import pipelineRoutes from './routes/pipeline.routes';
 import qaRoutes from './routes/qa.routes';
+import publicApiRoutes from './routes/publicApi.routes';
 import { resolveTenant } from './middleware/tenantMiddleware';
 import tenantAdminRoutes from './routes/tenant.routes';
 import prisma from './lib/prisma';
@@ -236,6 +237,9 @@ app.use('/api', async (req, _res, next) => {
   }
   next();
 });
+
+// Public API (no auth required, must be before auth middleware)
+app.use('/api/public', publicApiRoutes);
 
 // Tenant resolution must come before routes
 app.use(resolveTenant);
