@@ -33,20 +33,31 @@ router.get('/key', async (req, res) => {
 router.post('/inquiry', async (req, res) => {
   try {
     const apiKey = req.headers['x-api-key'] as string;
-    const { tenant: tenantSlug } = req.query as { tenant?: string };
+    if (!apiKey) { res.status(401).json({ success: false, error: 'API key required' }); return; }
 
-    // Resolve tenant from query param or use first active tenant
+    // Resolve tenant by API key first, then fallback to query param or global key
     let tenant;
-    if (tenantSlug) {
-      tenant = await prisma.tenant.findFirst({ where: { OR: [{ subdomain: tenantSlug }, { name: tenantSlug }], isActive: true } });
-    } else {
+    const globalKey = process.env.PUBLIC_API_KEY;
+    if (apiKey === globalKey) {
       tenant = await prisma.tenant.findFirst({ where: { isActive: true }, orderBy: { id: 'asc' } });
+    } else {
+      // Look up tenant by their configured API key
+      const allTenants = await prisma.tenant.findMany({ where: { isActive: true } });
+      for (const t of allTenants) {
+        const settings = mergeTenantCrmSettings(t.crmSettings);
+        if (settings.publicApiKey === apiKey) { tenant = t; break; }
+      }
     }
-    if (!tenant) { res.status(500).json({ success: false, error: 'No active tenant' }); return; }
 
-    const crm = mergeTenantCrmSettings(tenant.crmSettings);
-    const expectedKey = crm.publicApiKey || process.env.PUBLIC_API_KEY || 'test-key-123';
-    if (apiKey !== expectedKey) { res.status(401).json({ success: false, error: 'Invalid API key' }); return; }
+    // Fallback: try query param
+    if (!tenant) {
+      const { tenant: tenantSlug } = req.query as { tenant?: string };
+      if (tenantSlug) {
+        tenant = await prisma.tenant.findFirst({ where: { OR: [{ subdomain: tenantSlug }, { name: tenantSlug }], isActive: true } });
+      }
+    }
+
+    if (!tenant) { res.status(401).json({ success: false, error: 'Invalid API key' }); return; }
 
     const tenantId = tenant.id;
     const { fullName, phone, email, programOfInterest, intakePeriod, studyMode, source, kcseGrade, gender, county, town, message } = req.body || {};
