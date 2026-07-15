@@ -488,7 +488,7 @@ export default function DashboardLayout({
               </button>
               <button onClick={() => setShowStaffNotif(s => !s)} className="relative text-white hover:opacity-80 p-1.5" title="Assignment Notifications">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
-                {staffNotifications.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-teal-400 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{staffNotifications.length > 99 ? '99+' : staffNotifications.length}</span>}
+                {staffNotifications.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{staffNotifications.length > 99 ? '99+' : staffNotifications.length}</span>}
               </button>
               <button onClick={async () => { setFloatingChat({ reopenTick: Date.now() }); setMentions([]); setUnreadChatCount(0); try { const e=(localStorage.getItem('userEmail')||'').toLowerCase(); await fetch(`${WEB_API}/chat/mark-read`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:e}) }); } catch {} }} className="relative text-white hover:opacity-80 p-1.5" title="Chat">
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/></svg>
@@ -941,7 +941,7 @@ export default function DashboardLayout({
                       <span className="font-semibold text-gray-800">{n.title}</span>
                     </div>
                     <p className="text-gray-600">{n.body}</p>
-                    {n.link && <a href={n.link} className="text-teal-600 hover:underline text-[10px] mt-1 inline-block">View details →</a>}
+                    {n.link && <button onClick={() => { window.location.href = n.link; }} className="text-teal-600 hover:underline text-[10px] mt-1 inline-block">View details →</button>}
                   </div>
                 ))
               )}
