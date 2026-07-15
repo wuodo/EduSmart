@@ -67,6 +67,7 @@ router.post('/inquiry', async (req, res) => {
       message: message ? String(message).trim() : null,
       status: 'new',
       tenantId,
+      createdBy: 'Website',
     };
 
     if (county && town) {
