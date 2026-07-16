@@ -848,7 +848,6 @@ export default function InquiryList({
                 </button>
               </div>
             )}
-            )}
           </div>
         </div>
       </div>
