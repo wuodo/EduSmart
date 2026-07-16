@@ -494,49 +494,28 @@ export default function InquiriesPage() {
   }
 
   return (
-    <div className="flex flex-col h-full gap-y-3">
-      <div className="flex justify-between items-center">
-        <h1 className="text-xl sm:text-2xl font-bold">Inquiries</h1>
-        {/* Top-right create / bulk import */}
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {canEdit && (
-            <>
-              <CreateInquiryButton addInquiry={handleAddInquiry} />
-              <button
-                className="px-3 py-2 text-[13px] font-semibold bg-sky-600 text-white hover:bg-sky-700"
-                onClick={downloadImportTemplate}
-                title="Download bulk import CSV template"
-              >
-                Download Import CSV
-              </button>
-              <BulkImportButton onImported={refreshInquiries} />
-              {canExport && (
-                <button
-                  className="px-3 py-2 text-[13px] font-semibold bg-emerald-600 text-white hover:bg-emerald-700"
-                  onClick={exportFilteredCsv}
-                  title="Export filtered inquiries to CSV"
-                >
-                  Export CSV
-                </button>
-              )}
-              <button
-                className="px-3 py-2 text-[13px] font-semibold bg-teal-600 text-white hover:bg-teal-700"
-                onClick={() => setShowHiddenCols(v => !v)}
-                title={showHiddenCols ? 'Hide extra columns' : 'Show extra columns'}
-              >
-                {showHiddenCols ? 'Hide Columns' : 'Show Columns'}
-              </button>
-              <button
-                className="px-3 py-2 text-[13px] font-semibold bg-gray-600 text-white hover:bg-gray-700"
-                onClick={() => refreshInquiries(isAdmin ? (owner || undefined) : undefined)}
-                title="Refresh inquiries"
-              >
-                Refresh
-              </button>
-            </>
-          )}
+    <div className="flex flex-col h-full gap-y-1">
+      <div className="sticky top-0 z-20 bg-white pb-1">
+        <div className="flex items-center justify-between py-1">
+          <h1 className="text-sm font-bold">Inquiries</h1>
+          <div className="flex items-center gap-1">
+            {canEdit && (
+              <>
+                <CreateInquiryButton addInquiry={handleAddInquiry} />
+                <div className="relative group">
+                  <button className="px-2 py-1.5 text-[11px] font-semibold bg-gray-600 text-white hover:bg-gray-700">More ▾</button>
+                  <div className="absolute right-0 top-full mt-0.5 z-30 hidden group-hover:block group-focus-within:block bg-white border shadow-lg min-w-[160px] py-0.5">
+                    <button className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2" onClick={downloadImportTemplate}>📥 Download Import CSV</button>
+                    <BulkImportButton onImported={refreshInquiries} />
+                    {canExport && <button className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2" onClick={exportFilteredCsv}>📤 Export CSV</button>}
+                    <button className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2" onClick={() => setShowHiddenCols(v => !v)}>{showHiddenCols ? '🔒' : '🔓'} {showHiddenCols ? 'Hide Columns' : 'Show Columns'}</button>
+                    <button className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2" onClick={() => refreshInquiries(isAdmin ? (owner || undefined) : undefined)}>🔄 Refresh</button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
       {canView && chatSourceInfo && (
         <div className="bg-blue-50 dark:bg-blue-900/25 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 px-4 py-3 rounded">
           Opened from tagged chat inquiry{chatSourceInfo.inquiryName ? `: ${chatSourceInfo.inquiryName}` : ''}. Reminder/follow-up actions here are logged to your account audit trail.
@@ -628,10 +607,11 @@ export default function InquiriesPage() {
         </div>
       )}
 
+      </div>
       {canView && (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow flex flex-col flex-1 min-h-0 overflow-hidden">
-        {/* Sticky filters bar */}
-        <div className="p-4 border-b border-neutral-light dark:border-gray-700 flex-shrink-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-t-lg">
+        {/* Sticky filters bar — compact */}
+        <div className="px-3 py-2 border-b border-neutral-light flex-shrink-0 bg-white/95 backdrop-blur">
           <InquirySavedViewsBar snapshot={filterSnapshot} onApply={applySavedView} isAdmin={isAdmin} />
           <InquiryFilters
             status={status}
@@ -644,7 +624,6 @@ export default function InquiriesPage() {
             setCounty={setCounty}
             program={program}
             setProgram={setProgram}
-            programOptions={programOptions}
             kcseGrade={kcseGrade}
             setKcseGrade={setKcseGrade}
             intake={intake}
@@ -653,7 +632,8 @@ export default function InquiriesPage() {
             setGender={setGender}
             paymentStatus={paymentStatus}
             setPaymentStatus={setPaymentStatus}
-            isAdmin={isAdmin}
+            tags={tags}
+            setTags={setTags}
             owner={owner}
             setOwner={setOwner}
             owners={owners}
@@ -661,7 +641,7 @@ export default function InquiriesPage() {
           />
         </div>
         {/* Table area — fills remaining height, only this area scrolls */}
-        <div className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-4">
+        <div className="flex-1 overflow-y-auto min-h-0 px-2 py-2">
           <InquiryList
             inquiries={filteredInquiries}
             onRefresh={refreshInquiries}
