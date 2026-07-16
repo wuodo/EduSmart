@@ -130,6 +130,7 @@ app.use('/assets', (req, res, next) => {
 // NOTE: On Render free-tier, all users may share the same egress IP.
 // ---------------------------------------------------------------------------
 const _globalRateStore = new Map<string, { count: number; resetAt: number }>();
+const _loginFailStore = new Map<string, number>();
 const GLOBAL_RATE_LIMIT = 2000;
 const GLOBAL_RATE_WINDOW_MS = 60_000;
 const GLOBAL_RATE_EXEMPT = [
@@ -317,17 +318,38 @@ app.post('/api/users/login', async (req, res) => {
          await bcrypt.compare(normalizedPassword, user.password))
       : false;
 
+    // Per-user failed attempt counter (auto-block after 3)
+    const FAIL_KEY = `login_fail_${user?.id || normalizedEmail}`;
+    const failCount = _loginFailStore.get(FAIL_KEY) || 0;
+
     if (!user || !passwordOk) {
       console.warn('[login] failed:', { tenantId: tenant.id, email: normalizedEmail, userFound: !!user, passwordOk });
       recordFailedAttempt('tenant', ip, identifier);
+      const newCount = (failCount || 0) + 1;
+      _loginFailStore.set(FAIL_KEY, newCount);
+      if (newCount >= 3 && user) {
+        await prisma.user.update({ where: { id: user.id }, data: { approved: false } }).catch(() => {});
+      }
       if (!res.headersSent) {
-        return res.status(401).json({ error: 'Invalid login credentials' });
+        const msg = newCount >= 3 ? 'Account locked after 3 failed attempts. Contact your administrator.' : 'Invalid login credentials';
+        return res.status(401).json({ error: msg });
       }
       return;
     }
 
+    // Clear failed attempt counter on success
+    _loginFailStore.delete(FAIL_KEY);
+
     if (user.approved === false) {
-      if (!res.headersSent) return res.status(403).json({ error: 'Account pending approval. Please contact your administrator.' });
+      if (!res.headersSent) return res.status(403).json({ error: 'Account is locked. Contact your administrator to reset.' });
+      return;
+    }
+
+    // Password expiry: 60 days
+    const passwordAgeDays = (Date.now() - new Date(user.updatedAt || user.createdAt).getTime()) / 86400000;
+    if (passwordAgeDays > 60) {
+      await prisma.user.update({ where: { id: user.id }, data: { approved: false } }).catch(() => {});
+      if (!res.headersSent) return res.status(403).json({ error: 'Password has expired. Contact your administrator to reset.' });
       return;
     }
 

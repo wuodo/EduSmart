@@ -710,7 +710,7 @@ router.put('/users/:id/password', async (req, res) => {
     
     await prisma.user.update({
       where: { id: Number(id) },
-      data: { password: hashedPassword }
+      data: { password: hashedPassword, approved: true }
     });
     
     await auditLogger.custom(req, 'reset_user_password', 'cpanel', { 
