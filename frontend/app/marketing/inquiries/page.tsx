@@ -627,6 +627,7 @@ export default function InquiriesPage() {
             setPaymentStatus={setPaymentStatus}
             tags={tags}
             setTags={setTags}
+            isAdmin={isAdmin}
             owner={owner}
             setOwner={setOwner}
             owners={owners}
