@@ -1,130 +1,85 @@
-'use client'
+"use client";
+import { useCallback, useEffect, useState } from 'react';
+import type { InquiryFilterSnapshot } from '@/lib/inquirySavedViews';
+import { deleteSavedView, loadSavedViews, saveNamedView, type SavedInquiryView } from '@/lib/inquirySavedViews';
+import { BookmarkIcon, TrashIcon, X } from 'lucide-react';
 
-import { useCallback, useEffect, useState } from 'react'
-import type { InquiryFilterSnapshot } from '@/lib/inquirySavedViews'
-import { deleteSavedView, loadSavedViews, saveNamedView, type SavedInquiryView } from '@/lib/inquirySavedViews'
-import { BookmarkIcon, TrashIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
-
-const BookmarkIconAny: any = BookmarkIcon
-const TrashIconAny: any = TrashIcon
-const InfoIconAny: any = InformationCircleIcon
-
-export default function InquirySavedViewsBar({
-  snapshot,
-  onApply,
-  isAdmin,
-}: {
-  snapshot: InquiryFilterSnapshot
-  onApply: (filters: InquiryFilterSnapshot) => void
-  isAdmin: boolean
+export default function InquirySavedViewsBar({ snapshot, onApply, isAdmin }: {
+  snapshot: InquiryFilterSnapshot;
+  onApply: (filters: InquiryFilterSnapshot) => void;
+  isAdmin: boolean;
 }) {
-  const [views, setViews] = useState<SavedInquiryView[]>([])
-  const [selectedId, setSelectedId] = useState('')
-  const [name, setName] = useState('')
-  const [toast, setToast] = useState<string | null>(null)
+  const [open, setOpen] = useState(false);
+  const [views, setViews] = useState<SavedInquiryView[]>([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [name, setName] = useState('');
+  const [msg, setMsg] = useState('');
 
-  const refresh = useCallback(() => {
-    setViews(loadSavedViews())
-  }, [])
+  const refresh = useCallback(() => { setViews(loadSavedViews()); }, []);
 
-  useEffect(() => {
-    refresh()
-  }, [refresh])
+  useEffect(() => { refresh(); }, [refresh]);
 
   const save = () => {
-    const n = name.trim()
-    if (!n) {
-      setToast('Enter a name for this view.')
-      window.setTimeout(() => setToast(null), 2500)
-      return
-    }
-    const toSave = { ...snapshot }
-    if (!isAdmin) toSave.owner = ''
-    saveNamedView(n, toSave)
-    setName('')
-    refresh()
-    setToast(`Saved “${n}”.`)
-    window.setTimeout(() => setToast(null), 2500)
-  }
+    const n = name.trim();
+    if (!n) { setMsg('Enter a name.'); return; }
+    const toSave = { ...snapshot };
+    if (!isAdmin) toSave.owner = '';
+    saveNamedView(n, toSave);
+    setName(''); refresh();
+    setMsg(`Saved "${n}".`);
+    setTimeout(() => setMsg(''), 2000);
+  };
 
   const remove = () => {
-    if (!selectedId) return
-    deleteSavedView(selectedId)
-    setSelectedId('')
-    refresh()
-    setToast('View removed.')
-    window.setTimeout(() => setToast(null), 2500)
-  }
+    if (!selectedId) return;
+    deleteSavedView(selectedId);
+    setSelectedId(''); refresh();
+    setMsg('Deleted.');
+    setTimeout(() => setMsg(''), 2000);
+  };
+
+  const load = (id: string) => {
+    const v = views.find(x => x.id === id);
+    if (!v) return;
+    const f = { ...v.filters };
+    if (!isAdmin) f.owner = '';
+    onApply(f);
+    setOpen(false);
+  };
 
   return (
-    <div className="mb-3 space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <BookmarkIconAny className="h-4 w-4 text-teal-600 dark:text-teal-400 shrink-0" aria-hidden />
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">Saved views</span>
-        <span
-          className="inline-flex items-center"
-          title="Saved views are named shortcuts for your current inquiry filters (status, source, search, etc.). They’re saved in this browser for your account/tenant."
-        >
-          <InfoIconAny className="h-4 w-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" />
-        </span>
-        <select
-          value={selectedId}
-          onChange={(e) => {
-            const id = e.target.value
-            setSelectedId(id)
-            if (!id) return
-            const v = views.find((x) => x.id === id)
-            if (!v) return
-            const f = { ...v.filters }
-            if (!isAdmin) f.owner = ''
-            onApply(f)
-            setToast(`Loaded “${v.name}”.`)
-            window.setTimeout(() => setToast(null), 2500)
-          }}
-          className="min-w-[10rem] max-w-[16rem] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-[13px] px-2 py-1.5"
-          title="Load a saved filter set"
-        >
-          <option value="">Load saved view…</option>
-          {views.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.name}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={remove}
-          disabled={!selectedId}
-          className="inline-flex items-center gap-1 rounded-md border border-rose-300 dark:border-rose-800 px-2 py-1.5 text-[12px] font-semibold text-rose-700 dark:text-rose-200 hover:bg-rose-50 dark:hover:bg-rose-900/30 disabled:opacity-40 disabled:pointer-events-none"
-          title="Delete selected saved view"
-        >
-          <TrashIconAny className="h-3.5 w-3.5" />
-          Delete
-        </button>
-        <span className="hidden sm:inline text-gray-300 dark:text-gray-600">|</span>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Name for current filters"
-          className="min-w-[8rem] flex-1 max-w-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-[13px] px-2 py-1.5"
-        />
-        <button
-          type="button"
-          onClick={save}
-          className="rounded-md bg-teal-600 text-white hover:bg-teal-700 text-[13px] font-semibold px-3 py-1.5 shrink-0"
-        >
-          Save
-        </button>
-      </div>
-      {toast && (
-        <p className="text-xs text-gray-600 dark:text-gray-400" role="status">
-          {toast}
-        </p>
+    <>
+      <button onClick={() => { setOpen(true); refresh(); }} className="flex items-center gap-1 px-2 py-1 text-[11px] border hover:bg-gray-50 shrink-0" title="Saved views">
+        <BookmarkIcon size={12} /> Views
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setOpen(false)}>
+          <div className="bg-white w-full max-w-sm mx-4 p-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold">Saved Views</h3>
+              <button onClick={() => setOpen(false)} className="p-1 hover:bg-gray-100"><X size={16} /></button>
+            </div>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto mb-3">
+              {views.length === 0 ? (
+                <div className="text-xs text-gray-400 py-4 text-center">No saved views yet</div>
+              ) : views.map(v => (
+                <div key={v.id} className="flex items-center gap-2 text-xs">
+                  <button onClick={() => load(v.id)} className="flex-1 text-left px-2 py-1.5 border hover:bg-gray-50 truncate">{v.name}</button>
+                  <button onClick={() => { setSelectedId(v.id); remove(); }} className="p-1 hover:bg-red-50 text-red-500 shrink-0"><TrashIcon size={12} /></button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 border-t pt-3">
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="Name for current filters..." className="flex-1 border px-2 py-1.5 text-xs" />
+              <button onClick={save} className="px-3 py-1.5 bg-teal-600 text-white text-xs font-medium hover:bg-teal-700">Save Current</button>
+            </div>
+            {msg && <p className="text-xs text-gray-500 mt-2">{msg}</p>}
+          </div>
+        </div>
       )}
-      <p className="text-[11px] text-gray-500 dark:text-gray-500 leading-snug">
-        Saved views are stored in this browser for your account and tenant. Owner filter is only kept for admin and senior staff.
-      </p>
-    </div>
-  )
+    </>
+  );
 }
