@@ -498,6 +498,7 @@ export default function InquiryList({
           </button>
         </div>
       )}
+      </div>{/* end toolbar row */}
       </div>{/* end sticky band */}
 
       {showDeletedPanel && (
