@@ -592,18 +592,11 @@ export default function InquiriesPage() {
           <span className="block sm:inline">{success}</span>
         </div>
       )}
-      {canView && completenessSummary && completenessSummary.incompleteCount > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-900/25 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 px-4 py-3 rounded flex flex-wrap items-center justify-between gap-2">
-          <div className="text-sm">
-            <strong>{completenessSummary.incompleteCount}</strong> inquiry profiles are incomplete.
-            {' '}<span className="opacity-90">Complete required fields to improve conversion-gap analytics and reporting quality.</span>
-          </div>
-          <button
-            className="px-3 py-1.5 rounded border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-[13px] font-semibold"
-            onClick={() => setShowCompletenessNudge(true)}
-          >
-            Review Missing Data
-          </button>
+      {canView && completenessSummary && completenessSummary.incompleteCount > 0 && !(typeof window !== 'undefined' && localStorage.getItem('edusmart_completeness_banner_hidden')) && (
+        <div className="flex items-center gap-2 px-2 py-1 text-[11px] bg-amber-50 border-b border-amber-200 text-amber-800">
+          <span><strong>{completenessSummary.incompleteCount}</strong> incomplete {completenessSummary.incompleteCount === 1 ? 'profile' : 'profiles'}</span>
+          <button onClick={() => setShowCompletenessNudge(true)} className="underline hover:no-underline">Review</button>
+          <button onClick={() => { try { localStorage.setItem('edusmart_completeness_banner_hidden', '1'); window.location.reload(); } catch {} }} className="ml-auto text-amber-500 hover:text-amber-700">✕</button>
         </div>
       )}
 
@@ -611,7 +604,7 @@ export default function InquiriesPage() {
       {canView && (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow flex flex-col flex-1 min-h-0 overflow-hidden">
         {/* Sticky filters bar — compact */}
-        <div className="px-3 py-2 border-b border-neutral-light flex-shrink-0 bg-white/95 backdrop-blur">
+        <div className="px-2 py-1.5 border-b border-neutral-light flex-shrink-0 bg-white/95 backdrop-blur flex items-center gap-1">
           <InquirySavedViewsBar snapshot={filterSnapshot} onApply={applySavedView} isAdmin={isAdmin} />
           <InquiryFilters
             status={status}
