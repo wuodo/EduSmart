@@ -76,6 +76,7 @@ export default function InquiryList({
   const [loadingDeleted, setLoadingDeleted] = useState(false)
   const [selectedDeletedArchiveIds, setSelectedDeletedArchiveIds] = useState<string[]>([])
   const [mergeTargetId, setMergeTargetId] = useState('')
+  const [showSummary, setShowSummary] = useState(true)
   const [reassignOpen, setReassignOpen] = useState(false)
   const [seenWebsiteIds, setSeenWebsiteIds] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('edusmart_seen_website') || '[]')); } catch { return new Set<string>(); }
@@ -452,36 +453,18 @@ export default function InquiryList({
       )}
       {/* ── Sticky band: summary bar + action buttons ── */}
       <div className="sticky top-0 z-20 bg-white shadow-sm">
-      {/* Summary Bar */}
+      <div className="flex items-center justify-between px-2 py-0.5 border-b border-gray-100">
+        <button onClick={() => setShowSummary(s => !s)} className="text-[10px] text-gray-500 hover:text-gray-700 flex items-center gap-1">{showSummary ? '▾' : '▸'} Summary</button>
+        {isAdminLike && canDelete && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-gray-500">{selectedIds.length} selected</span>
+            <button onClick={handleBulkDelete} disabled={loading || selectedIds.length === 0} className="px-2 py-0.5 text-[10px] border bg-white hover:bg-gray-50 disabled:opacity-50">Delete Selected</button>
+          </div>
+        )}
+      </div>
+      {showSummary && (
       <div className="px-3 sm:px-4 py-2 bg-blue-50 border-b border-blue-200 text-xs">
-        {/* Mobile: stacked summary */}
-        <div className="block md:hidden space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold">Total</span>
-            <span className="font-bold text-primary">{total}</span>
-          </div>
-          <div>
-            <div className="font-semibold mb-1">By Intake</div>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(byIntake).map(([intake, count]) => (
-                <span key={intake} className="px-2 py-0.5 rounded-full bg-white border border-blue-200 text-[11px]">{intake.substring(0,3)}: <span className="font-semibold text-primary">{count}</span></span>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className="font-semibold mb-1">Top Courses</div>
-            <div className="flex flex-wrap gap-2">
-              {topPrograms.map(p => (
-                <span key={p.abbr} title={p.name} className="px-2 py-0.5 rounded-full bg-white border border-blue-200 text-[11px]">{p.abbr}: <span className="font-semibold text-primary">{p.count}</span></span>
-              ))}
-              {remainingPrograms > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-white border border-blue-200 text-[11px]">+{remainingPrograms} more</span>
-              )}
-            </div>
-          </div>
-        </div>
-        {/* Desktop: single line summary */}
-        <div className="hidden md:flex flex-wrap gap-x-6 gap-y-1 items-center">
+        <div className="flex flex-wrap gap-x-6 gap-y-1 items-center">
           <span className="font-semibold">Total:</span> {total}
           <span className="font-semibold">By Intake:</span> {Object.entries(byIntake).map(([intake, count]) => (
             <span key={intake} className="mr-2">{intake}: <span className="font-semibold text-primary">{count}</span></span>
@@ -494,31 +477,6 @@ export default function InquiryList({
           })}
         </div>
       </div>
-      {isAdminLike && canDelete && (
-        <div className="px-3 py-1.5 bg-white border-b border-gray-100 flex items-center justify-end gap-2">
-          <span className="text-xs text-gray-500">{selectedIds.length} selected</span>
-          <button
-            type="button"
-            onClick={async () => {
-              const next = !showDeletedPanel
-              setShowDeletedPanel(next)
-              if (next) await loadDeletedItems()
-            }}
-            className="px-3 py-1.5 rounded-md border bg-white hover:bg-gray-50 text-xs font-semibold"
-            title="Show recently deleted inquiries"
-          >
-            {showDeletedPanel ? 'Hide Recently Deleted' : 'Restore Recently Deleted'}
-          </button>
-          <button
-            type="button"
-            onClick={handleBulkDelete}
-            disabled={loading || selectedIds.length === 0}
-            className="px-3 py-1.5 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold bg-red-600 hover:bg-red-700"
-            title="Delete selected inquiries"
-          >
-            Delete Selected
-          </button>
-        </div>
       )}
       </div>{/* end sticky band */}
 
@@ -596,7 +554,7 @@ export default function InquiryList({
               </div>
             ) : (
             <table className="w-full table-auto border-separate border-spacing-0 text-[13px] rounded-lg overflow-hidden shadow-sm ring-1 ring-gray-200">
-              <thead style={{ backgroundColor: 'var(--brand-table-header-bg, #f1f5f9)', color: 'var(--brand-table-header-text, #374151)' }}>
+              <thead className="sticky top-0 z-10" style={{ backgroundColor: 'var(--brand-table-header-bg, #f1f5f9)', color: 'var(--brand-table-header-text, #374151)' }}>
                 <tr>
                   <th scope="col" className={`${thBase} py-2 pl-3 pr-2 sm:pl-4 lg:pl-6 w-[56px]`}>
                     #
