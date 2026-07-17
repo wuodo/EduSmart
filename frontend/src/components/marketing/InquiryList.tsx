@@ -77,7 +77,6 @@ export default function InquiryList({
   const [selectedDeletedArchiveIds, setSelectedDeletedArchiveIds] = useState<string[]>([])
   const [mergeTargetId, setMergeTargetId] = useState('')
   const [reassignOpen, setReassignOpen] = useState(false)
-  const [displayLimit, setDisplayLimit] = useState(50)
   const [seenWebsiteIds, setSeenWebsiteIds] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('edusmart_seen_website') || '[]')); } catch { return new Set<string>(); }
   })
@@ -521,7 +520,6 @@ export default function InquiryList({
           </button>
         </div>
       )}
-      </div>{/* end toolbar row */}
       </div>{/* end sticky band */}
 
       {showDeletedPanel && (
@@ -600,7 +598,7 @@ export default function InquiryList({
             <table className="w-full table-auto border-separate border-spacing-0 text-[13px] rounded-lg overflow-hidden shadow-sm ring-1 ring-gray-200">
               <thead style={{ backgroundColor: 'var(--brand-table-header-bg, #f1f5f9)', color: 'var(--brand-table-header-text, #374151)' }}>
                 <tr>
-                  <th scope="col" className={`${thBase} py-1.5 pl-3 pr-2 sm:pl-4 lg:pl-6 w-[56px]`}>
+                  <th scope="col" className={`${thBase} py-2 pl-3 pr-2 sm:pl-4 lg:pl-6 w-[56px]`}>
                     #
                   </th>
                   {isAdminLike && canDelete && (
@@ -658,13 +656,13 @@ export default function InquiryList({
                   <th scope="col" className={`${thBase} ${showHiddenCols ? '' : 'hidden'} w-[120px]`}>
                     Next Follow-up
                   </th>
-                  <th scope="col" className={`${thBase} py-1.5 pl-2 pr-3 sm:pr-4 lg:pr-6 w-[120px]`}>
+                  <th scope="col" className={`${thBase} py-2 pl-2 pr-3 sm:pr-4 lg:pr-6 w-[120px]`}>
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white">
-                {sorted.slice(0, displayLimit).map((inquiry, index) => {
+                {sorted.map((inquiry, index) => {
                   // Sentiment icon
                   let sentimentIcon = null;
                   if (inquiry.sentiment === 'positive') sentimentIcon = <span title="Positive" className="text-emerald-600 font-semibold">Positive</span>;
@@ -841,17 +839,6 @@ export default function InquiryList({
                   );
                 })}
               </tbody>
-              {sorted.length > displayLimit && (
-                <tfoot>
-                  <tr>
-                    <td colSpan={16} className="text-center py-3 border-t">
-                      <button onClick={() => setDisplayLimit(d => d + 50)} className="px-4 py-1.5 text-xs border hover:bg-gray-50 font-medium">
-                        Show {Math.min(50, sorted.length - displayLimit)} more ({sorted.length - displayLimit} remaining)
-                      </button>
-                    </td>
-                  </tr>
-                </tfoot>
-              )}
             </table>
             )}
           </div>
