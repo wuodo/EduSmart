@@ -77,7 +77,7 @@ export default function InquiryList({
   const [selectedDeletedArchiveIds, setSelectedDeletedArchiveIds] = useState<string[]>([])
   const [mergeTargetId, setMergeTargetId] = useState('')
   const [reassignOpen, setReassignOpen] = useState(false)
-  const [displayLimit, setDisplayLimit] = useState(50)
+  const [displayLimit, setDisplayLimit] = useState(25)
   const [seenWebsiteIds, setSeenWebsiteIds] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('edusmart_seen_website') || '[]')); } catch { return new Set<string>(); }
   })
