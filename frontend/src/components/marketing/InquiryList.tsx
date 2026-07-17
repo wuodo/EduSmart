@@ -452,7 +452,7 @@ export default function InquiryList({
         </div>
       )}
       {/* ── Sticky band: summary bar + action buttons ── */}
-      <div className="sticky top-0 z-20 bg-white shadow-sm">
+      <div className="sticky top-0 z-10 bg-white shadow-sm">
       <div className="flex items-center justify-between px-2 py-0.5 border-b border-gray-100">
         <button onClick={() => setShowSummary(s => !s)} className="text-[10px] text-gray-500 hover:text-gray-700 flex items-center gap-1">{showSummary ? '▾' : '▸'} Summary</button>
         {isAdminLike && canDelete && (
@@ -877,7 +877,7 @@ export default function InquiryList({
                 <tr><td className="font-semibold p-2">Preferred Contact Method</td><td className="p-2">{selected.preferredContactMethod}</td></tr>
                 {selected.bestTimeToContact && <tr><td className="font-semibold p-2">Best Time to Contact</td><td className="p-2">{selected.bestTimeToContact}</td></tr>}
                 <tr><td className="font-semibold p-2">Assigned To</td><td className="p-2">{selected.assignedTo || 'Unassigned'} {(isAdminLike && userRole !== 'admissions_officer') ? <button onClick={() => { fetch('/api/proxy/users').then(r => r.json()).then(d => { const list = Array.isArray(d) ? d : d.users || d.data || []; setUsers(list.map((u: any) => ({ email: u.email, name: u.name || u.email }))); setReassignTarget(selected); setReassignEmail(selected.assignedTo || ''); setReassignOpen(true); }).catch(() => {}); }} className="ml-2 px-1.5 py-0.5 text-[10px] bg-amber-600 text-white hover:bg-amber-700">Reassign</button> : null}</td></tr>
-                <tr><td className="font-semibold p-2">Lead Tags</td><td className="p-2">{selected.leadTags.join(', ')}</td></tr>
+                <tr><td className="font-semibold p-2">Lead Tags</td><td className="p-2">{Array.isArray(selected.leadTags) ? selected.leadTags.join(', ') : selected.leadTags || '-'}</td></tr>
                 <tr>
                   <td className="font-semibold p-2">{selected.updatedAt && selected.updatedAt !== selected.createdAt ? 'Edited on' : 'Created'}</td>
                   <td className="p-2">{new Date(selected.updatedAt || selected.createdAt).toLocaleString()}</td>

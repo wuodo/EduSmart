@@ -501,7 +501,8 @@ export default function InquiriesPage() {
           <div className="flex items-center gap-1">
             {canEdit && (
               <>
-                <CreateInquiryButton addInquiry={handleAddInquiry} />
+                <InquirySavedViewsBar snapshot={filterSnapshot} onApply={applySavedView} isAdmin={isAdmin} />
+               <CreateInquiryButton addInquiry={handleAddInquiry} />
                 <div className="relative group">
                   <button className="px-2 py-1.5 text-[11px] font-semibold bg-gray-600 text-white hover:bg-gray-700">More ▾</button>
                   <div className="absolute right-0 top-full mt-0.5 z-30 hidden group-hover:block group-focus-within:block bg-white border shadow-lg min-w-[160px] py-0.5">
@@ -604,9 +605,7 @@ export default function InquiriesPage() {
       {canView && (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow flex flex-col flex-1 min-h-0 overflow-hidden">
         {/* Sticky filters bar — compact */}
-        <div className="px-2 py-1.5 border-b border-neutral-light flex-shrink-0 bg-white/95 backdrop-blur flex items-center gap-1">
-          <InquirySavedViewsBar snapshot={filterSnapshot} onApply={applySavedView} isAdmin={isAdmin} />
-          <div className="flex-1">
+        <div className="px-2 py-1.5 border-b border-neutral-light flex-shrink-0 bg-white/95 backdrop-blur">
           <InquiryFilters
             status={status}
             setStatus={setStatus}
@@ -635,7 +634,6 @@ export default function InquiriesPage() {
             owners={owners}
             onClear={clearFilters}
           />
-          </div>
         </div>
         {/* Table area — fills remaining height, only this area scrolls */}
         <div className="flex-1 overflow-y-auto min-h-0 px-2 py-2">
