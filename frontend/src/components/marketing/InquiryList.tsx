@@ -77,14 +77,13 @@ export default function InquiryList({
   const [selectedDeletedArchiveIds, setSelectedDeletedArchiveIds] = useState<string[]>([])
   const [mergeTargetId, setMergeTargetId] = useState('')
   const [reassignOpen, setReassignOpen] = useState(false)
-  const [displayLimit, setDisplayLimit] = useState(25)
+  const [displayLimit, setDisplayLimit] = useState(50)
   const [seenWebsiteIds, setSeenWebsiteIds] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('edusmart_seen_website') || '[]')); } catch { return new Set<string>(); }
   })
   const [reassignTarget, setReassignTarget] = useState<any>(null)
   const [reassignEmail, setReassignEmail] = useState('')
   const [users, setUsers] = useState<{ email: string; name: string }[]>([])
-  const [showSummary, setShowSummary] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -452,11 +451,38 @@ export default function InquiryList({
           </div>
         </div>
       )}
-      {/* ── Sticky band: summary toggle + action buttons ── */}
-      <div className="sticky top-0 z-10 bg-white shadow-sm">
-      {showSummary && (
+      {/* ── Sticky band: summary bar + action buttons ── */}
+      <div className="sticky top-0 z-20 bg-white shadow-sm">
+      {/* Summary Bar */}
       <div className="px-3 sm:px-4 py-2 bg-blue-50 border-b border-blue-200 text-xs">
-        <div className="flex flex-wrap gap-x-6 gap-y-1 items-center">
+        {/* Mobile: stacked summary */}
+        <div className="block md:hidden space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold">Total</span>
+            <span className="font-bold text-primary">{total}</span>
+          </div>
+          <div>
+            <div className="font-semibold mb-1">By Intake</div>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(byIntake).map(([intake, count]) => (
+                <span key={intake} className="px-2 py-0.5 rounded-full bg-white border border-blue-200 text-[11px]">{intake.substring(0,3)}: <span className="font-semibold text-primary">{count}</span></span>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="font-semibold mb-1">Top Courses</div>
+            <div className="flex flex-wrap gap-2">
+              {topPrograms.map(p => (
+                <span key={p.abbr} title={p.name} className="px-2 py-0.5 rounded-full bg-white border border-blue-200 text-[11px]">{p.abbr}: <span className="font-semibold text-primary">{p.count}</span></span>
+              ))}
+              {remainingPrograms > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-white border border-blue-200 text-[11px]">+{remainingPrograms} more</span>
+              )}
+            </div>
+          </div>
+        </div>
+        {/* Desktop: single line summary */}
+        <div className="hidden md:flex flex-wrap gap-x-6 gap-y-1 items-center">
           <span className="font-semibold">Total:</span> {total}
           <span className="font-semibold">By Intake:</span> {Object.entries(byIntake).map(([intake, count]) => (
             <span key={intake} className="mr-2">{intake}: <span className="font-semibold text-primary">{count}</span></span>
@@ -469,10 +495,7 @@ export default function InquiryList({
           })}
         </div>
       </div>
-      )}
-      <div className="flex items-center justify-between px-3 py-1 border-b border-gray-100">
-        <button onClick={() => setShowSummary(s => !s)} className="text-[10px] text-gray-500 hover:text-gray-700 flex items-center gap-1">{showSummary ? '▾' : '▸'} Summary</button>
-        {isAdminLike && canDelete && (
+      {isAdminLike && canDelete && (
         <div className="px-3 py-1.5 bg-white border-b border-gray-100 flex items-center justify-end gap-2">
           <span className="text-xs text-gray-500">{selectedIds.length} selected</span>
           <button
