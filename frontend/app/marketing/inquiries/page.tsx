@@ -69,6 +69,16 @@ export default function InquiriesPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [showHiddenCols, setShowHiddenCols] = useState(false)
   const [showFilters, setShowFilters] = useState(true)
+  const [showSummaryModal, setShowSummaryModal] = useState(false)
+
+  // Summary stats
+  const totalInquiries = inquiries.length
+  const byIntake: Record<string, number> = {}
+  const byProgram: Record<string, number> = {}
+  for (const i of inquiries || []) {
+    byIntake[i.intakePeriod] = (byIntake[i.intakePeriod] || 0) + 1
+    byProgram[i.programOfInterest] = (byProgram[i.programOfInterest] || 0) + 1
+  }
   const [completenessSummary, setCompletenessSummary] = useState<{
     incompleteCount: number
     highPriorityCount: number
@@ -498,7 +508,10 @@ export default function InquiriesPage() {
     <div className="flex flex-col h-full gap-y-1">
       <div className="sticky top-0 z-20 bg-white pb-1">
         <div className="flex items-center justify-between py-1">
-          <h1 className="text-sm font-bold">Inquiries</h1>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowSummaryModal(true)} className="px-2.5 py-1.5 text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700">Summary</button>
+            <h1 className="text-sm font-bold">Inquiries</h1>
+          </div>
           <div className="flex items-center gap-1">
             {canEdit && (
               <>
@@ -698,6 +711,37 @@ export default function InquiriesPage() {
               <button onClick={() => { try { localStorage.removeItem('edusmart_completeness_dismissed'); } catch {} setShowCompletenessNudge(true); }} className="text-xs text-gray-400 hover:text-gray-600">Show again later</button>
               <div className="flex gap-2">
                 <button onClick={() => { setShowCompletenessNudge(false); try { localStorage.setItem('edusmart_completeness_dismissed', '1'); } catch {} }} className="px-3 py-1.5 border text-xs hover:bg-gray-50">Dismiss</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Summary Modal */}
+      {showSummaryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowSummaryModal(false)}>
+          <div className="bg-white w-full max-w-md mx-4 p-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-900">Inquiry Summary</h2>
+              <button onClick={() => setShowSummaryModal(false)} className="p-1 hover:bg-gray-100 text-gray-500">✕</button>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div><span className="font-semibold text-gray-700">Total:</span> <span className="text-lg font-bold text-teal-700">{totalInquiries}</span></div>
+              <div>
+                <span className="font-semibold text-gray-700">By Intake:</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {Object.entries(byIntake).length === 0 ? <span className="text-gray-400 text-xs">None</span> : Object.entries(byIntake).map(([intake, count]) => (
+                    <span key={intake} className="px-2 py-0.5 bg-gray-100 text-xs rounded">{intake}: <strong>{count}</strong></span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <span className="font-semibold text-gray-700">By Course:</span>
+                <div className="flex flex-wrap gap-1 mt-1 max-h-40 overflow-y-auto">
+                  {Object.entries(byProgram).length === 0 ? <span className="text-gray-400 text-xs">None</span> : Object.entries(byProgram).sort((a, b) => b[1] - a[1]).map(([prog, count]) => (
+                    <span key={prog} className="px-2 py-0.5 bg-gray-100 text-xs rounded" title={prog}>{prog.length > 25 ? prog.slice(0, 25) + '…' : prog}: <strong>{count}</strong></span>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

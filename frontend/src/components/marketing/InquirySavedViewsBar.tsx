@@ -49,7 +49,7 @@ export default function InquirySavedViewsBar({ snapshot, onApply, isAdmin }: {
 
   return (
     <>
-      <button onClick={() => { setOpen(true); refresh(); }} className="flex items-center gap-1 px-2 py-1 text-[11px] border hover:bg-gray-50 shrink-0" title="Saved views">
+      <button onClick={() => { setOpen(true); refresh(); }} className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium border hover:bg-gray-50 shrink-0" title="Saved views">
         <BookmarkIcon size={12} /> Views
       </button>
 

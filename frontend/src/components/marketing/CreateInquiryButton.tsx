@@ -313,7 +313,7 @@ export default function CreateInquiryButton({
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="px-4 py-2 bg-orange-600 text-white text-[13px] font-bold rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
+        className="px-2.5 py-1.5 bg-orange-600 text-white text-[11px] font-semibold hover:bg-orange-700"
       >
         Create Inquiry
       </button>

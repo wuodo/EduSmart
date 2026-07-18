@@ -452,34 +452,13 @@ export default function InquiryList({
           </div>
         </div>
       )}
-      {/* ── Sticky band: summary bar + action buttons ── */}
-      <div className="sticky top-0 z-10 bg-white shadow-sm">
-      <div className="flex items-center justify-between px-2 py-0.5 border-b border-gray-100">
-        <button onClick={() => { const next = !showSummary; setShowSummary(next); try { localStorage.setItem('edusmart_summary_hidden', next ? 'false' : 'true'); } catch {} }} className="text-[10px] text-gray-500 hover:text-gray-700 flex items-center gap-1">{showSummary ? '▾' : '▸'} Summary</button>
-        {isAdminLike && canDelete && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-gray-500">{selectedIds.length} selected</span>
-            <button onClick={handleBulkDelete} disabled={loading || selectedIds.length === 0} className={`px-2 py-0.5 text-[10px] border ${selectedIds.length > 0 ? 'bg-red-600 text-white border-red-600 hover:bg-red-700' : 'bg-white hover:bg-gray-50'} disabled:opacity-50`}>Delete Selected</button>
-          </div>
-        )}
-      </div>
-      {showSummary && (
-      <div className="px-3 sm:px-4 py-2 bg-blue-50 border-b border-blue-200 text-xs">
-        <div className="flex flex-wrap gap-x-6 gap-y-1 items-center">
-          <span className="font-semibold">Total:</span> {total}
-          <span className="font-semibold">By Intake:</span> {Object.entries(byIntake).map(([intake, count]) => (
-            <span key={intake} className="mr-2">{intake}: <span className="font-semibold text-primary">{count}</span></span>
-          ))}
-          <span className="font-semibold">By Course:</span> {Object.entries(byProgram).map(([prog, count]) => {
-            const abbr = abbreviateProgram(prog);
-            return (
-              <span key={prog} className="mr-2" title={prog}>{abbr}: <span className="font-semibold text-primary">{count}</span></span>
-            );
-          })}
-        </div>
+      {/* ── Sticky band: selected counter + delete ── */}
+      {isAdminLike && canDelete && selectedIds.length > 0 && (
+      <div className="sticky top-0 z-10 bg-white shadow-sm border-b border-gray-100 px-2 py-1 flex items-center justify-end gap-2">
+        <span className="text-[11px] text-gray-500">{selectedIds.length} selected</span>
+        <button onClick={handleBulkDelete} disabled={loading} className="px-2.5 py-1 text-[11px] font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">Delete Selected</button>
       </div>
       )}
-      </div>{/* end sticky band */}
 
       {showDeletedPanel && (
         <div className="border-b border-amber-200 bg-amber-50/40">
