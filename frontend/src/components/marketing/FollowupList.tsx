@@ -576,7 +576,7 @@ export default function FollowupList({ followups, inquiries, onRefresh }: Props)
       )}
     <div className="overflow-x-auto">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-[12px] text-gray-600">
+        <div className="text-[12px] text-gray-600 pl-2">
           {showExtraCols ? 'Showing all columns' : 'Compact view (essential columns)'}
         </div>
         <div className="flex items-center gap-2">
