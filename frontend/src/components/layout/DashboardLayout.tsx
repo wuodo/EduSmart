@@ -48,6 +48,10 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const moduleName = getModuleName(pathname);
   const [instName, setInstName] = useState<string>('');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return localStorage.getItem('edusmart_sidebar_collapsed') === 'true'; } catch { return false; }
+  });
   const { branding } = useBranding()
   const router = useRouter();
   useEffect(() => {
@@ -431,8 +435,8 @@ export default function DashboardLayout({
 
   return (
     <div className="h-screen bg-neutral-light">
-      <Sidebar isMobileOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} />
-      <div className="lg:ml-48 h-full flex flex-col min-w-0">
+      <Sidebar isMobileOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} collapsed={sidebarCollapsed} onToggleCollapse={() => { setSidebarCollapsed(c => { const n = !c; try { localStorage.setItem('edusmart_sidebar_collapsed', String(n)); } catch {} return n; }); }} />
+      <div className={`${sidebarCollapsed ? 'lg:ml-14' : 'lg:ml-48'} h-full flex flex-col min-w-0`}>
         {/* Top header bar */}
         <header className="w-full h-14 flex items-center px-3 sm:px-6 shadow-sm justify-between" style={{ backgroundColor: 'var(--brand-primary)' }}>
           {/* Left: logo + module */}

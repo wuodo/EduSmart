@@ -22,6 +22,8 @@ interface NavigationItem {
 interface SidebarProps {
   isMobileOpen: boolean;
   onClose: () => void;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 /** Align with PermissionsContext: UI role "manager" maps to senior_staff for access. */
@@ -86,13 +88,12 @@ function SidebarItem({ item, pathname, onClose, collapsed }: {
   );
 }
 
-export default function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
+export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname();
   const [userRole, setUserRole] = useState('');
   const [title, setTitle] = useState<string>('Marketing');
   const [logo, setLogo] = useState<string | null>(null);
   const { branding } = useBranding()
-  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     try {
@@ -198,7 +199,7 @@ export default function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
           <div className="flex items-center gap-1">
             {/* Collapse toggle */}
             <button
-              onClick={() => setCollapsed(c => !c)}
+              onClick={onToggleCollapse}
               className="inline-flex text-white hover:text-yellow-200 p-1"
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
