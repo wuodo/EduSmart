@@ -30,7 +30,7 @@ export function useMarketingData() {
   const refreshInquiries = async (owner?: string) => {
     setLoading(true);
     try {
-      const url = owner ? `${WEB_API}/inquiries?owner=${encodeURIComponent(owner)}` : `${WEB_API}/inquiries`;
+      const url = owner ? `${WEB_API}/inquiries?owner=${encodeURIComponent(owner)}&limit=5000` : `${WEB_API}/inquiries?limit=5000`;
       const res = await fetch(url, { cache: 'no-store', headers: userHeaders(), credentials: 'include' });
       if (!res.ok) {
         const text = await res.text().catch(() => '');

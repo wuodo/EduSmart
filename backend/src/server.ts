@@ -617,7 +617,7 @@ app.get('/api/inquiries', async (req, res) => {
     const email = String((req as any).user?.email || '').toLowerCase();
     const owner = String(req.query.owner || '').trim().toLowerCase();
     const page = Math.max(1, parseInt(String(req.query.page || '1'), 10));
-    const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit || '50'), 10)));
+    const limit = Math.min(5000, Math.max(1, parseInt(String(req.query.limit || '5000'), 10)));
     const skip = (page - 1) * limit;
 
     const where: any = { tenantId };
