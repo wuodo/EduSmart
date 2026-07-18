@@ -673,8 +673,8 @@ export default function InquiryList({
                     <td className="whitespace-nowrap border-b border-gray-100 px-2 py-1.5 text-[13px] text-gray-800">
                       {inquiry.phone}
                     </td>
-                    <td className="border-b border-gray-100 px-2 py-1.5 text-[13px] text-gray-800 hidden md:table-cell truncate" title={inquiry.programOfInterest}>
-                      {abbreviateProgram(inquiry.programOfInterest)}
+                    <td className="border-b border-gray-100 px-2 py-1.5 text-[13px] text-gray-800 hidden md:table-cell max-w-[200px]" title={inquiry.programOfInterest}>
+                      {inquiry.programOfInterest || '-'}
                     </td>
                     <td className="whitespace-nowrap border-b border-gray-100 px-2 py-1.5 text-[13px] text-gray-800 hidden lg:table-cell" title={inquiry.intakePeriod}>
                       {inquiry.intakePeriod ? inquiry.intakePeriod.substring(0,3) : ''}
