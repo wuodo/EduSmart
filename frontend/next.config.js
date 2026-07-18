@@ -7,9 +7,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  experimental: {
-    esmExternals: 'loose',
-  },
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
