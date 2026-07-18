@@ -8,6 +8,7 @@ export async function getDailyBriefing(req: Request, res: Response) {
     if (!tenantId) { res.status(400).json({ error: 'Tenant required' }); return; }
 
     const email = ((req as any).user?.email || '').toLowerCase();
+    const userName = ((req as any).user?.name || '').trim();
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayEnd = new Date(todayStart.getTime() + 86400000);
@@ -31,6 +32,7 @@ export async function getDailyBriefing(req: Request, res: Response) {
       success: true,
       briefing: {
         greeting,
+        userName: userName ? userName.split(' ')[0] : '',
         hotLeads,
         newToday,
         overdueFollowups,
