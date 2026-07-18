@@ -517,16 +517,16 @@ export default function InquiriesPage() {
               <>
                <InquirySavedViewsBar snapshot={filterSnapshot} onApply={applySavedView} isAdmin={isAdmin} />
                <CreateInquiryButton addInquiry={handleAddInquiry} />
-                 <div className="relative group">
-                   <button className="px-2.5 py-1.5 text-[11px] font-semibold bg-purple-600 text-white hover:bg-purple-700 rounded">More ▾</button>
-                  <div className="absolute right-0 top-full mt-0.5 z-30 hidden group-hover:block group-focus-within:block bg-white border shadow-lg min-w-[160px] py-0.5">
-                    <button className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2" onClick={downloadImportTemplate}>📥 Download Import CSV</button>
-                    <BulkImportButton onImported={refreshInquiries} />
-                    {canExport && <button className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2" onClick={exportFilteredCsv}>📤 Export CSV</button>}
-                    <button className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2" onClick={() => setShowHiddenCols(v => !v)}>{showHiddenCols ? '🔒' : '🔓'} {showHiddenCols ? 'Hide Columns' : 'Show Columns'}</button>
-                    <button className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2" onClick={() => refreshInquiries(isAdmin ? (owner || undefined) : undefined)}>🔄 Refresh</button>
-                  </div>
-                </div>
+                  <div className="relative group">
+                    <button className="px-2.5 py-1.5 text-[11px] font-semibold bg-purple-600 text-white hover:bg-purple-700 rounded">More ▾</button>
+                   <div className="absolute right-0 top-full mt-0.5 z-30 hidden group-hover:block group-focus-within:block bg-white border shadow-lg min-w-[180px] py-0.5">
+                     <button className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2 text-sky-700" onClick={downloadImportTemplate}><span className="w-3.5 h-3.5 rounded-sm bg-sky-500 shrink-0" /> Download Import CSV</button>
+                     <BulkImportButton onImported={refreshInquiries} />
+                     {canExport && <button className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2 text-emerald-700" onClick={exportFilteredCsv}><span className="w-3.5 h-3.5 rounded-sm bg-emerald-500 shrink-0" /> Export CSV</button>}
+                     <button className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2 text-amber-700" onClick={() => setShowHiddenCols(v => !v)}><span className={`w-3.5 h-3.5 rounded-sm ${showHiddenCols ? 'bg-amber-500' : 'bg-gray-400'} shrink-0`} /> {showHiddenCols ? 'Hide Columns' : 'Show Columns'}</button>
+                     <button className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2 text-indigo-700" onClick={() => refreshInquiries(isAdmin ? (owner || undefined) : undefined)}><span className="w-3.5 h-3.5 rounded-sm bg-indigo-500 shrink-0" /> Refresh</button>
+                   </div>
+                 </div>
               </>
             )}
           </div>
@@ -834,13 +834,12 @@ function BulkImportButton({ onImported }: { onImported: () => Promise<void> | vo
   };
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <>
       {error && (
-        <div className="bg-rose-50 dark:bg-rose-900/25 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 px-2 py-1 rounded text-xs max-w-xs text-right">
-          {error}
-        </div>
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 px-2 py-1 text-[10px]">{error}</div>
       )}
-      <label className="px-3 py-2 text-[13px] rounded-md border dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 font-semibold cursor-pointer">
+      <label className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2 text-violet-700 cursor-pointer">
+        <span className={`w-3.5 h-3.5 rounded-sm ${loading ? 'bg-gray-400' : 'bg-violet-500'} shrink-0`} />
         {loading ? 'Importing…' : 'Bulk Import CSV'}
         <input
           type="file"
@@ -850,6 +849,6 @@ function BulkImportButton({ onImported }: { onImported: () => Promise<void> | vo
           disabled={loading}
         />
       </label>
-    </div>
+    </>
   );
 }
