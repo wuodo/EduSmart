@@ -748,7 +748,7 @@ function BulkImportButton({ onImported }: { onImported: () => Promise<void> | vo
           phone: (cols[phoneIdx] || '').replace(/^"|"$/g, '').trim(),
           email: get('email'),
           gender: get('gender'),
-          programOfInterest: get('programofinterest') || get('program_of_interest') || get('program'),
+          programOfInterest: get('programofinterest') || get('program_of_interest') || get('program') || get('course') || get('course name') || get('program name'),
           intakePeriod: get('intakeperiod') || get('intake_period') || get('intake'),
           studyMode: get('studymode') || get('study_mode') || get('mode'),
           source: get('source'),
