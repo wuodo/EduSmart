@@ -502,10 +502,10 @@ export default function InquiriesPage() {
           <div className="flex items-center gap-1">
             {canEdit && (
               <>
-                <InquirySavedViewsBar snapshot={filterSnapshot} onApply={applySavedView} isAdmin={isAdmin} />
+               <InquirySavedViewsBar snapshot={filterSnapshot} onApply={applySavedView} isAdmin={isAdmin} />
                <CreateInquiryButton addInquiry={handleAddInquiry} />
-                <div className="relative group">
-                  <button className="px-2 py-1.5 text-[11px] font-semibold bg-gray-600 text-white hover:bg-gray-700">More ▾</button>
+                 <div className="relative group">
+                   <button className="px-2.5 py-1.5 text-[11px] font-semibold bg-purple-600 text-white hover:bg-purple-700 rounded">More ▾</button>
                   <div className="absolute right-0 top-full mt-0.5 z-30 hidden group-hover:block group-focus-within:block bg-white border shadow-lg min-w-[160px] py-0.5">
                     <button className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2" onClick={downloadImportTemplate}>📥 Download Import CSV</button>
                     <BulkImportButton onImported={refreshInquiries} />
@@ -607,7 +607,7 @@ export default function InquiriesPage() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow flex flex-col flex-1 min-h-0 overflow-hidden">
         {/* Filters toggle bar */}
         <div className="flex items-center justify-between px-2 py-1 border-b border-neutral-light flex-shrink-0 bg-white/95">
-          <button onClick={() => setShowFilters(s => !s)} className="text-[10px] text-gray-500 hover:text-gray-700">{showFilters ? '▾' : '▸'} Filters</button>
+          <button onClick={() => setShowFilters(s => !s)} className="text-xs font-bold text-green-700 hover:text-green-800">{showFilters ? '▾' : '▸'} Filters</button>
           <div className="flex items-center gap-1">
             <button onClick={() => setShowFilters(true)} className="text-[10px] text-gray-400 hover:text-gray-600">Clear</button>
           </div>

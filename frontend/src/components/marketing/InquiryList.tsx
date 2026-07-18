@@ -77,7 +77,7 @@ export default function InquiryList({
   const [selectedDeletedArchiveIds, setSelectedDeletedArchiveIds] = useState<string[]>([])
   const [mergeTargetId, setMergeTargetId] = useState('')
   const [displayLimit, setDisplayLimit] = useState(50)
-  const [showSummary, setShowSummary] = useState(true)
+  const [showSummary, setShowSummary] = useState(() => { try { return localStorage.getItem('edusmart_summary_hidden') !== 'true'; } catch { return true; } })
   const [reassignOpen, setReassignOpen] = useState(false)
   const [seenWebsiteIds, setSeenWebsiteIds] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('edusmart_seen_website') || '[]')); } catch { return new Set<string>(); }
@@ -455,11 +455,11 @@ export default function InquiryList({
       {/* ── Sticky band: summary bar + action buttons ── */}
       <div className="sticky top-0 z-10 bg-white shadow-sm">
       <div className="flex items-center justify-between px-2 py-0.5 border-b border-gray-100">
-        <button onClick={() => setShowSummary(s => !s)} className="text-[10px] text-gray-500 hover:text-gray-700 flex items-center gap-1">{showSummary ? '▾' : '▸'} Summary</button>
+        <button onClick={() => { const next = !showSummary; setShowSummary(next); try { localStorage.setItem('edusmart_summary_hidden', next ? 'false' : 'true'); } catch {} }} className="text-[10px] text-gray-500 hover:text-gray-700 flex items-center gap-1">{showSummary ? '▾' : '▸'} Summary</button>
         {isAdminLike && canDelete && (
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-gray-500">{selectedIds.length} selected</span>
-            <button onClick={handleBulkDelete} disabled={loading || selectedIds.length === 0} className="px-2 py-0.5 text-[10px] border bg-white hover:bg-gray-50 disabled:opacity-50">Delete Selected</button>
+            <button onClick={handleBulkDelete} disabled={loading || selectedIds.length === 0} className={`px-2 py-0.5 text-[10px] border ${selectedIds.length > 0 ? 'bg-red-600 text-white border-red-600 hover:bg-red-700' : 'bg-white hover:bg-gray-50'} disabled:opacity-50`}>Delete Selected</button>
           </div>
         )}
       </div>
