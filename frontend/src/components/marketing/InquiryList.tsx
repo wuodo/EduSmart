@@ -532,7 +532,7 @@ export default function InquiryList({
               <div className="text-center py-8 text-gray-500">
                 No data to show.
               </div>
-            ) : (
+            ) : (<>
             <table className="w-full table-auto border-separate border-spacing-0 text-[13px] rounded-lg overflow-hidden shadow-sm ring-1 ring-gray-200">
               <thead className="sticky top-0 z-10" style={{ backgroundColor: 'var(--brand-table-header-bg, #f1f5f9)', color: 'var(--brand-table-header-text, #374151)' }}>
                 <tr>
@@ -785,7 +785,7 @@ export default function InquiryList({
                 </button>
               </div>
             )}
-            )}
+            </>)}
           </div>
         </div>
       </div>
