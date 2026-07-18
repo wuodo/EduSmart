@@ -91,7 +91,7 @@ const inquirySources: { value: InquirySource; label: string }[] = [
   { value: 'other', label: 'Other' },
 ]
 
-const kcseGrades = ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'E'];
+const kcseGrades = ['Unknown', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'E'];
 
 const initialForm: InquiryFormData = {
   fullName: '',
@@ -330,7 +330,7 @@ export default function CreateInquiryButton({
                 ✕
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-2">
+            <form onSubmit={handleSubmit} className="space-y-2" noValidate>
               {/* Personal Information */}
               <div className="bg-gray-50/60 p-2 border border-gray-200">
                 <h4 className="font-semibold text-[#00a396] text-xs uppercase tracking-wide mb-2">Personal Information</h4>
@@ -462,22 +462,24 @@ export default function CreateInquiryButton({
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-0.5">Intake Period *</label>
                     <select
-                      value={formData.intakePeriod}
+                      value={formData.intakePeriod || ''}
                       onChange={e => setFormData({ ...formData, intakePeriod: e.target.value as IntakePeriod })}
                       className="w-full px-2 py-1.5 text-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
                       required
                     >
+                      <option value="">Select intake</option>
                       {intakePeriods.map(ip => <option key={ip} value={ip}>{ip.charAt(0).toUpperCase() + ip.slice(1)}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-0.5">Study Mode *</label>
                     <select
-                      value={formData.studyMode}
+                      value={formData.studyMode || ''}
                       onChange={e => setFormData({ ...formData, studyMode: e.target.value as StudyMode })}
                       className="w-full px-2 py-1.5 text-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
                       required
                     >
+                      <option value="">Select mode</option>
                       {studyModes.map(sm => <option key={sm} value={sm}>{sm.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>)}
                     </select>
                   </div>
@@ -519,11 +521,12 @@ export default function CreateInquiryButton({
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-0.5">Preferred Contact Method *</label>
                     <select
-                      value={formData.preferredContactMethod}
+                      value={formData.preferredContactMethod || ''}
                       onChange={e => setFormData({ ...formData, preferredContactMethod: e.target.value as ContactMethod })}
                       className="w-full px-2 py-1.5 text-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
                       required
                     >
+                      <option value="">Select method</option>
                       {contactMethods.map(cm => <option key={cm} value={cm}>{cm.charAt(0).toUpperCase() + cm.slice(1)}</option>)}
                     </select>
                   </div>
