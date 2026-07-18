@@ -76,6 +76,7 @@ export default function InquiryList({
   const [loadingDeleted, setLoadingDeleted] = useState(false)
   const [selectedDeletedArchiveIds, setSelectedDeletedArchiveIds] = useState<string[]>([])
   const [mergeTargetId, setMergeTargetId] = useState('')
+  const [displayLimit, setDisplayLimit] = useState(50)
   const [showSummary, setShowSummary] = useState(true)
   const [reassignOpen, setReassignOpen] = useState(false)
   const [seenWebsiteIds, setSeenWebsiteIds] = useState<Set<string>>(() => {
@@ -620,7 +621,7 @@ export default function InquiryList({
                 </tr>
               </thead>
               <tbody className="bg-white">
-                {sorted.map((inquiry, index) => {
+                {sorted.slice(0, displayLimit).map((inquiry, index) => {
                   // Sentiment icon
                   let sentimentIcon = null;
                   if (inquiry.sentiment === 'positive') sentimentIcon = <span title="Positive" className="text-emerald-600 font-semibold">Positive</span>;
@@ -797,6 +798,17 @@ export default function InquiryList({
                   );
                 })}
               </tbody>
+              {sorted.length > displayLimit && (
+                <tfoot>
+                  <tr>
+                    <td colSpan={16} className="text-center py-3 border-t">
+                      <button onClick={() => setDisplayLimit(d => d + 50)} className="px-4 py-1.5 text-xs border hover:bg-gray-50 font-medium">
+                        Show {Math.min(50, sorted.length - displayLimit)} more ({sorted.length - displayLimit} remaining)
+                      </button>
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
             )}
           </div>
