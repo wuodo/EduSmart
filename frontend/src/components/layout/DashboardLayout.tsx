@@ -40,6 +40,34 @@ function getModuleName(pathname: string) {
   return moduleNames[match || '/']
 }
 
+function BriefingBanner({ briefing, userName, onDismiss, onViewOverdue }: { briefing: any; userName: string; onDismiss: () => void; onViewOverdue: () => void }) {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const firstName = briefing.userName || userName?.split(' ')[0] || '';
+  const hotLeads = Number(briefing.hotLeads) || 0;
+  const overdue = Number(briefing.overdueFollowups) || 0;
+  const newToday = Number(briefing.newToday) || 0;
+  const convRate = Number(briefing.conversionRate) || 0;
+  const score = Number(briefing.score) || 0;
+  return (
+    <div className="mb-2 border border-teal-200 bg-gradient-to-r from-teal-50 to-white dark:from-teal-950/30 dark:to-gray-900 px-3 py-2 flex items-center gap-3 overflow-x-auto min-h-[40px]">
+      <span className="text-[12px] font-semibold text-teal-800 dark:text-teal-200 whitespace-nowrap shrink-0">{greeting}{firstName ? `, ${firstName}` : ''}!</span>
+      <div className="flex items-center gap-2.5 text-[11px] text-gray-600 dark:text-gray-300 whitespace-nowrap shrink-0">
+        <span><strong className="text-teal-700">{hotLeads}</strong> hot</span>
+        <span><strong className="text-amber-700">{overdue}</strong> overdue</span>
+        <span><strong className="text-blue-700">{newToday}</strong> new today</span>
+        <span><strong className="text-green-700">{convRate}%</strong> conv.</span>
+        <span className="hidden sm:inline"><strong className="text-purple-700">{score}</strong> focus score</span>
+      </div>
+      <span className="text-[11px] text-gray-500 italic truncate min-w-0">{String(briefing.priorityMessage ?? '')}</span>
+      {overdue > 0 && (
+        <button onClick={onViewOverdue} className="px-2 py-0.5 text-[10px] font-semibold bg-amber-600 text-white hover:bg-amber-700 shrink-0">View Overdue</button>
+      )}
+      <button onClick={onDismiss} className="text-gray-400 hover:text-gray-600 text-[11px] shrink-0 ml-auto">✕</button>
+    </div>
+  );
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -518,31 +546,14 @@ export default function DashboardLayout({
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pt-5 min-w-0 content-responsive flex flex-col" style={{overflowAnchor: 'none'}}>
-           {(() => {
-             const showBriefingPages = ['/inquiries', '/followups', '/reports', '/analytics', '/marketing'];
-             const shouldShow = briefing && showBriefingPages.some(p => pathname === p || pathname.startsWith(p + '/'));
-             if (!shouldShow) return null;
-             const hour = new Date().getHours();
-             const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-             const firstName = briefing.userName || userName?.split(' ')[0] || '';
-             return (
-             <div className="mb-2 border border-teal-200 bg-gradient-to-r from-teal-50 to-white dark:from-teal-950/30 dark:to-gray-900 px-3 py-2 flex items-center gap-3 overflow-x-auto min-h-[40px]">
-               <span className="text-[12px] font-semibold text-teal-800 dark:text-teal-200 whitespace-nowrap shrink-0">{greeting}{firstName ? `, ${firstName}` : ''}!</span>
-               <div className="flex items-center gap-2.5 text-[11px] text-gray-600 dark:text-gray-300 whitespace-nowrap shrink-0">
-                 <span><strong className="text-teal-700">{briefing.hotLeads}</strong> hot</span>
-                 <span><strong className="text-amber-700">{briefing.overdueFollowups}</strong> overdue</span>
-                 <span><strong className="text-blue-700">{briefing.newToday}</strong> new today</span>
-                 <span><strong className="text-green-700">{briefing.conversionRate}%</strong> conv.</span>
-                 <span className="hidden sm:inline"><strong className="text-purple-700">{briefing.score}</strong> focus score</span>
-               </div>
-               <span className="text-[11px] text-gray-500 italic truncate min-w-0">{briefing.priorityMessage}</span>
-               {briefing.overdueFollowups > 0 && (
-                 <button onClick={() => router.push('/followups')} className="px-2 py-0.5 text-[10px] font-semibold bg-amber-600 text-white hover:bg-amber-700 shrink-0">View Overdue</button>
-               )}
-               <button onClick={() => setBriefing(null)} className="text-gray-400 hover:text-gray-600 text-[11px] shrink-0 ml-auto">✕</button>
-             </div>
-             );
-           })()}
+           {briefing && ['/inquiries', '/followups', '/reports', '/analytics', '/marketing'].some(p => pathname === p || pathname.startsWith(p + '/')) ? (
+             <BriefingBanner
+               briefing={briefing}
+               userName={userName}
+               onDismiss={() => setBriefing(null)}
+               onViewOverdue={() => router.push('/followups')}
+             />
+           ) : null}
           {children}
         </main>
         {showRequests && (userRole === 'admin' || userRole === 'senior_staff') && (
