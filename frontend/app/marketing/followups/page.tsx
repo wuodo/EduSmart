@@ -25,10 +25,6 @@ export default function FollowupsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [chatSourceInfo, setChatSourceInfo] = useState<{ inquiryId: string; inquiryName: string; chatRoomId: string } | null>(null)
   const [focusInquiryId, setFocusInquiryId] = useState('')
-  const inputClass =
-    'w-full min-w-0 px-2 py-1.5 text-[13px] border border-neutral-light bg-white/90 dark:bg-gray-700/90 ' +
-    'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40'
-  const selectClass = inputClass
 
   useEffect(() => {
     const role = typeof window !== 'undefined' ? (localStorage.getItem('userRole') || '').toLowerCase() : ''
@@ -138,9 +134,9 @@ export default function FollowupsPage() {
   }
 
   return (
-    <div className="space-y-6 flex-1 flex flex-col">
+    <div className="space-y-1.5 flex-1 flex flex-col">
       <div className="flex justify-between items-center">
-        <h1 className="text-xl sm:text-2xl font-bold">Follow-ups</h1>
+        <h1 className="text-sm font-bold">Follow-ups</h1>
         {canEdit && (
           <ScheduleFollowupButton
             inquiries={inquiries}
@@ -149,10 +145,10 @@ export default function FollowupsPage() {
         )}
       </div>
       {/* Action-oriented quick nav */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1">
         <button
           type="button"
-          className={`px-3 py-2 rounded-md border text-[13px] font-semibold ${
+          className={`px-2 py-1 rounded border text-[11px] font-semibold ${
             overdueOnly ? 'bg-amber-600 border-amber-700 text-white' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
           }`}
           title="Show overdue pending follow-ups"
@@ -171,7 +167,7 @@ export default function FollowupsPage() {
         </button>
         <button
           type="button"
-          className={`px-3 py-2 rounded-md border text-[13px] font-semibold ${
+          className={`px-2 py-1 rounded border text-[11px] font-semibold ${
             !overdueOnly && status === 'pending' ? 'bg-teal-600 border-teal-700 text-white' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
           }`}
           title="Show all pending follow-ups"
@@ -190,7 +186,7 @@ export default function FollowupsPage() {
         </button>
         <button
           type="button"
-          className={`px-3 py-2 rounded-md border text-[13px] font-semibold ${
+          className={`px-2 py-1 rounded border text-[11px] font-semibold ${
             status === 'completed' ? 'bg-emerald-600 border-emerald-700 text-white' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
           }`}
           title="Show completed follow-ups"
@@ -209,7 +205,7 @@ export default function FollowupsPage() {
         </button>
         <button
           type="button"
-          className="px-3 py-2 rounded-md border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-[13px] font-semibold"
+          className="px-2 py-1 rounded border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-[11px] font-semibold"
           title="Clear focus and filters"
           onClick={() => {
             setOverdueOnly(false)
@@ -227,18 +223,18 @@ export default function FollowupsPage() {
         </button>
       </div>
       {chatSourceInfo && (
-        <div className="bg-blue-50 dark:bg-blue-900/25 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 px-3 py-2 rounded text-sm">
-          Opened from tagged chat inquiry{chatSourceInfo.inquiryName ? `: ${chatSourceInfo.inquiryName}` : ''}. Actions here are logged to your account audit trail.
+        <div className="bg-blue-50 border border-blue-200 text-blue-800 px-2 py-1 text-[11px]">
+          Opened from tagged chat inquiry{chatSourceInfo.inquiryName ? `: ${chatSourceInfo.inquiryName}` : ''}.
         </div>
       )}
       {overdueOnly && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100 px-3 py-2 rounded text-sm flex flex-wrap items-center justify-between gap-2">
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-2 py-1 text-[11px] flex items-center justify-between gap-2">
           <span>
-            Showing <strong>overdue</strong> follow-ups (pending and scheduled before now): <strong>{filteredFollowups.length}</strong>
+            Overdue: <strong>{filteredFollowups.length}</strong>
           </span>
           <button
             type="button"
-            className="text-[12px] font-semibold px-2 py-1 rounded border border-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+            className="text-[11px] font-semibold px-1.5 py-0.5 rounded border border-amber-400 hover:bg-amber-100"
             onClick={() => {
               setOverdueOnly(false)
               if (typeof window !== 'undefined') {
@@ -254,11 +250,11 @@ export default function FollowupsPage() {
         </div>
       )}
       {focusInquiryId && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100 px-3 py-2 rounded text-sm flex flex-wrap items-center justify-between gap-2">
-          <span>Showing follow-ups for inquiry <strong>#{focusInquiryId}</strong>.</span>
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-2 py-1 text-[11px] flex items-center justify-between gap-2">
+          <span>Follow-ups for inquiry <strong>#{focusInquiryId}</strong>.</span>
           <button
             type="button"
-            className="text-[12px] font-semibold px-2 py-1 rounded border border-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+            className="text-[11px] font-semibold px-1.5 py-0.5 rounded border border-amber-400 hover:bg-amber-100"
             onClick={() => {
               setFocusInquiryId('')
               if (typeof window !== 'undefined') {
@@ -269,68 +265,61 @@ export default function FollowupsPage() {
               }
             }}
           >
-            Show all follow-ups
+            Show all
           </button>
         </div>
       )}
 
       <FollowupStatsCards followups={followups} staffEmail={owner || undefined} tenantWide={isAdmin && !owner} />
       
-      <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">
-        <div className="p-3 sm:p-4 border-b border-neutral-light">
-          <div className="flex flex-wrap md:flex-nowrap md:items-center gap-2">
-            <div className="flex-[1] min-w-[160px]">
-              <input
-                type="text"
-                placeholder="Search follow-ups..."
-                className={inputClass}
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-wrap md:flex-nowrap gap-2 items-center flex-[2] min-w-[200px]">
+      <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 flex-1 flex flex-col min-h-0">
+        <div className="px-2 py-1.5 border-b border-neutral-light flex-shrink-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <input
+              type="text"
+              placeholder="Search..."
+              className="min-w-0 flex-1 px-2 py-1 text-[12px] border border-neutral-light focus:outline-none focus:ring-1 focus:ring-primary/30"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <select
+              className="px-2 py-1 text-[12px] border border-neutral-light focus:outline-none"
+              value={status}
+              onChange={e => setStatus(e.target.value)}
+            >
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+              <option value="rescheduled">Rescheduled</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <select
+              className="px-2 py-1 text-[12px] border border-neutral-light focus:outline-none"
+              value={type}
+              onChange={e => setType(e.target.value)}
+            >
+              <option value="">All Types</option>
+              <option value="call">Call</option>
+              <option value="email">Email</option>
+              <option value="sms">SMS</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="meeting">Meeting</option>
+            </select>
+            {isAdmin && owners.length > 0 && (
               <select
-                className={selectClass}
-                value={status}
-                onChange={e => setStatus(e.target.value)}
+                className="px-2 py-1 text-[12px] border border-amber-300 focus:outline-none"
+                value={owner}
+                onChange={e => setOwner(e.target.value)}
               >
-                <option value="">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="completed">Completed</option>
-                <option value="rescheduled">Rescheduled</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="">All Owners</option>
+                {owners.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
               </select>
-              <select
-                className={selectClass}
-                value={type}
-                onChange={e => setType(e.target.value)}
-              >
-                <option value="">All Types</option>
-                <option value="call">Call</option>
-                <option value="email">Email</option>
-                <option value="sms">SMS</option>
-                <option value="whatsapp">WhatsApp</option>
-                <option value="meeting">Meeting</option>
-              </select>
-              {isAdmin && owners.length > 0 && (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-600 px-2 py-1.5 flex items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wide text-yellow-800">Owner</span>
-                  <select
-                    className="px-2 py-1 border border-yellow-300 dark:border-yellow-600 bg-white dark:bg-gray-700 text-[13px] focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                    value={owner}
-                    onChange={e => setOwner(e.target.value)}
-                  >
-                    <option value="">All Owners</option>
-                    {owners.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </div>
-        <div className="p-3 sm:p-4 flex-1">
+        <div className="flex-1 min-h-0">
           <FollowupList
             followups={filteredFollowups}
             inquiries={inquiries}
