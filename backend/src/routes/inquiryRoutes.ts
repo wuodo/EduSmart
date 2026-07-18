@@ -118,7 +118,7 @@ router.get('/', async (req, res) => {
     }
 
     const page = Math.max(1, parseInt(String(req.query.page || '1'), 10));
-    const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit || '50'), 10)));
+    const limit = Math.min(500, Math.max(1, parseInt(String(req.query.limit || '200'), 10)));
     const skip = (page - 1) * limit;
 
     const [inquiries, total] = await Promise.all([

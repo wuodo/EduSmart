@@ -76,7 +76,7 @@ export default function InquiryList({
   const [loadingDeleted, setLoadingDeleted] = useState(false)
   const [selectedDeletedArchiveIds, setSelectedDeletedArchiveIds] = useState<string[]>([])
   const [mergeTargetId, setMergeTargetId] = useState('')
-  const [displayLimit, setDisplayLimit] = useState(50)
+  const [displayLimit, setDisplayLimit] = useState(25)
   const [showSummary, setShowSummary] = useState(() => { try { return localStorage.getItem('edusmart_summary_hidden') !== 'true'; } catch { return true; } })
   const [reassignOpen, setReassignOpen] = useState(false)
   const [seenWebsiteIds, setSeenWebsiteIds] = useState<Set<string>>(() => {
@@ -777,18 +777,14 @@ export default function InquiryList({
                   );
                 })}
               </tbody>
-              {sorted.length > displayLimit && (
-                <tfoot>
-                  <tr>
-                    <td colSpan={16} className="text-center py-3 border-t">
-                      <button onClick={() => setDisplayLimit(d => d + 50)} className="px-4 py-1.5 text-xs border hover:bg-gray-50 font-medium">
-                        Show {Math.min(50, sorted.length - displayLimit)} more ({sorted.length - displayLimit} remaining)
-                      </button>
-                    </td>
-                  </tr>
-                </tfoot>
-              )}
             </table>
+            {sorted.length > displayLimit && (
+              <div className="text-center py-2 border-t bg-gray-50 sticky bottom-0">
+                <button onClick={() => setDisplayLimit(d => d + 50)} className="px-4 py-2 text-xs font-semibold bg-teal-600 text-white hover:bg-teal-700">
+                  Show {Math.min(50, sorted.length - displayLimit)} more ({sorted.length - displayLimit} remaining)
+                </button>
+              </div>
+            )}
             )}
           </div>
         </div>
