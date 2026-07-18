@@ -979,13 +979,23 @@ router.put('/:id', async (req, res) => {
       } catch (e) { console.warn('[stage-gate] validation error:', e); }
     }
 
+    // Separate detail fields from the main payload (they live on InquiryDetail, not Inquiry)
+    const { county, town, idOrPassport, ...mainPayload } = updatePayload;
     const inquiry = await prisma.inquiry.update({ 
       where: { 
         id,
         tenantId
       }, 
-      data: updatePayload 
+      data: mainPayload 
     });
+    // Upsert inquiry detail
+    if (county || town || idOrPassport) {
+      await prisma.inquiryDetail.upsert({
+        where: { inquiryId: id },
+        create: { inquiryId: id, county: county || '', town: town || '', idOrPassport: idOrPassport || null },
+        update: { county: county || '', town: town || '', idOrPassport: idOrPassport ?? undefined },
+      });
+    }
     
     // Log inquiry update
     await auditLogger.updateInquiry(req, id.toString(), {

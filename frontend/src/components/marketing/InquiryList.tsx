@@ -283,16 +283,45 @@ export default function InquiryList({
     if (!selected) return
     setLoading(true)
     try {
-      await apiFetch(`/inquiries/${selected.id}`, {
+      const res = await apiFetch(`/inquiries/${selected.id}`, {
         method: 'PUT',
-        body: JSON.stringify({ ...data, createdBy: selected.createdBy }),
+        body: JSON.stringify({
+          fullName: data.fullName,
+          phone: data.phone,
+          email: data.email,
+          gender: data.gender,
+          programOfInterest: data.programOfInterest,
+          intakePeriod: data.intakePeriod,
+          studyMode: data.studyMode,
+          source: data.source,
+          agentOrReferralName: data.agentOrReferralName,
+          preferredContactMethod: data.preferredContactMethod,
+          bestTimeToContact: data.bestTimeToContact,
+          leadTags: data.leadTags,
+          notes: data.notes,
+          status: data.status,
+          assignedTo: data.assignedTo,
+          kcseGrade: data.kcseGrade,
+          county: data.county,
+          town: data.town,
+          idOrPassport: data.idOrPassport || undefined,
+          consentSms: typeof data.consentSms === 'boolean' ? data.consentSms : undefined,
+          consentEmail: typeof data.consentEmail === 'boolean' ? data.consentEmail : undefined,
+          consentWhatsapp: typeof data.consentWhatsapp === 'boolean' ? data.consentWhatsapp : undefined,
+          createdBy: selected.createdBy,
+        }),
       })
-    } finally {
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ message: 'Save failed' }))
+        setToast({ type: 'error', message: errData?.message || errData?.error || `Save failed (${res.status})` })
+        return
+      }
       setEditMode(false)
       setEditData(null)
       setSelected(null)
-      setLoading(false)
       onRefresh()
+    } finally {
+      setLoading(false)
     }
   }
 
