@@ -122,6 +122,8 @@ run('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
     await p.$disconnect();
   }
 })().then(() => {
+  console.log('[render-start] Rebuilding backend from source...');
+  run('npm run build', { stdio: 'inherit' });
   console.log('[render-start] Starting server...');
   const server = run('node dist/server.js');
   process.exit(server.status ?? 0);
