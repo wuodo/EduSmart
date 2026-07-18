@@ -68,6 +68,7 @@ export default function InquiriesPage() {
   const [owners, setOwners] = useState<{ label: string; value: string }[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
   const [showHiddenCols, setShowHiddenCols] = useState(false)
+  const [showFilters, setShowFilters] = useState(true)
   const [completenessSummary, setCompletenessSummary] = useState<{
     incompleteCount: number
     highPriorityCount: number
@@ -604,7 +605,14 @@ export default function InquiriesPage() {
       </div>
       {canView && (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow flex flex-col flex-1 min-h-0 overflow-hidden">
-        {/* Sticky filters bar — compact */}
+        {/* Filters toggle bar */}
+        <div className="flex items-center justify-between px-2 py-1 border-b border-neutral-light flex-shrink-0 bg-white/95">
+          <button onClick={() => setShowFilters(s => !s)} className="text-[10px] text-gray-500 hover:text-gray-700">{showFilters ? '▾' : '▸'} Filters</button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowFilters(true)} className="text-[10px] text-gray-400 hover:text-gray-600">Clear</button>
+          </div>
+        </div>
+        {showFilters && (
         <div className="px-2 py-1.5 border-b border-neutral-light flex-shrink-0 bg-white/95 backdrop-blur">
           <InquiryFilters
             status={status}
@@ -635,6 +643,7 @@ export default function InquiriesPage() {
             onClear={clearFilters}
           />
         </div>
+        )}
         {/* Table area — fills remaining height, only this area scrolls */}
         <div className="flex-1 overflow-y-auto min-h-0 px-2 py-2">
           <InquiryList
