@@ -261,7 +261,7 @@ export default function InquiryList({
       agentOrReferralName: inquiry.agentOrReferralName,
       preferredContactMethod: inquiry.preferredContactMethod,
       bestTimeToContact: inquiry.bestTimeToContact,
-      leadTags: inquiry.leadTags,
+      leadTags: Array.isArray(inquiry.leadTags) ? inquiry.leadTags : [],
       notes: inquiry.notes,
       status: inquiry.status as InquiryStatus,
       assignedTo: '',
