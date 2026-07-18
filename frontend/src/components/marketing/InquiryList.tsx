@@ -477,7 +477,7 @@ export default function InquiryList({
                 : 'bg-rose-50 border-rose-200 text-rose-800'
             }`}
           >
-            {toast.message}
+            {String(toast.message ?? '')}
           </div>
         </div>
       )}

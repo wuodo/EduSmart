@@ -1,7 +1,6 @@
 import { Followup } from '@/types/followup';
 import { useEffect, useState } from 'react';
 import { WEB_API } from '@/utils/api';
-import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 function userHeaders() {
   if (typeof window === 'undefined') return {} as any;
@@ -76,7 +75,7 @@ export default function FollowupStatsCards({ followups, staffEmail, tenantWide }
             onClick={() => setShowAnalytics(s => !s)}
             className="w-full flex items-center gap-2 px-3 py-2 text-[12px] font-bold uppercase tracking-wide text-gray-700 hover:bg-gray-50"
           >
-            {showAnalytics ? <ChevronDownIcon className="w-3.5 h-3.5" /> : <ChevronRightIcon className="w-3.5 h-3.5" />}
+            <span className="text-[10px]">{showAnalytics ? '▾' : '▸'}</span>
             Performance Analytics
             {analytics?.staff && (
               <span className="text-gray-400 font-medium normal-case tracking-normal">({analytics.staff})</span>
