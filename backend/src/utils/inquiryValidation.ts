@@ -48,7 +48,7 @@ export const createInquirySchema = z.object({
 export const updateInquirySchema = z.object({
   fullName: z.string().min(1).max(200).optional(),
   phone: z.string().regex(/^\+?\d{7,15}$/).optional(),
-  email: z.string().email().optional().nullable(),
+  email: z.string().email().optional().nullable().or(z.literal('')),
   gender: z.string().optional().nullable(),
   programOfInterest: z.string().optional().nullable(),
   intakePeriod: z.string().optional().nullable(),

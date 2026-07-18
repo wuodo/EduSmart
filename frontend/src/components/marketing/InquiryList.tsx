@@ -288,7 +288,7 @@ export default function InquiryList({
         body: JSON.stringify({
           fullName: data.fullName,
           phone: data.phone,
-          email: data.email,
+          email: data.email || undefined,
           gender: data.gender,
           programOfInterest: data.programOfInterest,
           intakePeriod: data.intakePeriod,
