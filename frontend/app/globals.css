@@ -33,10 +33,19 @@
     --info: #3B82F6;
     --info-bg: #DBEAFE;
 
-    --sidebar-bg: #0D9488;
-    --sidebar-text: #FFFFFF;
-    --sidebar-active: #5EEAD4;
-    --sidebar-hover: #0F766E;
+    /* Sidebar (same colors for both themes) */
+    --sidebar-bg: #0F172A;
+    --sidebar-text: #F8FAFC;
+    --sidebar-active-border: #F59E0B;
+    --sidebar-active-bg: #334155;
+    --sidebar-hover: #1E293B;
+    --sidebar-secondary: #CBD5E1;
+    --sidebar-inactive-icon: #94A3B8;
+    --sidebar-active-icon: #F59E0B;
+    --sidebar-active-text: #FFFFFF;
+    --sidebar-divider: #334155;
+    --sidebar-scrollbar: #475569;
+    --sidebar-scrollbar-hover: #64748B;
     --sidebar-width: 260px;
     --sidebar-collapsed: 72px;
 
@@ -80,13 +89,6 @@
     --error-bg: #7F1D1D;
     --info: #60A5FA;
     --info-bg: #1E3A8A;
-
-    --sidebar-bg: #0D9488;
-    --sidebar-text: #FFFFFF;
-    --sidebar-active: #5EEAD4;
-    --sidebar-hover: #0F766E;
-    --sidebar-width: 260px;
-    --sidebar-collapsed: 72px;
 
     --table-header-bg: #1E293B;
     --table-header-text: #F8FAFC;
