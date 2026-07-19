@@ -63,36 +63,38 @@ function SidebarItem({ item, pathname, onClose, collapsed }: {
   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
   return (
-    <div className="relative flex items-center" style={{ minHeight: '44px' }}>
+    <div className="relative flex items-center" style={{ height: '40px' }}>
       {isActive && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-r" style={{ backgroundColor: 'var(--sidebar-active-border)', height: '20px' }} />
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-r" style={{ backgroundColor: 'var(--sidebar-active-border)', height: '18px' }} />
       )}
       <Link
         href={item.href}
         onClick={onClose}
-        className="flex items-center w-full transition-all duration-150"
+        className="flex items-center w-full"
         style={{
           color: isActive ? '#FFFFFF' : 'var(--sidebar-text)',
           backgroundColor: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
-          borderRadius: '10px',
-          minHeight: '44px',
-          padding: collapsed ? '12px 0' : '12px 16px',
+          borderRadius: '8px',
+          height: '40px',
+          padding: collapsed ? '0' : '0 12px',
           marginLeft: collapsed ? '0' : '4px',
-          fontWeight: isActive ? 600 : 400,
-          transition: 'background-color 150ms, color 150ms',
+          fontSize: '14px',
+          fontWeight: 500,
+          gap: '12px',
+          transition: 'background-color 150ms ease-in-out, color 150ms ease-in-out',
         }}
         onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'; e.currentTarget.style.color = '#FFFFFF'; } }}
         onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; } }}
       >
-        <div className="flex items-center justify-center shrink-0" style={{ width: collapsed ? '100%' : '24px' }}>
+        <div className="flex items-center justify-center shrink-0" style={{ width: collapsed ? '100%' : '18px' }}>
           <item.icon
-            className="h-4 w-4"
+            className="h-[18px] w-[18px]"
             style={{ color: isActive ? 'var(--sidebar-active-border)' : 'var(--sidebar-icon)' }}
             aria-hidden="true"
           />
         </div>
         {!collapsed && (
-          <span className="ml-3 text-sm truncate">{item.name || item.title}</span>
+          <span className="truncate">{item.name || item.title}</span>
         )}
       </Link>
     </div>
@@ -186,13 +188,13 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
       
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 ${collapsed ? 'w-[72px]' : 'w-[260px]'} transform transition-all duration-300 ease-in-out h-screen
+        fixed inset-y-0 left-0 z-50 ${collapsed ? 'w-[68px]' : 'w-[200px]'} transform transition-all duration-300 ease-in-out h-screen
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         flex flex-col overflow-y-auto
       `}
       style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-text)' }}
       >
-        <div className="flex h-14 items-center justify-between px-4 shrink-0" style={{ borderBottom: '1px solid var(--sidebar-divider)' }}>
+        <div className="flex items-center justify-between shrink-0" style={{ height: '60px', padding: '0 12px', borderBottom: '1px solid var(--sidebar-divider)' }}>
           <div className="flex items-center gap-2">
             {logo && !collapsed ? (
               <img
@@ -202,7 +204,7 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
                 onError={() => setLogo(null)}
               />
             ) : (
-              <h1 className="text-compact font-bold truncate max-w-[8rem]" style={{ color: 'var(--sidebar-text)' }}>
+              <h1 className="text-base font-bold truncate max-w-[8rem]" style={{ color: 'var(--sidebar-text)' }}>
                 {collapsed ? (title ? title.charAt(0) : '') : title}
               </h1>
             )}
@@ -215,7 +217,7 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
               style={{ color: 'var(--sidebar-text)' }}
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={collapsed ? 'M4 12h16M10 6l-6 6 6 6' : 'M4 12h16M14 6l6 6-6 6'} />
               </svg>
             </button>
@@ -231,7 +233,8 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
             </button>
           </div>
         </div>
-        <nav className="flex-1 space-y-0.5 px-3 py-4 overflow-y-auto">
+        <nav className="flex-1 overflow-y-auto" style={{ padding: '8px 12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {filteredNavigation.map((item) => (
             <SidebarItem
               key={item.name || item.title}
@@ -241,6 +244,7 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
               collapsed={collapsed}
             />
           ))}
+          </div>
         </nav>
       </div>
     </>
