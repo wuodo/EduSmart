@@ -462,43 +462,43 @@ export default function DashboardLayout({
 
 
   return (
-    <div className="h-screen bg-neutral-light">
+    <div className="h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
       <Sidebar isMobileOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} collapsed={sidebarCollapsed} onToggleCollapse={() => { setSidebarCollapsed(c => { const n = !c; try { localStorage.setItem('edusmart_sidebar_collapsed', String(n)); } catch {} return n; }); }} />
       <div className={`${sidebarCollapsed ? 'lg:ml-14' : 'lg:ml-48'} h-full flex flex-col min-w-0`}>
         {/* Top header bar */}
-        <header className="w-full h-14 flex items-center px-3 sm:px-6 shadow-sm justify-between" style={{ backgroundColor: 'var(--brand-primary)' }}>
+        <header className="w-full h-14 flex items-center px-3 sm:px-6 shadow-sm justify-between theme-transition" style={{ backgroundColor: 'var(--primary)' }}>
           {/* Left: logo + module */}
           <div className="flex items-center gap-3 min-w-0">
-            <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="lg:hidden text-white hover:opacity-80 p-1" title="Menu">
+            <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="lg:hidden p-1 hover:opacity-80 theme-transition" style={{ color: 'var(--primary-foreground)' }} title="Menu">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
             {instName ? (
               <div className="flex items-center gap-3 min-w-0">
-                <span className="text-white font-bold text-sm tracking-wide truncate">{instName}</span>
-                <span className="hidden lg:flex items-center gap-1 text-white/50 text-xs font-medium">/ {moduleName}</span>
+                <span className="font-bold text-sm tracking-wide truncate" style={{ color: 'var(--primary-foreground)' }}>{instName}</span>
+                <span className="hidden lg:flex items-center gap-1 text-xs font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>/ {moduleName}</span>
               </div>
             ) : (
-              <span className="text-white font-semibold text-sm truncate">{moduleName}</span>
+              <span className="font-semibold text-sm truncate" style={{ color: 'var(--primary-foreground)' }}>{moduleName}</span>
             )}
-            <div className="hidden lg:flex items-center gap-1 ml-2 text-[10px] text-white/50"><span className="live-dot"></span>Live</div>
+            <div className="hidden lg:flex items-center gap-1 ml-2 text-[10px]" style={{ color: 'rgba(255,255,255,0.5)' }}><span className="live-dot"></span>Live</div>
           </div>
 
           {/* Right: tool groups */}
           <div className="flex items-center gap-1 sm:gap-3">
             {/* Search */}
-            <button onClick={() => openCommandPalette()} className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-white/80 bg-white/10 hover:bg-white/20 transition-colors" title="Search (Ctrl+K)">
+            <button onClick={() => openCommandPalette()} className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs theme-transition hover:opacity-80" style={{ color: 'rgba(255,255,255,0.85)', backgroundColor: 'rgba(255,255,255,0.1)' }} title="Search (Ctrl+K)">
               <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
               <span>Search</span>
-              <kbd className="text-[10px] text-white/40 border border-white/20 rounded px-1">⌘K</kbd>
+              <kbd className="text-[10px] rounded px-1" style={{ color: 'rgba(255,255,255,0.4)', borderColor: 'rgba(255,255,255,0.2)' }}>⌘K</kbd>
             </button>
-            <button onClick={() => openCommandPalette()} className="sm:hidden text-white hover:opacity-80 p-1" title="Search">
+            <button onClick={() => openCommandPalette()} className="sm:hidden p-1" style={{ color: 'var(--primary-foreground)' }} title="Search">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </button>
 
             {/* Time */}
             <div className="hidden md:flex flex-col items-end mr-1">
-              <span className="text-white text-[11px] font-medium leading-tight">{dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              <span className="text-white/60 text-[9px] leading-tight">{dateTime.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+              <span className="text-[11px] font-medium leading-tight" style={{ color: 'var(--primary-foreground)' }}>{dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <span className="text-[9px] leading-tight" style={{ color: 'rgba(255,255,255,0.6)' }}>{dateTime.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
             </div>
 
             {/* Theme */}

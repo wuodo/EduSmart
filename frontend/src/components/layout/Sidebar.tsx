@@ -67,19 +67,20 @@ function SidebarItem({ item, pathname, onClose, collapsed }: {
         <Link
           href={item.href}
           onClick={onClose}
-        className={`group flex items-center px-2 py-1.5 text-compact-sm font-medium transition-colors ${
+        className={`group flex items-center px-2 py-1.5 text-compact-sm font-medium transition-all duration-150 rounded ${
           isActive
-            ? 'bg-white/15 border-l-4 pl-1.5'
-            : 'hover:bg-white/10'
+            ? 'pl-2'
+            : 'hover:opacity-80'
         }`}
         style={{
-          color: 'var(--brand-sidebar-text, #ffffff)',
-          ...(isActive ? { borderLeftColor: 'var(--brand-sidebar-active, var(--brand-accent, #14b8a6))' } : {})
+          color: isActive ? 'var(--sidebar-active)' : 'var(--sidebar-text)',
+          backgroundColor: isActive ? 'color-mix(in srgb, var(--sidebar-active) 12%, transparent)' : 'transparent',
+          ...(isActive ? { borderLeft: '3px solid var(--sidebar-active)' } : {})
         }}
         >
           <item.icon
             className="mr-2 h-4 w-4 flex-shrink-0"
-            style={{ color: 'var(--brand-sidebar-text, #ffffff)', opacity: isActive ? 1 : 0.8 }}
+            style={{ color: isActive ? 'var(--sidebar-active)' : 'var(--sidebar-text)' }}
             aria-hidden="true"
           />
           {!collapsed && (item.name || item.title)}
@@ -177,11 +178,11 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
       <div className={`
         fixed inset-y-0 left-0 z-50 ${collapsed ? 'w-14' : 'w-48'} transform transition-all duration-300 ease-in-out h-screen
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        flex flex-col border-r border-white/10 overflow-y-auto
+        flex flex-col overflow-y-auto
       `}
-      style={{ backgroundColor: 'var(--brand-sidebar-bg, var(--brand-primary, #003366))' }}
+      style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-text)' }}
       >
-        <div className="flex h-14 items-center justify-between px-4 border-b border-white/20 shrink-0">
+        <div className="flex h-14 items-center justify-between px-4 shrink-0" style={{ borderColor: 'var(--divider)' }}>
           <div className="flex items-center gap-2">
             {logo && !collapsed ? (
               <img
@@ -191,7 +192,7 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
                 onError={() => setLogo(null)}
               />
             ) : (
-              <h1 className="text-compact font-bold text-white truncate max-w-[8rem]">
+              <h1 className="text-compact font-bold truncate max-w-[8rem]" style={{ color: 'var(--sidebar-text)' }}>
                 {collapsed ? (title ? title.charAt(0) : '') : title}
               </h1>
             )}
@@ -200,7 +201,8 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
             {/* Collapse toggle */}
             <button
               onClick={onToggleCollapse}
-              className="inline-flex text-white hover:text-yellow-200 p-1"
+              className="inline-flex p-1 hover:opacity-70 transition-opacity"
+              style={{ color: 'var(--sidebar-text)' }}
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -210,7 +212,8 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
             {/* Close button for mobile */}
             <button
               onClick={onClose}
-              className="lg:hidden text-white hover:text-yellow-200 p-1"
+              className="lg:hidden p-1 hover:opacity-70 transition-opacity"
+              style={{ color: 'var(--sidebar-text)' }}
             >
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
