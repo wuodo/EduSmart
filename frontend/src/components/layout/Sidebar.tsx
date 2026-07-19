@@ -233,8 +233,8 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
             </button>
           </div>
         </div>
-        <nav className="flex-1 overflow-y-auto" style={{ padding: '8px 12px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <nav className="flex-1 overflow-y-auto" style={{ padding: '4px 12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
           {filteredNavigation.map((item) => (
             <SidebarItem
               key={item.name || item.title}
