@@ -390,7 +390,7 @@ export default function DashboardLayout({
     setProfileLoading(true);
     setShowProfile(true);
     try {
-      const res = await fetch(`${WEB_API}/users/me`, { cache: 'no-store' });
+      const res = await fetch(`${WEB_API}/users/me`, { cache: 'no-store', credentials: 'include' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Not authenticated');
       setProfileName(data.name || '');
@@ -920,20 +920,20 @@ export default function DashboardLayout({
         )}
         {showProfile && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <div className="bg-white dark:bg-gray-800 shadow-lg w-full max-w-md p-6" style={{ borderRadius: '16px' }}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">My Profile</h3>
-                <button className="text-neutral-dark hover:text-primary" onClick={() => setShowProfile(false)}>×</button>
+                <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>My Profile</h3>
+                <button className="hover:opacity-70" style={{ color: 'var(--text-muted)' }} onClick={() => setShowProfile(false)}>×</button>
               </div>
-              {profileError && <div className="mb-3 text-sm text-rose-600">{profileError}</div>}
+              {profileError && <div className="mb-3 text-sm" style={{ color: 'var(--error)' }}>{profileError}</div>}
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Name</label>
-                  <input value={profileName} onChange={e => setProfileName(e.target.value)} className="w-full border rounded px-3 py-2" placeholder="Your name" />
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Name</label>
+                  <input value={profileName} onChange={e => setProfileName(e.target.value)} className="form-input w-full" placeholder="Your name" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Gender</label>
-                  <select value={profileGender} onChange={e => setProfileGender(e.target.value)} className="w-full border rounded px-3 py-2">
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Gender</label>
+                  <select value={profileGender} onChange={e => setProfileGender(e.target.value)} className="form-input w-full">
                     <option value="">Select Gender</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
@@ -941,17 +941,17 @@ export default function DashboardLayout({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Phone</label>
-                  <input value={profilePhone} onChange={e => setProfilePhone(e.target.value)} className="w-full border rounded px-3 py-2" placeholder="07xx xxx xxx" />
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Phone</label>
+                  <input value={profilePhone} onChange={e => setProfilePhone(e.target.value)} className="form-input w-full" placeholder="07xx xxx xxx" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Change Password</label>
-                  <input type="password" value={profilePassword} onChange={e => setProfilePassword(e.target.value)} className="w-full border rounded px-3 py-2" placeholder="••••••••" />
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Change Password</label>
+                  <input type="password" value={profilePassword} onChange={e => setProfilePassword(e.target.value)} className="form-input w-full" placeholder="••••••••" />
                 </div>
               </div>
               <div className="mt-6 flex justify-end gap-3">
-                <button className="px-4 py-2 rounded border" onClick={() => setShowProfile(false)}>Cancel</button>
-                <button className="px-4 py-2 rounded bg-primary text-white disabled:opacity-50" onClick={saveProfile} disabled={profileLoading}>{profileLoading ? 'Saving...' : 'Save'}</button>
+                <button className="btn-md btn-secondary" onClick={() => setShowProfile(false)}>Cancel</button>
+                <button className="btn-md btn-primary" onClick={saveProfile} disabled={profileLoading}>{profileLoading ? 'Saving...' : 'Save'}</button>
               </div>
             </div>
           </div>
