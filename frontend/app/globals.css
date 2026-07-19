@@ -88,9 +88,9 @@
     --radius-chip: 20px;
 
     /* Layout */
-    --sidebar-width: 200px;
+    --sidebar-width: 220px;
     --sidebar-collapsed: 68px;
-    --header-height: 72px;
+    --header-height: 56px;
     --page-padding: 24px;
     --card-padding: 24px;
     --content-gap: 24px;
@@ -100,6 +100,13 @@
 
   .dark {
     /* === Dark Theme === */
+
+    /* Brand — amber in dark mode */
+    --primary: #F59E0B;
+    --primary-hover: #FBBF24;
+    --primary-foreground: #FFFFFF;
+    --secondary: #F59E0B;
+    --accent: #F59E0B;
 
     /* Backgrounds */
     --page-bg: #0F172A;
@@ -243,8 +250,8 @@ table, .table { border-radius: var(--radius-table) !important; }
    BUTTONS — per spec heights
    ===================================================== */
 .btn-lg { height: 48px; padding: 0 24px; font-size: 14px; font-weight: 500; }
-.btn-md { height: 40px; padding: 0 20px; font-size: 14px; font-weight: 500; }
-.btn-sm { height: 36px; padding: 0 16px; font-size: 13px; font-weight: 500; }
+.btn-md { height: 40px; padding: 0 16px; font-size: 14px; font-weight: 500; }
+.btn-sm { height: 36px; padding: 0 12px; font-size: 13px; font-weight: 500; }
 
 .btn-primary {
   background-color: var(--primary) !important;

@@ -63,9 +63,9 @@ function SidebarItem({ item, pathname, onClose, collapsed }: {
   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
   return (
-    <div className="relative flex items-center" style={{ height: '40px' }}>
+    <div className="relative flex items-center" style={{ height: '34px' }}>
       {isActive && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-r" style={{ backgroundColor: 'var(--sidebar-active-border)', height: '18px' }} />
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r" style={{ backgroundColor: 'var(--sidebar-active-border)', height: '16px' }} />
       )}
       <Link
         href={item.href}
@@ -75,20 +75,20 @@ function SidebarItem({ item, pathname, onClose, collapsed }: {
           color: isActive ? '#FFFFFF' : 'var(--sidebar-text)',
           backgroundColor: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
           borderRadius: '8px',
-          height: '40px',
-          padding: collapsed ? '0' : '0 12px',
-          marginLeft: collapsed ? '0' : '4px',
+          height: '34px',
+          padding: collapsed ? '0' : '0 10px',
+          marginLeft: collapsed ? '0' : '3px',
           fontSize: '14px',
           fontWeight: 500,
-          gap: '12px',
+          gap: '10px',
           transition: 'background-color 150ms ease-in-out, color 150ms ease-in-out',
         }}
         onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'; e.currentTarget.style.color = '#FFFFFF'; } }}
         onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; } }}
       >
-        <div className="flex items-center justify-center shrink-0" style={{ width: collapsed ? '100%' : '18px' }}>
+        <div className="flex items-center justify-center shrink-0" style={{ width: collapsed ? '100%' : '16px' }}>
           <item.icon
-            className="h-[18px] w-[18px]"
+            className="h-4 w-4"
             style={{ color: isActive ? 'var(--sidebar-active-border)' : 'var(--sidebar-icon)' }}
             aria-hidden="true"
           />
@@ -188,13 +188,13 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
       
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 ${collapsed ? 'w-[68px]' : 'w-[200px]'} transform transition-all duration-300 ease-in-out h-screen
+        fixed inset-y-0 left-0 z-50 ${collapsed ? 'w-[68px]' : 'w-[220px]'} transform transition-all duration-300 ease-in-out h-screen
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         flex flex-col overflow-y-auto
       `}
       style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-text)' }}
       >
-        <div className="flex items-center justify-between shrink-0" style={{ height: '60px', padding: '0 12px', borderBottom: '1px solid var(--sidebar-divider)' }}>
+        <div className="flex items-center justify-between shrink-0" style={{ height: '56px', padding: '0 10px', borderBottom: '1px solid var(--sidebar-divider)' }}>
           <div className="flex items-center gap-2">
             {logo && !collapsed ? (
               <img
@@ -204,23 +204,12 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
                 onError={() => setLogo(null)}
               />
             ) : (
-              <h1 className="text-base font-bold truncate max-w-[8rem]" style={{ color: 'var(--sidebar-text)' }}>
+              <h1 className="text-[15px] font-bold truncate max-w-[7rem]" style={{ color: 'var(--sidebar-text)' }}>
                 {collapsed ? (title ? title.charAt(0) : '') : title}
               </h1>
             )}
           </div>
           <div className="flex items-center gap-1">
-            {/* Collapse toggle */}
-            <button
-              onClick={onToggleCollapse}
-              className="inline-flex p-1 hover:opacity-70 transition-opacity"
-              style={{ color: 'var(--sidebar-text)' }}
-              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={collapsed ? 'M4 12h16M10 6l-6 6 6 6' : 'M4 12h16M14 6l6 6-6 6'} />
-              </svg>
-            </button>
             {/* Close button for mobile */}
             <button
               onClick={onClose}
@@ -233,7 +222,7 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
             </button>
           </div>
         </div>
-        <nav className="flex-1 overflow-y-auto" style={{ padding: '4px 12px' }}>
+        <nav className="flex-1 overflow-y-auto" style={{ padding: '5px 10px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
           {filteredNavigation.map((item) => (
             <SidebarItem
@@ -246,6 +235,18 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
           ))}
           </div>
         </nav>
+        {/* Collapse toggle — full width at bottom */}
+        <button
+          onClick={onToggleCollapse}
+          className="flex items-center justify-center w-full transition-all duration-150"
+          style={{ color: 'var(--sidebar-text)', opacity: 0.7, height: '40px', borderTop: '1px solid var(--sidebar-divider)', gap: '10px', fontSize: '13px' }}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+          </svg>
+          {!collapsed && <span>Collapse</span>}
+        </button>
       </div>
     </>
   );

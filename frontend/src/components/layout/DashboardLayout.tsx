@@ -464,7 +464,7 @@ export default function DashboardLayout({
   return (
     <div className="h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
       <Sidebar isMobileOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} collapsed={sidebarCollapsed} onToggleCollapse={() => { setSidebarCollapsed(c => { const n = !c; try { localStorage.setItem('edusmart_sidebar_collapsed', String(n)); } catch {} return n; }); }} />
-      <div className={`${sidebarCollapsed ? 'lg:ml-[68px]' : 'lg:ml-[200px]'} h-full flex flex-col min-w-0`}>
+      <div className={`${sidebarCollapsed ? 'lg:ml-[68px]' : 'lg:ml-[220px]'} h-full flex flex-col min-w-0`}>
         {/* Top header bar — per spec: white bg / bottom border for light, dark bg for dark */}
         <header className="header-bar flex items-center justify-between theme-transition">
           {/* Left: logo + module */}
@@ -485,7 +485,7 @@ export default function DashboardLayout({
           {/* Right: tool groups */}
           <div className="flex items-center gap-4">
             {/* Search */}
-            <button onClick={() => openCommandPalette()} className="hidden sm:flex items-center gap-2 px-4 theme-transition" style={{ height: '40px', borderRadius: '10px', color: 'var(--header-text)', backgroundColor: 'var(--header-search-bg)', border: '1px solid var(--header-search-border)', width: '320px' }} title="Search (Ctrl+K)">
+            <button onClick={() => openCommandPalette()} className="hidden sm:flex items-center gap-2 px-4 theme-transition" style={{ height: '40px', borderRadius: '10px', color: 'var(--header-text)', backgroundColor: 'var(--header-search-bg)', border: '1px solid var(--header-search-border)', width: '340px' }} title="Search (Ctrl+K)">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--text-muted)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
               <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Search anything...</span>
               <kbd className="ml-auto text-xs px-1.5 py-0.5 rounded" style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}>⌘K</kbd>
