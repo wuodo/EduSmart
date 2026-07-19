@@ -320,6 +320,8 @@ export default function InquiryList({
       setEditData(null)
       setSelected(null)
       onRefresh()
+    } catch (e: any) {
+      setToast({ type: 'error', message: e?.message || 'Something went wrong while saving' })
     } finally {
       setLoading(false)
     }

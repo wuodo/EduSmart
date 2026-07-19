@@ -493,11 +493,12 @@ export default function CreateInquiryButton({
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-0.5">Source of Inquiry *</label>
                     <select
-                      value={formData.source}
+                      value={formData.source?.toLowerCase() || ''}
                       onChange={e => setFormData({ ...formData, source: e.target.value as InquirySource })}
                       className="w-full px-2 py-1.5 text-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
                       required
                     >
+                      <option value="">Select source</option>
                       {inquirySources.map(src => <option key={src.value} value={src.value}>{src.label}</option>)}
                     </select>
                     {errors.source && <p className="text-rose-500 text-xs mt-0.5">{errors.source}</p>}

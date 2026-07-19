@@ -25,7 +25,7 @@ export async function processOverdueFollowups() {
         title: 'Overdue Follow-up Reminder',
         body: `Follow-up "${f.type}" for ${f.inquiry.fullName} (#${f.inquiry.id}) was due ${f.scheduledFor.toLocaleDateString()}. Please action.`,
         priority: 'warning',
-        link: `/inquiries/${f.inquiryId}`,
+        link: `/inquiries?openInquiry=${f.inquiryId}`,
         tenantId: f.tenantId ?? f.inquiry.tenantId,
       },
       ['in_app', 'email'],
