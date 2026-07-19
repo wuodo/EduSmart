@@ -464,7 +464,7 @@ export default function DashboardLayout({
   return (
     <div className="h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
       <Sidebar isMobileOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} collapsed={sidebarCollapsed} onToggleCollapse={() => { setSidebarCollapsed(c => { const n = !c; try { localStorage.setItem('edusmart_sidebar_collapsed', String(n)); } catch {} return n; }); }} />
-      <div className={`${sidebarCollapsed ? 'lg:ml-14' : 'lg:ml-48'} h-full flex flex-col min-w-0`}>
+      <div className={`${sidebarCollapsed ? 'lg:ml-[72px]' : 'lg:ml-[260px]'} h-full flex flex-col min-w-0`}>
         {/* Top header bar */}
         <header className="w-full h-14 flex items-center px-3 sm:px-6 shadow-sm justify-between theme-transition" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
           {/* Left: logo + module */}

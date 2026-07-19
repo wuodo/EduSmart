@@ -63,28 +63,38 @@ function SidebarItem({ item, pathname, onClose, collapsed }: {
   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
   return (
-    <div>
-        <Link
-          href={item.href}
-          onClick={onClose}
-        className={`group flex items-center px-2 py-1.5 text-compact-sm font-medium transition-all duration-150 rounded ${
-          isActive
-            ? 'pl-2'
-            : 'hover:opacity-80'
-        }`}
+    <div className="relative flex items-center" style={{ minHeight: '44px' }}>
+      {isActive && (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-r" style={{ backgroundColor: '#5EEAD4', height: '20px' }} />
+      )}
+      <Link
+        href={item.href}
+        onClick={onClose}
+        className="flex items-center w-full transition-all duration-150"
         style={{
-          color: isActive ? 'var(--sidebar-active)' : 'var(--sidebar-text)',
-          backgroundColor: isActive ? 'color-mix(in srgb, var(--sidebar-active) 12%, transparent)' : 'transparent',
-          ...(isActive ? { borderLeft: '3px solid var(--sidebar-active)' } : {})
+          color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.85)',
+          backgroundColor: isActive ? '#0F766E' : 'transparent',
+          borderRadius: '10px',
+          minHeight: '44px',
+          padding: collapsed ? '12px 0' : '12px 16px',
+          marginLeft: collapsed ? '0' : '4px',
+          fontWeight: isActive ? 600 : 400,
+          transition: 'background-color 150ms, color 150ms',
         }}
-        >
+        onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = '#0F766E'; e.currentTarget.style.color = '#FFFFFF'; } }}
+        onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)'; } }}
+      >
+        <div className="flex items-center justify-center shrink-0" style={{ width: collapsed ? '100%' : '24px' }}>
           <item.icon
-            className="mr-2 h-4 w-4 flex-shrink-0"
-            style={{ color: isActive ? 'var(--sidebar-active)' : 'var(--sidebar-text)' }}
+            className="h-4 w-4"
+            style={{ color: 'inherit' }}
             aria-hidden="true"
           />
-          {!collapsed && (item.name || item.title)}
-        </Link>
+        </div>
+        {!collapsed && (
+          <span className="ml-3 text-sm truncate">{item.name || item.title}</span>
+        )}
+      </Link>
     </div>
   );
 }
@@ -176,13 +186,13 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
       
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 ${collapsed ? 'w-14' : 'w-48'} transform transition-all duration-300 ease-in-out h-screen
+        fixed inset-y-0 left-0 z-50 ${collapsed ? 'w-[72px]' : 'w-[260px]'} transform transition-all duration-300 ease-in-out h-screen
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         flex flex-col overflow-y-auto
       `}
       style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-text)' }}
       >
-        <div className="flex h-14 items-center justify-between px-4 shrink-0" style={{ borderColor: 'var(--divider)' }}>
+        <div className="flex h-14 items-center justify-between px-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
           <div className="flex items-center gap-2">
             {logo && !collapsed ? (
               <img
@@ -221,7 +231,7 @@ export default function Sidebar({ isMobileOpen, onClose, collapsed, onToggleColl
             </button>
           </div>
         </div>
-        <nav className="flex-1 space-y-0.5 px-2 py-3 overflow-y-auto">
+        <nav className="flex-1 space-y-0.5 px-3 py-4 overflow-y-auto">
           {filteredNavigation.map((item) => (
             <SidebarItem
               key={item.name || item.title}
