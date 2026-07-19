@@ -466,7 +466,7 @@ export default function DashboardLayout({
       <Sidebar isMobileOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} collapsed={sidebarCollapsed} onToggleCollapse={() => { setSidebarCollapsed(c => { const n = !c; try { localStorage.setItem('edusmart_sidebar_collapsed', String(n)); } catch {} return n; }); }} />
       <div className={`${sidebarCollapsed ? 'lg:ml-14' : 'lg:ml-48'} h-full flex flex-col min-w-0`}>
         {/* Top header bar */}
-        <header className="w-full h-14 flex items-center px-3 sm:px-6 shadow-sm justify-between theme-transition" style={{ backgroundColor: 'var(--primary)' }}>
+        <header className="w-full h-14 flex items-center px-3 sm:px-6 shadow-sm justify-between theme-transition" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
           {/* Left: logo + module */}
           <div className="flex items-center gap-3 min-w-0">
             <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="lg:hidden p-1 hover:opacity-80 theme-transition" style={{ color: 'var(--primary-foreground)' }} title="Menu">

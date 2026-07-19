@@ -399,10 +399,10 @@ export default function MarketingReports() {
             <Bar
               data={{
                 labels: inquiriesOverTime.map((d: any) => String(d.date).slice(5)),
-                datasets: [
-                  { label: 'Inquiries', data: inquiriesOverTime.map((d: any) => d.inquiries), backgroundColor: '#3b82f6', barThickness: 8 },
-                  { label: 'Registrations', data: inquiriesOverTime.map((d: any) => d.registrations), backgroundColor: '#22c55e', barThickness: 8 },
-                ],
+datasets: [
+  { label: 'Inquiries', data: inquiriesOverTime.map((d: any) => d.inquiries), backgroundColor: '#0D9488', barThickness: 8 },
+  { label: 'Registrations', data: inquiriesOverTime.map((d: any) => d.registrations), backgroundColor: '#14B8A6', barThickness: 8 },
+],
               }}
               options={{
                 responsive: true,
@@ -430,7 +430,7 @@ export default function MarketingReports() {
             <Pie
               data={{
                 labels: Object.keys(inquiriesBySource),
-                datasets: [{ data: Object.values(inquiriesBySource) as any, backgroundColor: ['#2563eb', '#22c55e', '#f59e42', '#a3a3a3', '#f43f5e'] }],
+                datasets: [{ data: Object.values(inquiriesBySource) as any, backgroundColor: ['#0D9488', '#14B8A6', '#5EEAD4', '#3B82F6', '#22C55E'] }],
               }}
               options={{ plugins: { legend: { position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 10 } } } }, maintainAspectRatio: false }}
             />
@@ -443,7 +443,7 @@ export default function MarketingReports() {
             <Bar
               data={{
                 labels: (topPrograms || []).map((p: any) => abbreviateProgram(p[0] || '')),
-                datasets: [{ label: 'Inquiries', data: (topPrograms || []).map((p: any) => p[1] || 0), backgroundColor: '#f59e42', barThickness: 14 }],
+                datasets: [{ label: 'Inquiries', data: (topPrograms || []).map((p: any) => p[1] || 0), backgroundColor: '#F59E0B', barThickness: 14 }],
               }}
               options={{ plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { color: '#e5e7eb' }, ticks: { font: { size: 10 } } } } }}
             />
@@ -457,7 +457,7 @@ export default function MarketingReports() {
               <Bar
                 data={{
                   labels: (followupsByType || []).map((f: any) => f.type || ''),
-                  datasets: [{ label: 'By type', data: (followupsByType || []).map((f: any) => f.count || 0), backgroundColor: '#2563eb', barThickness: 12 }],
+                  datasets: [{ label: 'By type', data: (followupsByType || []).map((f: any) => f.count || 0), backgroundColor: '#3B82F6', barThickness: 12 }],
                 }}
                 options={{ plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { color: '#e5e7eb' }, ticks: { font: { size: 10 } } } } }}
               />
@@ -466,7 +466,7 @@ export default function MarketingReports() {
               <Bar
                 data={{
                   labels: (followupsByStatus || []).map((f: any) => f.status || ''),
-                  datasets: [{ label: 'By status', data: (followupsByStatus || []).map((f: any) => f.count || 0), backgroundColor: '#a3a3a3', barThickness: 12 }],
+                  datasets: [{ label: 'By status', data: (followupsByStatus || []).map((f: any) => f.count || 0), backgroundColor: '#14B8A6', barThickness: 12 }],
                 }}
                 options={{ plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { color: '#e5e7eb' }, ticks: { font: { size: 10 } } } } }}
               />
@@ -485,14 +485,14 @@ export default function MarketingReports() {
                 id="per-officer-performance-chart"
                 data={{
                   labels: report.users.map((u: any) => u.owner),
-                  datasets: [
-                    {
-                      label: 'Performance Index',
-                      data: report.users.map((u: any) => u.performanceIndex),
-                      backgroundColor: '#16a34a',
-                      barThickness: 20,
-                    },
-                  ],
+datasets: [
+  {
+    label: 'Performance Index',
+    data: report.users.map((u: any) => u.performanceIndex),
+    backgroundColor: '#0D9488',
+    barThickness: 20,
+  },
+],
                 }}
                 options={{
                   plugins: {

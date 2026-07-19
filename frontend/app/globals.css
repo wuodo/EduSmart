@@ -109,9 +109,13 @@
   }
 }
 
-/* Rounded corners */
-input, textarea, select { border-radius: 0.5rem !important; }
-.animate-spin { border-radius: 9999px !important; }
+/* Rounded corners — 10-12px enterprise look */
+input, textarea, select, button, .btn { border-radius: 10px !important; }
+.card, .card-hover { border-radius: 12px !important; }
+.modal, [class*="modalPanel"] { border-radius: 12px !important; }
+.badge, [class*="badge"] { border-radius: 10px !important; }
+table, .table { border-radius: 10px !important; }
+.rounded-full, .animate-spin { border-radius: 9999px !important; }
 
 /* =====================================================
    DARK MODE OVERRIDES
@@ -189,6 +193,13 @@ input, textarea, select { border-radius: 0.5rem !important; }
 .dark .hover\:bg-gray-50:hover { background-color: var(--surface); }
 .dark .hover\:bg-gray-100:hover { background-color: var(--surface); }
 .dark .hover\:bg-gray-200 { background-color: #475569; }
+.dark .bg-teal-600 { background-color: var(--primary) !important; }
+.dark .bg-teal-700 { background-color: var(--primary-hover) !important; }
+.dark .bg-teal-600:hover { background-color: var(--primary-hover) !important; }
+.dark .bg-teal-700:hover { opacity: 0.9; }
+.dark .text-teal-700 { color: var(--primary) !important; }
+.dark .text-teal-600 { color: var(--primary) !important; }
+.dark .hover\:text-teal-700:hover { color: var(--primary-hover) !important; }
 
 /* --- Semantic backgrounds --- */
 .dark .bg-green-100 { background-color: var(--success-bg); }
@@ -227,6 +238,88 @@ input, textarea, select { border-radius: 0.5rem !important; }
   color: var(--info);
 }
 
+/* =====================================================
+   COMPONENT UTILITY CLASSES
+   Use these in components instead of hardcoded Tailwind colors
+   ===================================================== */
+
+/* --- Primary button (primary action, active nav, links, selected states) --- */
+.btn-primary {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  transition: background-color 150ms ease, transform 150ms ease !important;
+}
+.btn-primary:hover {
+  background-color: var(--primary-hover) !important;
+  transform: scale(1.02);
+}
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+/* --- Secondary button --- */
+.btn-secondary {
+  background-color: var(--secondary) !important;
+  color: var(--primary-foreground) !important;
+  transition: background-color 150ms ease, transform 150ms ease !important;
+}
+.btn-secondary:hover {
+  opacity: 0.85;
+  transform: scale(1.02);
+}
+.btn-secondary:active {
+  transform: scale(0.97);
+}
+
+/* --- Accent button (KPIs, charts highlights, stats, important actions) --- */
+.btn-accent {
+  background-color: var(--accent) !important;
+  color: var(--text-primary) !important;
+  transition: background-color 150ms ease, transform 150ms ease !important;
+}
+.btn-accent:hover {
+  opacity: 0.85;
+  transform: scale(1.02);
+}
+.btn-accent:active {
+  transform: scale(0.97);
+}
+
+/* --- Link style using primary --- */
+.link-primary {
+  color: var(--primary) !important;
+  transition: color 150ms ease !important;
+}
+.link-primary:hover {
+  color: var(--primary-hover) !important;
+  text-decoration: underline;
+}
+
+/* --- Active/selected state --- */
+.active-primary {
+  background-color: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+  color: var(--primary) !important;
+  border-left: 3px solid var(--primary) !important;
+}
+
+/* --- Badges using semantic tokens --- */
+.badge-success {
+  background-color: var(--success-bg) !important;
+  color: var(--success) !important;
+}
+.badge-warning {
+  background-color: var(--warning-bg) !important;
+  color: var(--warning) !important;
+}
+.badge-error {
+  background-color: var(--error-bg) !important;
+  color: var(--error) !important;
+}
+.badge-info {
+  background-color: var(--info-bg) !important;
+  color: var(--info) !important;
+}
+
 /* --- Transition helpers --- */
 .theme-transition {
   transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
@@ -244,4 +337,9 @@ input, textarea, select { border-radius: 0.5rem !important; }
 /* --- Button press scale --- */
 .btn-press:active {
   transform: scale(0.97);
+}
+
+/* --- Hover animation for all interactive elements --- */
+a, button, [role="button"], select, input[type="checkbox"], input[type="radio"] {
+  transition: all 150ms ease;
 }
