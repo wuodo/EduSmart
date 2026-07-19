@@ -116,6 +116,7 @@ export default function DashboardLayout({
   // Get user info from localStorage
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState('');
+  const [userEmail, setUserEmail] = useState('');
   const [dateTime, setDateTime] = useState(new Date());
   const [showProfile, setShowProfile] = useState(false);
   const [briefing, setBriefing] = useState<any>(null);
@@ -245,6 +246,7 @@ export default function DashboardLayout({
     if (typeof window !== 'undefined') {
       setUserName(localStorage.getItem('userName') || '');
       setUserRole(localStorage.getItem('userRole') || '');
+      setUserEmail(localStorage.getItem('userEmail') || '');
     }
     fetch('/api/proxy/briefing').then(r => r.json()).then(d => { if (d.briefing) setBriefing(d.briefing); }).catch(() => {});
     const interval = setInterval(() => setDateTime(new Date()), 1000);
