@@ -465,56 +465,55 @@ export default function DashboardLayout({
     <div className="h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
       <Sidebar isMobileOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} collapsed={sidebarCollapsed} onToggleCollapse={() => { setSidebarCollapsed(c => { const n = !c; try { localStorage.setItem('edusmart_sidebar_collapsed', String(n)); } catch {} return n; }); }} />
       <div className={`${sidebarCollapsed ? 'lg:ml-[72px]' : 'lg:ml-[260px]'} h-full flex flex-col min-w-0`}>
-        {/* Top header bar */}
-        <header className="w-full h-14 flex items-center px-3 sm:px-6 shadow-sm justify-between theme-transition" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+        {/* Top header bar — per spec: white bg / bottom border for light, dark bg for dark */}
+        <header className="header-bar flex items-center justify-between theme-transition">
           {/* Left: logo + module */}
           <div className="flex items-center gap-3 min-w-0">
-            <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="lg:hidden p-1 hover:opacity-80 theme-transition" style={{ color: 'var(--primary-foreground)' }} title="Menu">
+            <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="lg:hidden p-1.5" style={{ color: 'var(--header-icon)' }} title="Menu">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
             {instName ? (
               <div className="flex items-center gap-3 min-w-0">
-                <span className="font-bold text-sm tracking-wide truncate" style={{ color: 'var(--primary-foreground)' }}>{instName}</span>
-                <span className="hidden lg:flex items-center gap-1 text-xs font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>/ {moduleName}</span>
+                <span className="font-bold text-base truncate" style={{ color: 'var(--header-text)' }}>{instName}</span>
+                <span className="hidden lg:flex items-center gap-1 text-sm" style={{ color: 'var(--text-muted)' }}>/ {moduleName}</span>
               </div>
             ) : (
-              <span className="font-semibold text-sm truncate" style={{ color: 'var(--primary-foreground)' }}>{moduleName}</span>
+              <span className="font-semibold text-base truncate" style={{ color: 'var(--header-text)' }}>{moduleName}</span>
             )}
-            <div className="hidden lg:flex items-center gap-1 ml-2 text-[10px]" style={{ color: 'rgba(255,255,255,0.5)' }}><span className="live-dot"></span>Live</div>
           </div>
 
           {/* Right: tool groups */}
-          <div className="flex items-center gap-1 sm:gap-3">
+          <div className="flex items-center gap-4">
             {/* Search */}
-            <button onClick={() => openCommandPalette()} className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs theme-transition hover:opacity-80" style={{ color: 'rgba(255,255,255,0.85)', backgroundColor: 'rgba(255,255,255,0.1)' }} title="Search (Ctrl+K)">
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-              <span>Search</span>
-              <kbd className="text-[10px] rounded px-1" style={{ color: 'rgba(255,255,255,0.4)', borderColor: 'rgba(255,255,255,0.2)' }}>⌘K</kbd>
+            <button onClick={() => openCommandPalette()} className="hidden sm:flex items-center gap-2 px-4 theme-transition" style={{ height: '40px', borderRadius: '10px', color: 'var(--header-text)', backgroundColor: 'var(--header-search-bg)', border: '1px solid var(--header-search-border)', width: '320px' }} title="Search (Ctrl+K)">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--text-muted)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Search anything...</span>
+              <kbd className="ml-auto text-xs px-1.5 py-0.5 rounded" style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}>⌘K</kbd>
             </button>
-            <button onClick={() => openCommandPalette()} className="sm:hidden p-1" style={{ color: 'var(--primary-foreground)' }} title="Search">
+            <button onClick={() => openCommandPalette()} className="sm:hidden p-1.5" style={{ color: 'var(--header-icon)' }} title="Search">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </button>
 
             {/* Time */}
-            <div className="hidden md:flex flex-col items-end mr-1">
-              <span className="text-[11px] font-medium leading-tight" style={{ color: 'var(--primary-foreground)' }}>{dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              <span className="text-[9px] leading-tight" style={{ color: 'rgba(255,255,255,0.6)' }}>{dateTime.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+            <div className="hidden md:flex flex-col items-end">
+              <span className="text-sm font-medium" style={{ color: 'var(--header-text)' }}>{dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{dateTime.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
             </div>
 
             {/* Theme */}
             <ThemeToggle />
 
             {/* Notifications consolidated */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               {(userRole === 'admin' || userRole === 'senior_staff') ? (
-                <button onClick={() => setShowRequests(s => !s)} className="relative text-white hover:opacity-80 p-1.5" title="Delete Requests">
+                <button onClick={() => setShowRequests(s => !s)} className="relative p-1.5" style={{ color: 'var(--header-icon)' }} title="Delete Requests">
                   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.104 0 2-.896 2-2h-4c0 1.104.896 2 2 2Zm7-6v-5a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Z"/></svg>
-                  {deleteRequests.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{deleteRequests.length}</span>}
+                  {deleteRequests.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] leading-none rounded-full px-1 py-0.5">{deleteRequests.length}</span>}
                 </button>
               ) : (
                 <OfficerApprovalsBell />
               )}
-              <button onClick={() => setShowBroadcasts(s => !s)} className="relative text-white hover:opacity-80 p-1.5" title="Broadcasts">
+              <button onClick={() => setShowBroadcasts(s => !s)} className="relative p-1.5" style={{ color: 'var(--header-icon)' }} title="Broadcasts">
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5V13a1.5 1.5 0 001.5 1.5H6l1.5 4.5h2l-1.2-4.5H12a6 6 0 006-6V6a1 1 0 00-1.447-.894L12 7.5H4.5A1.5 1.5 0 003 9v1.5Z"/></svg>
                 {broadcastUnreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{broadcastUnreadCount > 99 ? '99+' : broadcastUnreadCount}</span>}
               </button>
@@ -529,18 +528,18 @@ export default function DashboardLayout({
             </div>
 
             {/* Profile */}
-            <button onClick={openProfile} className="hidden sm:flex items-center gap-2 pl-2 pr-1 py-1 rounded-lg hover:bg-white/10 transition-colors group">
-              <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
-                <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 19.125a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21c-2.676 0-5.216-.584-7.499-1.875z"/></svg>
+            <button onClick={openProfile} className="hidden sm:flex items-center gap-2 pl-2 pr-2 py-1.5 theme-transition" style={{ border: '1px solid var(--header-avatar-border)', borderRadius: '10px', color: 'var(--header-text)' }}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+                <span className="text-sm font-semibold">{(userName || 'U')[0].toUpperCase()}</span>
               </div>
-              <span className="text-white text-xs font-medium truncate max-w-[100px]">{userName || 'Profile'}</span>
+              <span className="text-sm font-medium truncate max-w-[120px]">{userName || 'Profile'}</span>
             </button>
-            <button onClick={openProfile} className="sm:hidden text-white hover:opacity-80 p-1" title="Profile">
+            <button onClick={openProfile} className="sm:hidden p-1.5" style={{ color: 'var(--header-icon)' }} title="Profile">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 19.125a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21c-2.676 0-5.216-.584-7.499-1.875z"/></svg>
             </button>
 
             {/* Logout */}
-            <button onClick={handleLogout} className="text-white/60 hover:text-white p-1.5 transition-colors" title="Logout">
+            <button onClick={handleLogout} className="p-1.5 theme-transition" style={{ color: 'var(--header-icon)' }} title="Logout">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             </button>
           </div>

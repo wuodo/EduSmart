@@ -65,15 +65,15 @@ function SidebarItem({ item, pathname, onClose, collapsed }: {
   return (
     <div className="relative flex items-center" style={{ minHeight: '44px' }}>
       {isActive && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-r" style={{ backgroundColor: '#F59E0B', height: '20px' }} />
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-r" style={{ backgroundColor: 'var(--sidebar-active-border)', height: '20px' }} />
       )}
       <Link
         href={item.href}
         onClick={onClose}
         className="flex items-center w-full transition-all duration-150"
         style={{
-          color: isActive ? '#FFFFFF' : '#CBD5E1',
-          backgroundColor: isActive ? '#334155' : 'transparent',
+          color: isActive ? '#FFFFFF' : 'var(--sidebar-text)',
+          backgroundColor: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
           borderRadius: '10px',
           minHeight: '44px',
           padding: collapsed ? '12px 0' : '12px 16px',
@@ -81,13 +81,13 @@ function SidebarItem({ item, pathname, onClose, collapsed }: {
           fontWeight: isActive ? 600 : 400,
           transition: 'background-color 150ms, color 150ms',
         }}
-        onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = '#1E293B'; e.currentTarget.style.color = '#F8FAFC'; } }}
-        onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#CBD5E1'; } }}
+        onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'; e.currentTarget.style.color = '#FFFFFF'; } }}
+        onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; } }}
       >
         <div className="flex items-center justify-center shrink-0" style={{ width: collapsed ? '100%' : '24px' }}>
           <item.icon
             className="h-4 w-4"
-            style={{ color: isActive ? '#F59E0B' : '#94A3B8' }}
+            style={{ color: isActive ? 'var(--sidebar-active-border)' : 'var(--sidebar-icon)' }}
             aria-hidden="true"
           />
         </div>
