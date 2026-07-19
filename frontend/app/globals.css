@@ -146,10 +146,17 @@
     --divider: #334155;
 
     /* Semantic */
+    --success: #22C55E;
     --success-bg: #14532D;
+    --warning: #F59E0B;
     --warning-bg: #78350F;
+    --error: #EF4444;
     --error-bg: #7F1D1D;
+    --info: #60A5FA;
     --info-bg: #1E3A8A;
+
+    /* Scrollbar */
+    --scrollbar: #475569;
 
     /* Tables */
     --table-header-bg: #1E293B;
@@ -473,6 +480,9 @@ table, .table { border-radius: var(--radius-table) !important; }
 
 /* Modal overlay */
 .dark .bg-black\/40 { background-color: rgb(0 0 0 / 0.7); }
+
+/* Scrollbar in dark mode */
+.dark ::-webkit-scrollbar-thumb { background: var(--scrollbar); }
 
 /* Sidebar in dark mode */
 .dark .sidebar-icon {

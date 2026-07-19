@@ -80,6 +80,8 @@ export default function DashboardLayout({
     if (typeof window === 'undefined') return false;
     try { return localStorage.getItem('edusmart_sidebar_collapsed') === 'true'; } catch { return false; }
   });
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { branding } = useBranding()
   const router = useRouter();
   useEffect(() => {
@@ -482,66 +484,89 @@ export default function DashboardLayout({
             )}
           </div>
 
-          {/* Right: tool groups */}
-          <div className="flex items-center gap-4">
-            {/* Search */}
-            <button onClick={() => openCommandPalette()} className="hidden sm:flex items-center gap-2 px-4 theme-transition" style={{ height: '40px', borderRadius: '10px', color: 'var(--header-text)', backgroundColor: 'var(--header-search-bg)', border: '1px solid var(--header-search-border)', width: '340px' }} title="Search (Ctrl+K)">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--text-muted)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-              <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Search anything...</span>
-              <kbd className="ml-auto text-xs px-1.5 py-0.5 rounded" style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}>⌘K</kbd>
-            </button>
-            <button onClick={() => openCommandPalette()} className="sm:hidden p-1.5" style={{ color: 'var(--header-icon)' }} title="Search">
+          {/* Right: tool groups — minimal enterprise header */}
+          <div className="flex items-center gap-3">
+
+            {/* Search (Command+K trigger only) */}
+            <button onClick={() => openCommandPalette()} className="p-1.5 theme-transition" style={{ color: 'var(--header-icon)' }} title="Search (⌘K)">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </button>
 
-            {/* Time */}
-            <div className="hidden md:flex flex-col items-end">
-              <span className="text-sm font-medium" style={{ color: 'var(--header-text)' }}>{dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{dateTime.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-            </div>
-
-            {/* Theme */}
-            <ThemeToggle />
-
-            {/* Notifications consolidated */}
-            <div className="flex items-center gap-2">
-              {(userRole === 'admin' || userRole === 'senior_staff') ? (
-                <button onClick={() => setShowRequests(s => !s)} className="relative p-1.5" style={{ color: 'var(--header-icon)' }} title="Delete Requests">
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.104 0 2-.896 2-2h-4c0 1.104.896 2 2 2Zm7-6v-5a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Z"/></svg>
-                  {deleteRequests.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] leading-none rounded-full px-1 py-0.5">{deleteRequests.length}</span>}
-                </button>
-              ) : (
-                <OfficerApprovalsBell />
-              )}
-              <button onClick={() => setShowBroadcasts(s => !s)} className="relative p-1.5" style={{ color: 'var(--header-icon)' }} title="Broadcasts">
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5V13a1.5 1.5 0 001.5 1.5H6l1.5 4.5h2l-1.2-4.5H12a6 6 0 006-6V6a1 1 0 00-1.447-.894L12 7.5H4.5A1.5 1.5 0 003 9v1.5Z"/></svg>
-                {broadcastUnreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{broadcastUnreadCount > 99 ? '99+' : broadcastUnreadCount}</span>}
-              </button>
-              <button onClick={() => setShowStaffNotif(s => !s)} className="relative text-white hover:opacity-80 p-1.5" title="Assignment Notifications">
+            {/* Consolidated notifications bell — one dropdown for everything */}
+            <div className="relative">
+              <button onClick={() => setShowNotifPanel(s => !s)} className="relative p-1.5" style={{ color: 'var(--header-icon)' }} title="Notifications">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
-                {staffNotifications.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{staffNotifications.length > 99 ? '99+' : staffNotifications.length}</span>}
+                {(() => {
+                  const totalNotifs = deleteRequests.length + broadcastUnreadCount + staffNotifications.length + unreadChatCount;
+                  return totalNotifs > 0 ? <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] leading-none rounded-full px-1 py-0.5 min-w-[16px] text-center">{totalNotifs > 99 ? '99+' : totalNotifs}</span> : null;
+                })()}
               </button>
-              <button onClick={async () => { setFloatingChat({ reopenTick: Date.now() }); setMentions([]); setUnreadChatCount(0); try { const e=(localStorage.getItem('userEmail')||'').toLowerCase(); await fetch(`${WEB_API}/chat/mark-read`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:e}) }); } catch {} }} className="relative text-white hover:opacity-80 p-1.5" title="Chat">
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/></svg>
-                {unreadChatCount > 0 && <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] leading-none rounded-full px-1 py-0.5">{unreadChatCount}</span>}
-              </button>
+              {showNotifPanel && (
+                <div className="absolute right-0 top-full mt-1 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 text-sm font-semibold">Notifications</div>
+                  <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+                    {deleteRequests.length > 0 && (
+                      <div className="px-3 py-2 text-xs">
+                        <span className="font-semibold text-amber-600">{deleteRequests.length}</span> delete request(s)
+                      </div>
+                    )}
+                    {broadcastUnreadCount > 0 && (
+                      <div className="px-3 py-2 text-xs">
+                        <span className="font-semibold text-blue-600">{broadcastUnreadCount}</span> broadcast(s) unread
+                      </div>
+                    )}
+                    {staffNotifications.length > 0 && (
+                      <div className="px-3 py-2 text-xs">
+                        <span className="font-semibold text-rose-600">{staffNotifications.length}</span> assignment notification(s)
+                      </div>
+                    )}
+                    {unreadChatCount > 0 && (
+                      <div className="px-3 py-2 text-xs">
+                        <span className="font-semibold text-teal-600">{unreadChatCount}</span> unread chat message(s)
+                      </div>
+                    )}
+                    {deleteRequests.length === 0 && broadcastUnreadCount === 0 && staffNotifications.length === 0 && unreadChatCount === 0 && (
+                      <div className="px-3 py-6 text-xs text-gray-400 text-center">No new notifications</div>
+                    )}
+                  </div>
+                  <div className="px-3 py-1.5 border-t border-gray-200 dark:border-gray-700 flex gap-2 text-[11px]">
+                    {deleteRequests.length > 0 && <button onClick={() => { setShowRequests(true); setShowNotifPanel(false); }} className="text-amber-700 hover:underline">Requests</button>}
+                    {broadcastUnreadCount > 0 && <button onClick={() => { setShowBroadcasts(true); setShowNotifPanel(false); }} className="text-blue-700 hover:underline">Broadcasts</button>}
+                    {staffNotifications.length > 0 && <button onClick={() => { setShowStaffNotif(true); setShowNotifPanel(false); }} className="text-rose-700 hover:underline">Assignments</button>}
+                    {unreadChatCount > 0 && <button onClick={() => { setFloatingChat({ reopenTick: Date.now() }); setMentions([]); setUnreadChatCount(0); setShowNotifPanel(false); }} className="text-teal-700 hover:underline">Chat</button>}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Profile */}
-            <button onClick={openProfile} className="hidden sm:flex items-center gap-2 pl-2 pr-2 py-1.5 theme-transition" style={{ border: '1px solid var(--header-avatar-border)', borderRadius: '10px', color: 'var(--header-text)' }}>
-              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
-                <span className="text-sm font-semibold">{(userName || 'U')[0].toUpperCase()}</span>
-              </div>
-              <span className="text-sm font-medium truncate max-w-[120px]">{userName || 'Profile'}</span>
-            </button>
-            <button onClick={openProfile} className="sm:hidden p-1.5" style={{ color: 'var(--header-icon)' }} title="Profile">
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 19.125a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21c-2.676 0-5.216-.584-7.499-1.875z"/></svg>
-            </button>
-
-            {/* Logout */}
-            <button onClick={handleLogout} className="p-1.5 theme-transition" style={{ color: 'var(--header-icon)' }} title="Logout">
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-            </button>
+            {/* Profile dropdown — with theme toggle inside */}
+            <div className="relative">
+              <button onClick={() => setShowProfileMenu(s => !s)} className="hidden sm:flex items-center gap-2 pl-2 pr-2 py-1 theme-transition" style={{ border: '1px solid var(--header-avatar-border)', borderRadius: '10px', color: 'var(--header-text)' }}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+                  <span className="text-xs font-semibold">{(userName || 'U')[0].toUpperCase()}</span>
+                </div>
+                <span className="text-sm font-medium truncate max-w-[100px]">{userName || 'Profile'}</span>
+              </button>
+              <button onClick={() => setShowProfileMenu(s => !s)} className="sm:hidden p-1.5" style={{ color: 'var(--header-icon)' }} title="Profile">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 19.125a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21c-2.676 0-5.216-.584-7.499-1.875z"/></svg>
+              </button>
+              {showProfileMenu && (
+                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                    <div className="text-sm font-medium truncate">{userName || 'User'}</div>
+                    <div className="text-xs text-gray-500 truncate">{userEmail || ''}</div>
+                  </div>
+                  <button onClick={() => { openProfile(); setShowProfileMenu(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700">Profile Settings</button>
+                  <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-2 flex items-center justify-between text-sm">
+                    <span>Dark mode</span>
+                    <ThemeToggle />
+                  </div>
+                  <div className="border-t border-gray-200 dark:border-gray-700">
+                    <button onClick={() => { handleLogout(); setShowProfileMenu(false); }} className="w-full text-left px-3 py-2 text-sm text-rose-600 hover:bg-gray-50 dark:hover:bg-gray-700">Log out</button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 pt-5 min-w-0 content-responsive flex flex-col" style={{overflowAnchor: 'none'}}>
