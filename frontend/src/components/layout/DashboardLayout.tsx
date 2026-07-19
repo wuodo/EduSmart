@@ -508,37 +508,89 @@ export default function DashboardLayout({
               </button>
               {showNotifPanel && (
                 <div className="absolute right-0 top-full mt-1 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden">
-                  <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 text-sm font-semibold">Notifications</div>
-                  <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
-                    {deleteRequests.length > 0 && (
-                      <div className="px-3 py-2 text-xs">
-                        <span className="font-semibold text-amber-600">{deleteRequests.length}</span> delete request(s)
-                      </div>
-                    )}
-                    {broadcastUnreadCount > 0 && (
-                      <div className="px-3 py-2 text-xs">
-                        <span className="font-semibold text-blue-600">{broadcastUnreadCount}</span> broadcast(s) unread
-                      </div>
-                    )}
-                    {staffNotifications.length > 0 && (
-                      <div className="px-3 py-2 text-xs">
-                        <span className="font-semibold text-rose-600">{staffNotifications.length}</span> assignment notification(s)
-                      </div>
-                    )}
-                    {unreadChatCount > 0 && (
-                      <div className="px-3 py-2 text-xs">
-                        <span className="font-semibold text-teal-600">{unreadChatCount}</span> unread chat message(s)
-                      </div>
-                    )}
-                    {deleteRequests.length === 0 && broadcastUnreadCount === 0 && staffNotifications.length === 0 && unreadChatCount === 0 && (
-                      <div className="px-3 py-6 text-xs text-gray-400 text-center">No new notifications</div>
-                    )}
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                    <span className="text-sm font-semibold">Notifications</span>
+                    <button onClick={() => setShowNotifPanel(false)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
                   </div>
-                  <div className="px-3 py-1.5 border-t border-gray-200 dark:border-gray-700 flex gap-2 text-[11px]">
-                    {deleteRequests.length > 0 && <button onClick={() => { setShowRequests(true); setShowNotifPanel(false); }} className="text-amber-700 hover:underline">Requests</button>}
-                    {broadcastUnreadCount > 0 && <button onClick={() => { setShowBroadcasts(true); setShowNotifPanel(false); }} className="text-blue-700 hover:underline">Broadcasts</button>}
-                    {staffNotifications.length > 0 && <button onClick={() => { setShowStaffNotif(true); setShowNotifPanel(false); }} className="text-rose-700 hover:underline">Assignments</button>}
-                    {unreadChatCount > 0 && <button onClick={() => { setFloatingChat({ reopenTick: Date.now() }); setMentions([]); setUnreadChatCount(0); setShowNotifPanel(false); }} className="text-teal-700 hover:underline">Chat</button>}
+                  <div className="max-h-96 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+                    {deleteRequests.length === 0 && broadcastUnreadCount === 0 && staffNotifications.length === 0 && unreadChatCount === 0 ? (
+                      <div className="px-3 py-8 text-xs text-gray-400 text-center">No new notifications</div>
+                    ) : (
+                      <>
+                        {/* Delete requests */}
+                        {deleteRequests.slice(0, 5).map((r: any) => {
+                          const meta = requestMeta[r.id] || {};
+                          return (
+                            <div key={r.id} className="px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors" onClick={() => { setShowRequests(true); setShowNotifPanel(false); }}>
+                              <div className="flex items-start gap-2">
+                                <div className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center shrink-0 mt-0.5">
+                                  <svg className="w-3 h-3 text-amber-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.104 0 2-.896 2-2h-4c0 1.104.896 2 2 2Zm7-6v-5a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Z"/></svg>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">Delete request — {meta.moduleLabel || 'Inquiry'}</div>
+                                  <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">by {meta.requesterName || r.requestedBy}</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {deleteRequests.length > 5 && (
+                          <div className="px-3 py-1.5 text-[11px] text-amber-600 text-center cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/20" onClick={() => { setShowRequests(true); setShowNotifPanel(false); }}>
+                            +{deleteRequests.length - 5} more delete request(s)
+                          </div>
+                        )}
+
+                        {/* Staff notifications */}
+                        {staffNotifications.slice(0, 5).map((n: any, i: number) => (
+                          <div key={`staff-${i}`} className="px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors" onClick={() => { if (n.link) window.location.href = n.link; setShowNotifPanel(false); }}>
+                            <div className="flex items-start gap-2">
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${n.priority === 'critical' ? 'bg-red-100 dark:bg-red-900' : n.priority === 'warning' ? 'bg-amber-100 dark:bg-amber-900' : 'bg-blue-100 dark:bg-blue-900'}`}>
+                                <svg className={`w-3 h-3 ${n.priority === 'critical' ? 'text-red-600' : n.priority === 'warning' ? 'text-amber-600' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0"/></svg>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">{n.title || 'Notification'}</div>
+                                <div className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2">{n.body || ''}</div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {staffNotifications.length > 5 && (
+                          <div className="px-3 py-1.5 text-[11px] text-rose-600 text-center cursor-pointer hover:bg-rose-50 dark:hover:bg-rose-900/20" onClick={() => { setShowStaffNotif(true); setShowNotifPanel(false); }}>
+                            +{staffNotifications.length - 5} more notification(s)
+                          </div>
+                        )}
+
+                        {/* Broadcasts — count only, no individual items */}
+                        {broadcastUnreadCount > 0 && (
+                          <div className="px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors" onClick={() => { setShowBroadcasts(true); setShowNotifPanel(false); }}>
+                            <div className="flex items-start gap-2">
+                              <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0 mt-0.5">
+                                <svg className="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M3 10.5V13a1.5 1.5 0 001.5 1.5H6l1.5 4.5h2l-1.2-4.5H12a6 6 0 006-6V6a1 1 0 00-1.447-.894L12 7.5H4.5A1.5 1.5 0 003 9v1.5Z"/></svg>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-medium text-gray-900 dark:text-gray-100">{broadcastUnreadCount} unread broadcast(s)</div>
+                                <div className="text-[11px] text-gray-500 dark:text-gray-400">Click to view</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Chat — count only */}
+                        {unreadChatCount > 0 && (
+                          <div className="px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors" onClick={() => { setFloatingChat({ reopenTick: Date.now() }); setMentions([]); setUnreadChatCount(0); setShowNotifPanel(false); }}>
+                            <div className="flex items-start gap-2">
+                              <div className="w-5 h-5 rounded-full bg-teal-100 dark:bg-teal-900 flex items-center justify-center shrink-0 mt-0.5">
+                                <svg className="w-3 h-3 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/></svg>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-medium text-gray-900 dark:text-gray-100">{unreadChatCount} unread chat message(s)</div>
+                                <div className="text-[11px] text-gray-500 dark:text-gray-400">Click to open chat</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               )}
