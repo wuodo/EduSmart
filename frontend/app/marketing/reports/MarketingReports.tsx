@@ -259,16 +259,6 @@ export default function MarketingReports() {
   if (!report && loading) return <div className="p-8 text-sm">Loading report...</div>
   if (!report) return <div className="p-8 text-sm text-rose-600">Failed to load report.</div>
 
-  // Replace the abbreviate function with the registration module's abbreviateProgram logic
-  function abbreviateProgram(name: string) {
-    const ignore = ['in', 'of', 'and', 'for', 'to', 'the', 'with', 'on', 'at', 'by'];
-    return name
-      .split(' ')
-      .filter(word => word && !ignore.includes(word.toLowerCase()))
-      .map(word => word[0].toUpperCase())
-      .join('');
-  }
-
   function persistPresets(next: ReportPreset[]) {
     setPresets(next)
     try {
@@ -430,9 +420,28 @@ datasets: [
             <Pie
               data={{
                 labels: Object.keys(inquiriesBySource),
-                datasets: [{ data: Object.values(inquiriesBySource) as any, backgroundColor: ['#0D9488', '#14B8A6', '#5EEAD4', '#3B82F6', '#22C55E'] }],
+                datasets: [{
+                  data: Object.values(inquiriesBySource) as any,
+                  backgroundColor: ['#0D9488', '#14B8A6', '#5EEAD4', '#3B82F6', '#22C55E'],
+                  borderWidth: 0,
+                }],
               }}
-              options={{ plugins: { legend: { position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 10 } } } }, maintainAspectRatio: false }}
+              options={{
+                cutout: '60%',
+                plugins: {
+                  legend: { position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 10 }, padding: 8 } },
+                  tooltip: {
+                    callbacks: {
+                      label: (ctx: any) => {
+                        const total = (ctx.dataset.data as number[]).reduce((a: number, b: number) => a + b, 0);
+                        const pct = total > 0 ? Math.round((ctx.parsed as number) / total * 100) : 0;
+                        return ` ${ctx.label}: ${pct}% (${ctx.parsed})`;
+                      },
+                    },
+                  },
+                },
+                maintainAspectRatio: false,
+              }}
             />
           </div>
         </div>
@@ -442,34 +451,91 @@ datasets: [
           <div className="h-[180px]">
             <Bar
               data={{
-                labels: (topPrograms || []).map((p: any) => abbreviateProgram(p[0] || '')),
-                datasets: [{ label: 'Inquiries', data: (topPrograms || []).map((p: any) => p[1] || 0), backgroundColor: '#F59E0B', barThickness: 14 }],
+                labels: (topPrograms || []).map((p: any) => p[0] || ''),
+                datasets: [{
+                  label: 'Inquiries',
+                  data: (topPrograms || []).map((p: any) => p[1] || 0),
+                  backgroundColor: '#F59E0B',
+                  borderRadius: 6,
+                  barPercentage: 0.7,
+                  categoryPercentage: 0.8,
+                }],
               }}
-              options={{ plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { color: '#e5e7eb' }, ticks: { font: { size: 10 } } } } }}
+              options={{
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: (ctx: any) => `${ctx.parsed.y} inquiries`,
+                    },
+                  },
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  x: {
+                    grid: { display: false },
+                    ticks: {
+                      font: { size: 9 },
+                      maxRotation: 25,
+                      maxTicksLimit: 8,
+                    },
+                  },
+                  y: { grid: { color: '#e5e7eb' }, ticks: { font: { size: 10 } }, beginAtZero: true },
+                },
+              }}
             />
           </div>
         </div>
 
         <div className="lg:col-span-4 bg-white ring-1 ring-gray-200 p-2">
-          <div className="text-[11px] font-bold uppercase tracking-wide text-gray-600 mb-1">Follow-ups</div>
-          <div className="grid grid-cols-1 gap-1.5">
-            <div className="h-[85px]">
-              <Bar
-                data={{
-                  labels: (followupsByType || []).map((f: any) => f.type || ''),
-                  datasets: [{ label: 'By type', data: (followupsByType || []).map((f: any) => f.count || 0), backgroundColor: '#3B82F6', barThickness: 12 }],
-                }}
-                options={{ plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { color: '#e5e7eb' }, ticks: { font: { size: 10 } } } } }}
-              />
+          <div className="text-[11px] font-bold uppercase tracking-wide text-gray-600 mb-1">Follow-ups &amp; response quality</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <div className="text-[10px] text-gray-500 mb-0.5 font-medium">By type</div>
+              <div className="h-[100px]">
+                <Bar
+                  data={{
+                    labels: (followupsByType || []).map((f: any) => f.type || ''),
+                    datasets: [{
+                      label: 'Count',
+                      data: (followupsByType || []).map((f: any) => f.count || 0),
+                      backgroundColor: '#3B82F6',
+                      borderRadius: 6,
+                      barPercentage: 0.6,
+                    }],
+                  }}
+                  options={{
+                    plugins: { legend: { display: false } },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { grid: { color: '#e5e7eb' }, ticks: { font: { size: 9 } }, beginAtZero: true } },
+                  }}
+                />
+              </div>
             </div>
-            <div className="h-[85px]">
-              <Bar
-                data={{
-                  labels: (followupsByStatus || []).map((f: any) => f.status || ''),
-                  datasets: [{ label: 'By status', data: (followupsByStatus || []).map((f: any) => f.count || 0), backgroundColor: '#14B8A6', barThickness: 12 }],
-                }}
-                options={{ plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { color: '#e5e7eb' }, ticks: { font: { size: 10 } } } } }}
-              />
+            <div>
+              <div className="text-[10px] text-gray-500 mb-0.5 font-medium">By status</div>
+              <div className="h-[100px]">
+                <Bar
+                  data={{
+                    labels: (followupsByStatus || []).map((f: any) => f.status || ''),
+                    datasets: [{
+                      label: 'Count',
+                      data: (followupsByStatus || []).map((f: any) => f.count || 0),
+                      backgroundColor: '#14B8A6',
+                      borderRadius: 6,
+                      barPercentage: 0.6,
+                    }],
+                  }}
+                  options={{
+                    plugins: { legend: { display: false } },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { grid: { color: '#e5e7eb' }, ticks: { font: { size: 9 } }, beginAtZero: true } },
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
