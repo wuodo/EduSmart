@@ -47,7 +47,7 @@ export default function CpanelLayout({ children }: { children: React.ReactNode }
               const active = pathname?.startsWith(item.href);
               const Icon = item.icon as any;
               return (
-                <Link key={item.href} href={item.href} className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded ${active ? 'font-medium' : ''}`} style={{ backgroundColor: active ? '#0d9488' : 'transparent', color: '#fff' }}>
+                <Link key={item.href} href={item.href} className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors`} style={{ backgroundColor: active ? '#14B8A6' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.75)' }}>
                   {Icon ? <Icon size={16}/> : null}
                   <span>{item.label}</span>
                 </Link>

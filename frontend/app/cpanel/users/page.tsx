@@ -330,7 +330,8 @@ export default function UsersPage() {
         <button
           type="button"
           onClick={() => setShowCreateModal(true)}
-          className="bg-btnblue text-white px-3 py-1.5 text-xs md:text-sm rounded-none hover:opacity-90 whitespace-nowrap"
+          className="px-3 py-1.5 text-xs md:text-sm font-medium whitespace-nowrap"
+          style={{ backgroundColor: '#0D9488', color: '#fff', borderRadius: '8px' }}
         >
           + Create user
         </button>
