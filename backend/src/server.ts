@@ -857,6 +857,41 @@ app.use('/api/tenants', tenantAdminRoutes);
 app.use('/api/esign', esignRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/pipeline', pipelineRoutes);
+// Data-quality shim (ensures it works even if qaRoutes isn't rebuilt)
+app.get('/api/qa/data-quality', async (req, res) => {
+  try {
+    const tenantId = (req as any).tenant?.id;
+    if (!tenantId) { res.status(400).json({ error: 'Tenant required' }); return; }
+    const total = await prisma.inquiry.count({ where: { tenantId } });
+    const missing: Record<string, number> = {};
+    const fieldChecks: [string, any][] = [
+      ['fullName', { fullName: null }], ['phone', { phone: null }],
+      ['email', { OR: [{ email: null }, { email: '' }] }],
+      ['programOfInterest', { programOfInterest: null }],
+      ['intakePeriod', { intakePeriod: null }], ['studyMode', { studyMode: null }],
+      ['source', { source: null }], ['preferredContactMethod', { preferredContactMethod: null }],
+      ['kcseGrade', { OR: [{ kcseGrade: null }, { kcseGrade: 'Unknown' }] }],
+      ['gender', { gender: null }],
+    ];
+    for (const [field, where] of fieldChecks) {
+      const count = await prisma.inquiry.count({ where: { tenantId, ...where } as any });
+      if (count > 0) missing[field] = count;
+    }
+    const staffList = await prisma.user.findMany({ where: { tenantId }, take: 20, select: { email: true, name: true } });
+    const staffQuality: { email: string; name: string; created: number; avgScore: number }[] = [];
+    for (const staff of staffList) {
+      const created = await prisma.inquiry.count({ where: { tenantId, createdBy: { equals: staff.email, mode: 'insensitive' } } });
+      if (created === 0) continue;
+      const totalScore = await prisma.inquiry.aggregate({ where: { tenantId, createdBy: { equals: staff.email, mode: 'insensitive' } }, _avg: { score: true } });
+      staffQuality.push({ email: staff.email, name: staff.name || staff.email, created, avgScore: Math.round(totalScore._avg.score ?? 0) });
+    }
+    staffQuality.sort((a, b) => a.avgScore - b.avgScore);
+    const fields = Object.entries(missing).map(([field, count]) => ({ field, count, pct: total > 0 ? Math.round((count / total) * 100) : 0 }));
+    res.json({ success: true, total, fields, staffQuality });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 app.use('/api/qa', qaRoutes);
 
 // SSE endpoint for real-time chat updates
