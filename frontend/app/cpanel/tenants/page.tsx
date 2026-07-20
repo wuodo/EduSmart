@@ -360,7 +360,7 @@ export default function TenantsPage() {
 
       <div className="bg-white rounded-none border border-gray-200 overflow-x-auto">
         <div className="px-3 py-2 text-sm text-gray-600 border-b flex items-center">Tenant list <Info text="All tenants in the system. Use actions to suspend, delete, upload logo, or assign a plan." /></div>
-        <table className="w-full text-[11px] md:text-[12px]">
+        <table className="w-full text-[11px] md:text-[12px]" style={{ minWidth: '1200px' }}>
           <thead className="bg-gray-50/80">
             <tr>
               <th className="text-left px-3 py-2 font-semibold uppercase tracking-wider text-teal-800 w-[34px]">
