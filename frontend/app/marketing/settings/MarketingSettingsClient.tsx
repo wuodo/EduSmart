@@ -122,7 +122,7 @@ export default function MarketingSettingsClient() {
             title={collapsed ? s.label : undefined}
             className={`w-full py-1.5 text-left text-sm font-medium transition flex items-center gap-2 ${
               section === s.key
-                ? 'bg-primary text-white shadow-sm border-l-[3px] border-white/30'
+                ? 'bg-[#0D9488] dark:bg-[#F59E0B] text-white shadow-sm border-l-[3px] border-white/30'
                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-700/60 border-l-[3px] border-transparent'
             } ${!allowed ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''} ${collapsed ? 'px-2 justify-center' : 'pl-5 pr-2'}`}
             onClick={() => allowed && goSection(s.key)}

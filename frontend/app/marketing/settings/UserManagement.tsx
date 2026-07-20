@@ -240,7 +240,7 @@ export default function UserManagement() {
         </div>
         <div className="flex gap-2">
           <button onClick={loadUsers} className="px-3 py-1.5 rounded border bg-white hover:bg-gray-50">Refresh</button>
-          <button onClick={openCreateModal} disabled={!isAdmin} className={`px-4 py-2 rounded text-white ${isAdmin ? 'bg-primary hover:bg-primary/90' : 'bg-gray-400 cursor-not-allowed'}`}>Create User</button>
+          <button onClick={openCreateModal} disabled={!isAdmin} className={`px-4 py-2 rounded text-white ${isAdmin ? 'bg-[#0D9488] dark:bg-[#F59E0B] hover:opacity-90' : 'bg-gray-400 cursor-not-allowed'}`}>Create User</button>
         </div>
       </div>
 
@@ -360,7 +360,7 @@ export default function UserManagement() {
               </div>
               <div className="pt-2 flex justify-end gap-2">
                 <button type="button" onClick={closeCreateModal} className="px-4 py-2 rounded border bg-white hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={createLoading || !isAdmin} className={`px-4 py-2 rounded text-white ${isAdmin ? 'bg-primary hover:bg-primary/90' : 'bg-gray-400 cursor-not-allowed'}`}>{createLoading ? 'Creating...' : 'Create User'}</button>
+                <button type="submit" disabled={createLoading || !isAdmin} className={`px-4 py-2 rounded text-white ${isAdmin ? 'bg-[#0D9488] dark:bg-[#F59E0B] hover:opacity-90' : 'bg-gray-400 cursor-not-allowed'}`}>{createLoading ? 'Creating...' : 'Create User'}</button>
               </div>
             </form>
           </div>
@@ -389,7 +389,7 @@ export default function UserManagement() {
             </div>
             <div className="px-5 py-3 border-t flex justify-end gap-2">
               <button onClick={closePasswordModal} className="px-4 py-2 rounded border bg-white hover:bg-gray-50">Cancel</button>
-              <button onClick={submitPasswordChange} disabled={pwLoading || !isAdmin} className={`px-4 py-2 rounded text-white ${isAdmin ? 'bg-primary hover:bg-primary/90' : 'bg-gray-400 cursor-not-allowed'}`}>{pwLoading ? 'Saving...' : 'Save'}</button>
+              <button onClick={submitPasswordChange} disabled={pwLoading || !isAdmin} className={`px-4 py-2 rounded text-white ${isAdmin ? 'bg-[#0D9488] dark:bg-[#F59E0B] hover:opacity-90' : 'bg-gray-400 cursor-not-allowed'}`}>{pwLoading ? 'Saving...' : 'Save'}</button>
             </div>
           </div>
         </div>
@@ -441,7 +441,7 @@ export default function UserManagement() {
             </div>
             <div className="px-5 py-3 border-t flex justify-end gap-2">
               <button onClick={cancelEdit} className="px-4 py-2 rounded border bg-white hover:bg-gray-50">Cancel</button>
-              <button onClick={() => saveEdit(users.find(u => u.id === editingId)!)} className="px-4 py-2 rounded bg-primary text-white hover:bg-primary/90">Save</button>
+              <button onClick={() => saveEdit(users.find(u => u.id === editingId)!)} className="px-4 py-2 rounded bg-[#0D9488] dark:bg-[#F59E0B] text-white hover:opacity-90">Save</button>
             </div>
           </div>
         </div>
