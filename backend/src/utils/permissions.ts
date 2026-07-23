@@ -30,7 +30,7 @@ function ensureDefaults(): PermissionsModel {
 			{ name: 'super_admin', permissions: ['all'] },
 			{ name: 'admin', permissions: ['view','edit','export','delete','all'] },
 			{ name: 'senior_staff', permissions: ['view','edit','export','delete','all'] },
-			{ name: 'admissions_officer', permissions: ['view'] },
+			{ name: 'admissions_officer', permissions: ['view', 'edit'] },
 			{ name: 'viewer', permissions: ['view'] }
 		],
 		modules: {
