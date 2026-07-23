@@ -128,6 +128,26 @@ async function bootstrapPermissionsFromDb(): Promise<void> {
 			// DB has saved permissions — load them into in-memory cache NOW so
 			// subsequent sync loadPermissions() calls use the real saved state.
 			cached = normalizePermissions(dbPerms as PermissionsModel);
+			// Ensure admissions_officer has 'edit' permission for followups, etc.
+			const ao = cached.roles.find(r => r.name === 'admissions_officer');
+			if (ao && !ao.permissions.includes('edit')) {
+				ao.permissions.push('edit');
+				// Persist the fix back to DB so it survives restarts
+				try {
+					const row = await (prisma as any).cpanelConfig.findUnique({ where: { id: 1 } });
+					const current: Record<string, unknown> = (row?.data && typeof row.data === 'object'
+						? row.data
+						: {}) as Record<string, unknown>;
+					await (prisma as any).cpanelConfig.upsert({
+						where: { id: 1 },
+						update: { data: { ...current, permissions: cached } },
+						create: { id: 1, data: { permissions: cached } },
+					});
+					console.log('[permissions] Added "edit" to admissions_officer in DB.');
+				} catch (e) {
+					console.warn('[permissions] Failed to persist permissions fix:', e);
+				}
+			}
 			mtime = Date.now(); // prevent stale file from overwriting cached
 			console.log('[permissions] Loaded permissions from DB into memory cache.');
 		} else {
