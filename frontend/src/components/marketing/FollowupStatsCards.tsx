@@ -24,7 +24,7 @@ export default function FollowupStatsCards({ followups, staffEmail, tenantWide }
   const overdue = followups.filter(f => (f.status === 'pending' || f.status === 'rescheduled') && new Date(f.scheduledFor) < now).length;
 
   const cards = [
-    { label: 'Total', value: total, color: 'bg-primary text-white' },
+    { label: 'Total', value: total, color: 'bg-[#0D9488] text-white' },
     { label: 'Pending', value: pending, color: 'bg-yellow-500 text-white' },
     { label: 'Completed', value: completed, color: 'bg-green-500 text-white' },
     { label: 'Rescheduled', value: rescheduled, color: 'bg-blue-500 text-white' },
