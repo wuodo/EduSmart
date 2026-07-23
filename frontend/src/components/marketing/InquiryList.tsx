@@ -781,6 +781,26 @@ export default function InquiryList({
                       >
                         <FaWhatsappAny className="h-4 w-4" />
                       </button>
+                      {/* Mark Registered button — admin/senior_staff only */}
+                      {(userRole === 'admin' || userRole === 'senior_staff') && inquiry.paymentStatus !== 'Paid' && (
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Mark "${inquiry.fullName}" as registered?`)) return;
+                            try {
+                              const res = await apiFetch(`/inquiries/${inquiry.id}/mark-registered`, { method: 'POST' });
+                              const d = await res.json();
+                              setToast({ type: d.success ? 'success' : 'error', message: d.message || d.error });
+                              if (d.success) onRefresh();
+                            } catch (e: any) {
+                              setToast({ type: 'error', message: e?.message || 'Failed to mark as registered' });
+                            }
+                          }}
+                          className="text-emerald-600 hover:text-emerald-800 ml-1"
+                          title="Mark as Registered"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </button>
+                      )}
                     </td>
                   </tr>
                   {/* Mobile expanded details */}

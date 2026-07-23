@@ -1261,4 +1261,33 @@ router.post('/:id/reminder/response', async (req, res) => {
   }
 });
 
+// Mark inquiry as registered (admin/senior_staff only, sets paymentStatus to Paid)
+router.post('/:id/mark-registered', async (req, res) => {
+  try {
+    const role = String((req as any).user?.role || '').toLowerCase();
+    if (role !== 'admin' && role !== 'senior_staff') {
+      return safeJson(res, { message: 'Forbidden: only admins can mark inquiries as registered' }, 403);
+    }
+    const tenantId = (req as any).tenant?.id;
+    if (!tenantId) return safeJson(res, { message: 'Tenant required' }, 400);
+    const id = parseInt(req.params.id);
+    const inquiry = await prisma.inquiry.findFirst({ where: { id, tenantId } });
+    if (!inquiry) return safeJson(res, { message: 'Inquiry not found' }, 404);
+    if (inquiry.paymentStatus === 'Paid') return safeJson(res, { message: 'Already registered' }, 400);
+
+    const paymentCode = `REG-${Date.now().toString(36).toUpperCase()}-${id}`;
+    const updated = await prisma.inquiry.update({
+      where: { id },
+      data: { paymentStatus: 'Paid', paymentCode, paymentDate: new Date() },
+    });
+    await auditLogger.updateInquiry(req, String(id), {
+      changes: { action: 'mark_registered', paymentCode, paymentStatus: 'Paid' },
+      tenantId,
+    });
+    return safeJson(res, { success: true, inquiry: updated, message: 'Marked as registered' });
+  } catch (error: any) {
+    return safeJson(res, { message: 'Error marking as registered', error: error.message }, 500);
+  }
+});
+
 export { router as inquiryRoutes }; 
